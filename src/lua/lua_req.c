@@ -201,6 +201,33 @@ static int l_hin_sanitize_path (lua_State *L) {
   return 2;
 }
 
+#include <sys/socket.h>
+#include <netdb.h>
+
+static int l_hin_remote_address (lua_State *L) {
+  hin_client_t *client = (hin_client_t*)lua_touserdata (L, 1);
+  if (client == NULL || client->magic != HIN_CLIENT_MAGIC) {
+    printf ("lua hin_sanitize_path need a valid client\n");
+    return 0;
+  }
+
+  char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
+  int err;
+  err = getnameinfo (&client->in_addr, client->in_len,
+        hbuf, sizeof hbuf,
+        sbuf, sizeof sbuf,
+        NI_NUMERICHOST | NI_NUMERICSERV);
+  if (err == 0) {
+    lua_pushstring (L, hbuf);
+    lua_pushstring (L, sbuf);
+    return 2;
+  } else {
+    fprintf (stderr, "getnameinfo3 err '%s'\n", gai_strerror (err));
+  }
+
+  return 0;
+}
+
 static lua_function_t functs [] = {
 {"parse_path",		l_hin_parse_path },
 {"parse_headers",	l_hin_parse_headers },
@@ -209,6 +236,7 @@ static lua_function_t functs [] = {
 {"cgi",			l_hin_cgi },
 {"respond",		l_hin_respond },
 {"sanitize_path",	l_hin_sanitize_path },
+{"remote_address",	l_hin_remote_address },
 {NULL, NULL},
 };
 

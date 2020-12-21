@@ -40,7 +40,7 @@ local server = create_httpd (function (server, req)
   elseif (path == "/hello") then
     return respond (req, 200, "Hello world")
   end
-  local file_path = sanitize_path (req, "htdocs", path)
+  local file_path, file_name = sanitize_path (req, "htdocs", path)
   --print (string.format ("file_path for '%s' ext '%s' res '%s'", path, ext, file_path))
   if (ext == "php") then
     return cgi (req, "/usr/bin/php-cgi", file_path)
