@@ -1,0 +1,16 @@
+docs/*
+!docs/*.md
+!docs/*.txt
+build/*
+!build/build.ninja
+htdocs/*
+!htdocs/index.html
+
+*.pem
+*.key
+*.crt
+
+*.jpg
+*.png
+*.img
+*.log
