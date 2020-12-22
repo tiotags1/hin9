@@ -65,6 +65,8 @@ int hin_pipe_write_callback (hin_buffer_t * buffer, int ret) {
   hin_pipe_t * pipe = (hin_pipe_t*)buffer->parent;
   if (ret < 0) {
     printf ("pipe write error %d '%s'\n", buffer->fd, strerror (-ret));
+    if (pipe->out_error_callback)
+      pipe->out_error_callback (pipe);
     hin_pipe_close (pipe);
     return -1;
   }
@@ -103,8 +105,11 @@ int hin_pipe_read_callback (hin_buffer_t * buffer, int ret) {
     if (ret == 0 && master.debug & DEBUG_PIPE) {
       printf ("pipe read EOF %d\n", buffer->fd);
     }
-    if (ret < 0)
+    if (ret < 0) {
       printf ("pipe read error %d\n", buffer->fd);
+      if (pipe->in_error_callback)
+        pipe->in_error_callback (pipe);
+    }
 
     pipe->flags |= HIN_DONE;
     pipe->in.flags |= HIN_DONE;

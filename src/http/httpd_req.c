@@ -46,32 +46,53 @@ int httpd_respond_error (hin_client_t * client, int status, const char * body) {
   http->state |= HIN_SERVICE;
 }
 
-static int http_headers_write_callback (hin_buffer_t * buffer, int ret) {
+static int httpd_close_filefd_callback (hin_buffer_t * buffer, int ret) {
+  if (ret < 0) printf ("encountered close in fd %d: %s\n", buffer->fd, strerror (-ret));
+  return 1;
+}
+
+static int httpd_close_filefd (hin_buffer_t * buffer, httpd_client_t * http) {
+  buffer->fd = http->filefd;
+  buffer->callback = httpd_close_filefd_callback;
+  hin_request_close (buffer);
+  return 0;
+}
+
+static int httpd_pipe_error_callback (hin_pipe_t * pipe) {
+  printf ("error in client %d\n", pipe->out.fd);
+  hin_client_shutdown (pipe->parent);
+}
+
+static int httpd_headers_write_callback (hin_buffer_t * buffer, int ret) {
   hin_client_t * client = (hin_client_t*)buffer->parent;
   httpd_client_t * http = (httpd_client_t*)&client->extra;
   if (ret != buffer->count) printf ("not sent all of it ? %d/%d\n", ret, buffer->count);
   if (http->status == 304) {
-    if (close (http->filefd)) perror ("close in");
     httpd_client_finish_request (client);
+    httpd_close_filefd (buffer, http);
+    return 0;
   } else {
-    send_file (client, http->filefd, http->pos, http->count, http->flags & (HIN_HTTP_DEFLATE | HIN_HTTP_CHUNKED), NULL);
+    hin_pipe_t * pipe = send_file (client, http->filefd, http->pos, http->count, http->flags & (HIN_HTTP_DEFLATE | HIN_HTTP_CHUNKED), NULL);
+    pipe->out_error_callback = httpd_pipe_error_callback;
   }
-  hin_buffer_clean (buffer);
+  return 1;
 }
 
-int hin_httpd_statx_done (hin_buffer_t * buf, int ret) {
+static int httpd_statx_callback (hin_buffer_t * buf, int ret) {
   hin_client_t * client = (hin_client_t*)buf->parent;
   httpd_client_t * http = (httpd_client_t*)&client->extra;
   if (ret < 0) {
     printf ("http 404 error can't open '%s': %s\n", http->file_path, strerror (-ret));
     httpd_respond_error (client, 404, NULL);
-    return -1;
+
+    httpd_close_filefd (buf, http);
+    return 0;
   }
   struct statx stat1 = *(struct statx *)buf->ptr;
   struct statx * stat = &stat1;
 
   http->sz = stat->stx_size;
-  buf->callback = http_headers_write_callback;
+  buf->callback = httpd_headers_write_callback;
 
   if (http->count < 0) http->count = http->sz - http->pos;
   if (http->pos != 0 || http->count != http->sz) {
@@ -86,7 +107,8 @@ int hin_httpd_statx_done (hin_buffer_t * buf, int ret) {
   if (http->pos < 0 || http->pos > http->sz || http->pos + http->count > http->sz) {
     printf ("http 416 error out of range\n");
     httpd_respond_error (client, 416, NULL);
-    return -1;
+    httpd_close_filefd (buf, http);
+    return 0;
   }
 
   if (master.debug & DEBUG_PIPE) {
@@ -177,9 +199,10 @@ int hin_httpd_statx_done (hin_buffer_t * buf, int ret) {
   if (master.debug & DEBUG_RW) printf ("responding '\n%.*s'\n", buf->count, buf->ptr);
 
   hin_request_write (buf);
+  return 0;
 }
 
-int hin_httpd_open_done (hin_buffer_t * buf, int ret) {
+static int httpd_open_filefd_callback (hin_buffer_t * buf, int ret) {
   hin_client_t * client = (hin_client_t*)buf->parent;
   httpd_client_t * http = (httpd_client_t*)&client->extra;
   if (ret < 0) {
@@ -187,11 +210,33 @@ int hin_httpd_open_done (hin_buffer_t * buf, int ret) {
     httpd_respond_error (client, 404, NULL);
     return -1;
   }
-  buf->callback = hin_httpd_statx_done;
+  buf->callback = httpd_statx_callback;
   http->filefd = ret;
   memset (buf->ptr, 0, sizeof (struct statx));
   hin_request_statx (buf, ret, "", AT_EMPTY_PATH, STATX_ALL);
   return 0;
+}
+
+int httpd_handle_file_request (hin_client_t * client, const char * path, off_t pos, off_t count, uintptr_t param) {
+  httpd_client_t * http = (httpd_client_t*)&client->extra;
+
+  http->file_path = strdup (path);
+  http->pos = pos;
+  http->count = count;
+  http->state |= HIN_SERVICE;
+
+  hin_buffer_t * buf = malloc (sizeof (*buf) + READ_SZ);
+  memset (buf, 0, sizeof (*buf));
+  buf->flags = HIN_SOCKET | (client->flags & HIN_SSL);
+  buf->fd = client->sockfd;
+  buf->count = 0;
+  buf->sz = READ_SZ;
+  buf->ptr = buf->buffer;
+  buf->parent = client;
+  buf->ssl = &client->ssl;
+
+  buf->callback = httpd_open_filefd_callback;
+  hin_request_openat (buf, AT_FDCWD, path, O_RDONLY | O_CLOEXEC, 0);
 }
 
 int httpd_parse_req (hin_client_t * client, string_t * source) {
@@ -214,28 +259,6 @@ int httpd_parse_req (hin_client_t * client, string_t * source) {
   http->state &= ~HIN_HEADERS;
 
   return used;
-}
-
-int httpd_handle_file_request (hin_client_t * client, const char * path, off_t pos, off_t count, uintptr_t param) {
-  httpd_client_t * http = (httpd_client_t*)&client->extra;
-
-  http->file_path = strdup (path);
-  http->pos = pos;
-  http->count = count;
-  http->state |= HIN_SERVICE;
-
-  hin_buffer_t * buf = malloc (sizeof (*buf) + READ_SZ);
-  memset (buf, 0, sizeof (*buf));
-  buf->flags = HIN_SOCKET | (client->flags & HIN_SSL);
-  buf->fd = client->sockfd;
-  buf->count = 0;
-  buf->sz = READ_SZ;
-  buf->ptr = buf->buffer;
-  buf->parent = client;
-  buf->ssl = &client->ssl;
-
-  buf->callback = hin_httpd_open_done;
-  hin_request_openat (buf, AT_FDCWD, path, O_RDONLY | O_CLOEXEC, 0);
 }
 
 

@@ -61,6 +61,8 @@ struct hin_pipe_struct {
   int (*read_callback) (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush);
   int (*finish_callback) (hin_pipe_t * pipe);
   int (*extra_callback) (hin_pipe_t * pipe);
+  int (*out_error_callback) (hin_pipe_t * pipe);
+  int (*in_error_callback) (hin_pipe_t * pipe);
 };
 
 struct hin_client_struct {

@@ -88,7 +88,7 @@ printf ("chunked num %d flush %d\n", num, flush);
   hin_buffer_clean (buffer);
 }
 
-int send_file (hin_client_t * client, int filefd, off_t pos, off_t count, uint32_t flags, int (*extra) (hin_pipe_t *)) {
+hin_pipe_t * send_file (hin_client_t * client, int filefd, off_t pos, off_t count, uint32_t flags, int (*extra) (hin_pipe_t *)) {
   httpd_client_t * http = (httpd_client_t*)&client->extra;
 
   hin_pipe_t * pipe = calloc (1, sizeof (*pipe));
@@ -113,6 +113,8 @@ int send_file (hin_client_t * client, int filefd, off_t pos, off_t count, uint32
   }
 
   hin_pipe_advance (pipe);
+
+  return pipe;
 }
 
 static int done_receive_file (hin_pipe_t * pipe) {
@@ -121,7 +123,7 @@ static int done_receive_file (hin_pipe_t * pipe) {
   if (close (pipe->out.fd)) perror ("close in");
 }
 
-int receive_file (hin_client_t * client, int filefd, off_t pos, off_t count, uint32_t flags, int (*extra) (hin_pipe_t *)) {
+hin_pipe_t * receive_file (hin_client_t * client, int filefd, off_t pos, off_t count, uint32_t flags, int (*extra) (hin_pipe_t *)) {
   http_client_t * http = (http_client_t*)&client->extra;
 
   hin_pipe_t * pipe = calloc (1, sizeof (*pipe));
@@ -139,5 +141,7 @@ int receive_file (hin_client_t * client, int filefd, off_t pos, off_t count, uin
   pipe->extra_callback = extra;
 
   hin_pipe_advance (pipe);
+
+  return pipe;
 }
 

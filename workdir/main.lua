@@ -47,7 +47,7 @@ local server = create_httpd (function (server, req)
   elseif (to_cache[ext]) then
     set_option (req, "cache", 604800)
   end
-  send_file (req, file_path, 0, -1, function (req) end)
+  send_file (req, file_path, 0, -1)
 end)
 --listen (server, "127.0.0.1", "8081", "workdir/cert.pem", "workdir/key.pem")
 listen (server, "127.0.0.1", "8080")
