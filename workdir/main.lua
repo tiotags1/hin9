@@ -20,7 +20,8 @@ local server = create_httpd (function (server, req)
   local path, query, method, version = parse_path (req)
   --print ("path is ", path, method, query, version)
   --local h = parse_headers (req)
-  --access ("%s %s %s\n", method, path, query)
+  --local ip, port = remote_address (req)
+  --access ("%s %s %s %s\n", ip, method, path, query)
   --for i, k in pairs (h) do
   --  print ("header ", i, k)
   --end
