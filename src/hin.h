@@ -112,9 +112,9 @@ int hin_pipe_advance (hin_pipe_t * pipe);
 
 void hin_buffer_clean (hin_buffer_t * buffer);
 
-void http_list_remove (hin_buffer_t ** list, hin_buffer_t * new);
-void http_list_append (hin_buffer_t ** list, hin_buffer_t * new);
-int http_write (hin_pipe_t * client, hin_buffer_t * buffer);
+void hin_buffer_list_remove (hin_buffer_t ** list, hin_buffer_t * new);
+void hin_buffer_list_append (hin_buffer_t ** list, hin_buffer_t * new);
+int hin_pipe_write (hin_pipe_t * client, hin_buffer_t * buffer);
 
 void hin_client_list_remove (hin_client_t ** list, hin_client_t * new);
 void hin_client_list_add (hin_client_t ** list, hin_client_t * new);

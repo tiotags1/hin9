@@ -65,8 +65,6 @@ build obj/hin9/src/system/client.c.o: cc ../src/system/client.c
  cflags= -D_GNU_SOURCE
 build obj/hin9/src/system/console.c.o: cc ../src/system/console.c
  cflags= -D_GNU_SOURCE
-build obj/hin9/src/system/lines.c.o: cc ../src/system/lines.c
- cflags= -D_GNU_SOURCE
 build obj/hin9/src/system/main.c.o: cc ../src/system/main.c
  cflags= -D_GNU_SOURCE
 build obj/hin9/src/system/restart.c.o: cc ../src/system/restart.c
@@ -78,6 +76,6 @@ build obj/external/basic_pattern.c.o: cc external/basic_pattern.c
 build obj/external/basic_timer.c.o: cc external/basic_timer.c
  cflags= -D_GNU_SOURCE
 
-build hin9: link obj/hin9/src/http/dl_client.c.o obj/hin9/src/http/dl_head.c.o obj/hin9/src/http/dl_req.c.o obj/hin9/src/http/httpd.c.o obj/hin9/src/http/httpd_cgi.c.o obj/hin9/src/http/httpd_head.c.o obj/hin9/src/http/httpd_post.c.o obj/hin9/src/http/httpd_proxy.c.o obj/hin9/src/http/httpd_req.c.o obj/hin9/src/http/sendfile.c.o obj/hin9/src/http/utils.c.o obj/hin9/src/lua/lua.c.o obj/hin9/src/lua/lua_config.c.o obj/hin9/src/lua/lua_opt.c.o obj/hin9/src/lua/lua_req.c.o obj/hin9/src/lua/lua_utils.c.o obj/hin9/src/netcode/connect.c.o obj/hin9/src/netcode/listen.c.o obj/hin9/src/netcode/pipe.c.o obj/hin9/src/netcode/ssl.c.o obj/hin9/src/netcode/uring.c.o obj/hin9/src/system/buffer.c.o obj/hin9/src/system/client.c.o obj/hin9/src/system/console.c.o obj/hin9/src/system/lines.c.o obj/hin9/src/system/main.c.o obj/hin9/src/system/restart.c.o obj/hin9/src/system/ssl_init.c.o obj/external/basic_pattern.c.o obj/external/basic_timer.c.o
+build hin9: link obj/hin9/src/http/dl_client.c.o obj/hin9/src/http/dl_head.c.o obj/hin9/src/http/dl_req.c.o obj/hin9/src/http/httpd.c.o obj/hin9/src/http/httpd_cgi.c.o obj/hin9/src/http/httpd_head.c.o obj/hin9/src/http/httpd_post.c.o obj/hin9/src/http/httpd_proxy.c.o obj/hin9/src/http/httpd_req.c.o obj/hin9/src/http/sendfile.c.o obj/hin9/src/http/utils.c.o obj/hin9/src/lua/lua.c.o obj/hin9/src/lua/lua_config.c.o obj/hin9/src/lua/lua_opt.c.o obj/hin9/src/lua/lua_req.c.o obj/hin9/src/lua/lua_utils.c.o obj/hin9/src/netcode/connect.c.o obj/hin9/src/netcode/listen.c.o obj/hin9/src/netcode/pipe.c.o obj/hin9/src/netcode/ssl.c.o obj/hin9/src/netcode/uring.c.o obj/hin9/src/system/buffer.c.o obj/hin9/src/system/client.c.o obj/hin9/src/system/console.c.o obj/hin9/src/system/main.c.o obj/hin9/src/system/restart.c.o obj/hin9/src/system/ssl_init.c.o obj/external/basic_pattern.c.o obj/external/basic_timer.c.o
  ldflags= -lm -luring -lz -lcrypto -lssl -llua
 

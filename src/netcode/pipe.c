@@ -15,6 +15,21 @@ void hin_pipe_close (hin_pipe_t * pipe) {
   free (pipe);
 }
 
+hin_buffer_t * hin_pipe_buffer_get (hin_pipe_t * pipe) {
+  hin_buffer_t * buf = malloc (sizeof *buf + READ_SZ);
+  memset (buf, 0, sizeof (*buf));
+  buf->parent = (void*)pipe;
+  buf->flags = 0;
+  buf->ptr = buf->buffer;
+  buf->count = buf->sz = READ_SZ;
+  buf->ssl = pipe->ssl;
+  return buf;
+}
+
+int hin_pipe_write (hin_pipe_t * pipe, hin_buffer_t * buffer) {
+  hin_buffer_list_append (&pipe->write, buffer);
+}
+
 static int hin_pipe_read_next (hin_buffer_t * buffer) {
   hin_pipe_t * pipe = (hin_pipe_t*)buffer->parent;
   buffer->fd = pipe->in.fd;
@@ -57,7 +72,7 @@ int hin_pipe_advance (hin_pipe_t * pipe) {
   if (pipe->write) {
     hin_buffer_t * buffer = pipe->write;
     hin_pipe_write_next (buffer);
-    http_list_remove (&pipe->write, buffer);
+    hin_buffer_list_remove (&pipe->write, buffer);
   }
 }
 
@@ -84,7 +99,7 @@ int hin_pipe_write_callback (hin_buffer_t * buffer, int ret) {
   if (pipe->write) {
     hin_buffer_t * buffer = pipe->write;
     hin_pipe_write_next (buffer);
-    http_list_remove (&pipe->write, buffer);
+    hin_buffer_list_remove (&pipe->write, buffer);
   } else {
     pipe->out.flags |= HIN_DONE;
     hin_pipe_advance (pipe);
@@ -96,7 +111,7 @@ int hin_pipe_write_callback (hin_buffer_t * buffer, int ret) {
 int hin_pipe_copy_raw (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush) {
   if (num <= 0) return 0;
   buffer->count = num;
-  http_write (pipe, buffer);
+  hin_pipe_write (pipe, buffer);
 }
 
 int hin_pipe_read_callback (hin_buffer_t * buffer, int ret) {

@@ -47,7 +47,7 @@ int hin_pipe_copy_deflate (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, in
           header (client, new, "0\r\n\r\n");
         }
       }
-      http_write (pipe, new);
+      hin_pipe_write (pipe, new);
     } else {
       hin_buffer_clean (new);
     }
@@ -83,7 +83,7 @@ printf ("chunked num %d flush %d\n", num, flush);
     header (client, buf, "%x\r\n\r\n", 0);
   }
 
-  http_write (pipe, buf);
+  hin_pipe_write (pipe, buf);
 
   hin_buffer_clean (buffer);
 }
