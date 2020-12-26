@@ -4,8 +4,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <hin.h>
-#include "hin_lua.h"
+#include "hin.h"
+#include "lua.h"
 #include "http.h"
 #include "uri.h"
 

@@ -3,8 +3,8 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include <hin.h>
-#include <lua/hin_lua.h>
+#include "hin.h"
+#include "lua.h"
 
 void httpd_client_clean (httpd_client_t * http) {
   if (http->file_path) free ((void*)http->file_path);

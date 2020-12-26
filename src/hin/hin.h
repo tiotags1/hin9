@@ -10,8 +10,9 @@ typedef struct hin_buffer_struct hin_buffer_t;
 typedef struct hin_client_struct hin_client_t;
 typedef struct hin_pipe_struct hin_pipe_t;
 
-#include <hin_ssl.h>
-#include <hin_master.h>
+#include "ssl.h"
+#include "master.h"
+#include "http.h"
 
 #define READ_SZ                 4096
 //65536
@@ -126,8 +127,6 @@ int hin_lines_request (hin_buffer_t * buffer);
 int hin_lines_reread (hin_client_t * client);
 #include <basic_pattern.h>
 hin_buffer_t * hin_lines_create (hin_client_t * client, int sockfd, int (*callback) (hin_client_t * client, string_t * source));
-
-#include <http/http.h>
 
 #endif
 

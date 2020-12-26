@@ -4,8 +4,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <hin.h>
-#include "hin_lua.h"
+#include "hin.h"
+#include "lua.h"
 
 int hin_server_callback (hin_client_t * client) {
   if (client->parent == NULL) {

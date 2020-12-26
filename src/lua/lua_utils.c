@@ -4,8 +4,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <hin.h>
-#include "hin_lua.h"
+#include "hin.h"
+#include "lua.h"
 
 int lua_add_functions (lua_State * L, lua_function_t * func) {
   while (1) {

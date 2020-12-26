@@ -4,9 +4,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <hin.h>
-#include "hin_lua.h"
-#include <hin_ssl.h>
+#include "hin.h"
+#include "lua.h"
+#include "ssl.h"
 
 extern SSL_CTX * default_ctx;
 SSL_CTX * hin_ssl_init (const char * cert, const char * key);
