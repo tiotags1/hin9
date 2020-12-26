@@ -112,6 +112,7 @@ int hin_pipe_copy_raw (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int fl
   if (num <= 0) return 0;
   buffer->count = num;
   hin_pipe_write (pipe, buffer);
+  return 0;
 }
 
 int hin_pipe_read_callback (hin_buffer_t * buffer, int ret) {
@@ -148,7 +149,8 @@ int hin_pipe_read_callback (hin_buffer_t * buffer, int ret) {
   if (pipe->read_callback == NULL) {
     hin_pipe_copy_raw (pipe, buffer, ret, pipe->flags & HIN_DONE ? 1 : 0);
   } else {
-    pipe->read_callback (pipe, buffer, ret, pipe->flags & HIN_DONE ? 1 : 0);
+    if (pipe->read_callback (pipe, buffer, ret, pipe->flags & HIN_DONE ? 1 : 0))
+      hin_buffer_clean (buffer);
   }
 
   if (pipe->write == NULL) {

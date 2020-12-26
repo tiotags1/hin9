@@ -26,10 +26,11 @@ int hin_pipe_copy_deflate (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, in
   do {
     hin_buffer_t * new = hin_pipe_buffer_get (pipe);
     char * ptr = new->ptr;
+    int nsz = 8;
     if (http->flags & HIN_HTTP_CHUNKED) {
       new->sz -= 20; // size of max nr, 4 crlf + 0+crlfcrlf
       new->count = 0;
-      int n = header (client, new, "%-8x\r\n", new->sz);
+      int n = header (client, new, "%-*x\r\n", nsz, 0);
       ptr += n;
     }
     http->z.avail_out = new->sz;
@@ -41,25 +42,31 @@ int hin_pipe_copy_deflate (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, in
       new->count = have;
       new->fd = pipe->out.fd;
       if (http->flags & HIN_HTTP_CHUNKED) {
-        snprintf (new->buffer, 8, "%-8x", have);
         header (client, new, "\r\n");
         if (http->z.avail_out != 0) {
           header (client, new, "0\r\n\r\n");
         }
+
+        int num = snprintf (new->buffer, 0, "%x", have);
+        if (num < 0) { printf ("weird error\n"); exit (1); }
+        int offset = nsz - num;
+        char * ptr = new->buffer + offset;
+        snprintf (ptr, num+1, "%x", have);
+        new->ptr = ptr;
+        new->count -= offset;
       }
       hin_pipe_write (pipe, new);
     } else {
       hin_buffer_clean (new);
     }
   } while (http->z.avail_out == 0);
-  hin_buffer_clean (buffer);
+  return 1;
 }
 
 int hin_pipe_copy_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush) {
   hin_client_t * client = (hin_client_t*)pipe->parent;
   httpd_client_t * http = (httpd_client_t*)&client->extra;
 
-printf ("chunked num %d flush %d\n", num, flush);
   //if (num <= 0) return 0; // chunked requires it
 
   hin_buffer_t * buf = malloc (sizeof *buf + READ_SZ + 50);
@@ -85,7 +92,7 @@ printf ("chunked num %d flush %d\n", num, flush);
 
   hin_pipe_write (pipe, buf);
 
-  hin_buffer_clean (buffer);
+  return 1;
 }
 
 hin_pipe_t * send_file (hin_client_t * client, int filefd, off_t pos, off_t count, uint32_t flags, int (*extra) (hin_pipe_t *)) {

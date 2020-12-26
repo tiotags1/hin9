@@ -112,8 +112,10 @@ int hin_client_deflate_init (httpd_client_t * http) {
     return -1;
   }
   http->flags |= HIN_HTTP_DEFLATE;
-  if (http->flags & HIN_HTTP_VER0 == 0) {
+  if ((http->flags & HIN_HTTP_VER0) == 0) {
     http->flags |= HIN_HTTP_CHUNKED;
+  } else {
+    http->flags &= ~HIN_HTTP_KEEP;
   }
   return 0;
 }

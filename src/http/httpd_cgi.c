@@ -104,7 +104,11 @@ int cgi_send (hin_client_t * client, int fd) {
 
 int hin_cgi (hin_client_t * client, const char * exe_path, const char * script_path) {
   httpd_client_t * http = (httpd_client_t*)&client->extra;
-  http->flags &= ~HIN_HTTP_KEEP;
+  if ((http->flags & HIN_HTTP_VER0) == 0) {
+    http->flags |= HIN_HTTP_CHUNKED;
+  } else {
+    http->flags &= ~HIN_HTTP_KEEP;
+  }
   http->state |= HIN_SERVICE;
 
   const char * msg = "HTTP/1.1 200 OK\r\n";

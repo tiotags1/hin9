@@ -18,7 +18,6 @@ int httpd_client_start_request (hin_client_t * client) {
   httpd_client_t * http = (httpd_client_t*)&client->extra;
   http->state |= HIN_HEADERS;
 
-
   hin_client_t * server = (hin_client_t*)client->parent;
   hin_server_data_t * data = (hin_server_data_t*)server->parent;
   if (data) {
@@ -129,7 +128,7 @@ int httpd_client_read_callback (hin_client_t * client, string_t * source) {
 
   if (http->flags & HIN_HTTP_CAN_DEFLATE) {
     int hin_client_deflate_init (httpd_client_t * http);
-    //hin_client_deflate_init (http);
+    hin_client_deflate_init (http);
   }
 
   if ((http->state & ~(HIN_HEADERS|HIN_END)) == 0) {

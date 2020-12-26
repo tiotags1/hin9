@@ -7,7 +7,7 @@ hin = {
   c_files=list_dir ("src", "*.c"),
   ldflags="-lm -luring -lz -lcrypto -lssl -llua",
   cflags="-D_GNU_SOURCE",
-  includes={"src", "src/http"},
+  includes={"src/hin", "src/"},
   req={"basic_pattern", "basic_timer"},
 }
 
