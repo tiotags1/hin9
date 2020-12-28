@@ -126,6 +126,15 @@ int hin_request_openat (hin_buffer_t * buffer, int dfd, const char * path, int f
   return 0;
 }
 
+int hin_request_timeout (hin_buffer_t * buffer, struct timespec * ts, int count, int flags) {
+  struct io_uring_sqe *sqe = io_uring_get_sqe (&ring);
+  io_uring_prep_timeout (sqe, ts, count, flags);
+  io_uring_sqe_set_data (sqe, buffer);
+  io_uring_submit (&ring);
+  if (master.debug & DEBUG_URING) printf ("request timeout buf %p for callback %p\n", buffer, buffer->callback);
+  return 0;
+}
+
 int hin_request_statx (hin_buffer_t * buffer, int dfd, const char * path, int flags, int mask) {
   struct io_uring_sqe *sqe = io_uring_get_sqe (&ring);
   // I dunno

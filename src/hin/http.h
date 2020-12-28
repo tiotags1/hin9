@@ -5,6 +5,7 @@
 #include <time.h>
 
 #include "uri.h"
+#include <basic_timer.h>
 
 enum { HIN_REQ_HEADERS = 0x1, HIN_REQ_DATA = 0x2, HIN_REQ_POST = 0x4, HIN_REQ_WAIT = 0x8, HIN_REQ_END = 0x10 };
 
@@ -13,6 +14,8 @@ enum { HIN_HTTP_GET = 1, HIN_HTTP_POST };
 enum { HIN_HTTP_KEEPALIVE = 0x1, HIN_HTTP_RANGE = 0x2, HIN_HTTP_MODIFIED = 0x4, HIN_HTTP_ETAG = 0x8,
 HIN_HTTP_CACHE = 0x10, HIN_HTTP_CHUNKED = 0x20, HIN_HTTP_DEFLATE = 0x40, HIN_HTTP_DATE = 0x80,
 HIN_HTTP_VER0 = 0x100 };
+
+#define HTTPD_TIMEOUT 10
 
 typedef struct {
   char * name;
@@ -39,6 +42,8 @@ typedef struct {
   int post_fd;
   off_t post_sz;
   char * post_sep;
+
+  basic_time_t next_time;
 
   string_t headers;
   z_stream z;

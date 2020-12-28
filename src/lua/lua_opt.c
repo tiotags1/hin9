@@ -61,12 +61,19 @@ static int l_hin_set_server_option (lua_State *L) {
   if (name == NULL) { printf ("option nil\n"); return 0; }
 
   if (strcmp (name, "enable") == 0) {
-    client->disable &= ~get_mask (lua_tostring (L, 3));
-    if (master.debug & DEBUG_CONFIG) printf ("lua server enable %s\n", name);
+    const char * param = lua_tostring (L, 3);
+    client->disable &= ~get_mask (param);
+    if (master.debug & DEBUG_CONFIG) printf ("lua server enable %s\n", param);
     return 0;
   } else if (strcmp (name, "disable") == 0) {
-    client->disable |= get_mask (lua_tostring (L, 3));
-    if (master.debug & DEBUG_CONFIG) printf ("lua server disable %s\n", name);
+    const char * param = lua_tostring (L, 3);
+    client->disable |= get_mask (param);
+    if (master.debug & DEBUG_CONFIG) printf ("lua server disable %s\n", param);
+    return 0;
+  } else if (strcmp (name, "timeout") == 0) {
+    int timeout = lua_tonumber (L, 3);
+    client->timeout = timeout;
+    if (master.debug & DEBUG_CONFIG) printf ("lua server timeout set to %d\n", timeout);
     return 0;
   } else {
     printf ("set_otion unknown option '%s'\n", name);

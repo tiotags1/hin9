@@ -27,7 +27,7 @@ enum { HIN_CLIENT = 1, HIN_DYN_BUFFER, HIN_SERVER, HIN_DOWNLOAD };
 
 enum { DEBUG_OTHER = 0x1, DEBUG_PIPE = 0x2, DEBUG_HEADERS = 0x4, DEBUG_RW = 0x8,
   DEBUG_SSL = 0x10, DEBUG_PROTO = 0x20, DEBUG_URING = 0x40, DEBUG_SOCKET = 0x80,
-  DEBUG_CGI = 0x100, DEBUG_POST = 0x200, DEBUG_CONFIG = 0x400 };
+  DEBUG_CGI = 0x100, DEBUG_POST = 0x200, DEBUG_CONFIG = 0x400, DEBUG_TIMER = 0x800 };
 
 typedef int (*hin_callback_t) (hin_buffer_t * buffer, int ret);
 
@@ -107,6 +107,7 @@ int hin_request_connect (hin_buffer_t * buffer);
 int hin_request_close (hin_buffer_t * buffer);
 int hin_request_openat (hin_buffer_t * buffer, int dfd, const char * path, int flags, int mode);
 int hin_request_statx (hin_buffer_t * buffer, int dfd, const char * path, int flags, int mask);
+int hin_request_timeout (hin_buffer_t * buffer, struct timespec * ts, int count, int flags);
 
 hin_buffer_t * hin_pipe_buffer_get (hin_pipe_t * pipe);
 int hin_pipe_advance (hin_pipe_t * pipe);

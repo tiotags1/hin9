@@ -62,7 +62,12 @@ static int hin_lines_read_callback (hin_buffer_t * buffer, int ret);
 
 int hin_lines_request (hin_buffer_t * buffer) {
   hin_client_t * client = (hin_client_t*)buffer->parent;
-  hin_buffer_prepare (buffer, READ_SZ);
+  int sz;
+  int new_pos = buffer->ptr - buffer->data;
+  int left = buffer->sz - new_pos;
+  if (left < (sz / 2)) { sz = READ_SZ; }
+  else { sz = left; }
+  hin_buffer_prepare (buffer, sz);
   buffer->flags = HIN_SOCKET | (client->flags & HIN_SSL);
   buffer->callback = hin_lines_read_callback;
   hin_request_read (buffer);

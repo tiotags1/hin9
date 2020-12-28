@@ -14,6 +14,7 @@ typedef struct hin_server_data_struct {
   int callback;
   uint32_t magic;
   uint32_t disable;
+  int timeout;
   lua_State *L;
   struct hin_server_data_struct * next;
 } hin_server_data_t;

@@ -30,6 +30,8 @@ void hin_client_clean (hin_client_t * client) {
   //if (client->read_buffer)
   //  hin_buffer_clean (client->read_buffer);
   //free (client);
+  hin_client_shutdown (client);
+  close (client->sockfd);
 }
 
 void hin_server_clean (hin_client_t * server) {

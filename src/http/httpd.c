@@ -6,6 +6,36 @@
 #include "hin.h"
 #include "lua.h"
 
+void httpd_client_ping (hin_client_t * client, int timeout) {
+  httpd_client_t * http = (httpd_client_t*)&client->extra;
+  http->next_time = basic_time_get ();
+  http->next_time.sec += timeout;
+}
+
+static void httpd_client_timer (hin_client_t * client, basic_time_t * now) {
+  httpd_client_t * http = (httpd_client_t *)&client->extra;
+  if (http->next_time.sec == 0) return 0;
+  basic_ftime dt = basic_time_fdiff (now, &http->next_time);
+  if (dt < 0) {
+    if (master.debug & DEBUG_TIMER)
+      printf ("httpd timer shutdown %d %.6f\n", client->sockfd, dt);
+    hin_client_shutdown (client);
+  } else {
+    if (master.debug & DEBUG_TIMER)
+      printf ("httpd timer %d %.6f\n", client->sockfd, dt);
+  }
+}
+
+void httpd_timer () {
+  basic_time_t now = basic_time_get ();
+  for (hin_client_t * server = master.server_list; server; server = server->next) {
+    hin_server_blueprint_t * bp = (hin_server_blueprint_t*)&server->extra;
+    for (hin_client_t * client = bp->active_client; client; client = client->next) {
+      httpd_client_timer (client, &now);
+    }
+  }
+}
+
 void httpd_client_clean (httpd_client_t * http) {
   if (http->file_path) free ((void*)http->file_path);
   if (http->post_sep) free ((void*)http->post_sep);
@@ -24,6 +54,7 @@ int httpd_client_start_request (hin_client_t * client) {
     httpd_client_t * http = (httpd_client_t*)&client->extra;
     http->disable = data->disable;
   }
+  httpd_client_ping (client, data->timeout);
 }
 
 int httpd_client_reread (hin_client_t * client);

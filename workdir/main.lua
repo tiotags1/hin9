@@ -57,7 +57,8 @@ end)
 --listen (server, "127.0.0.1", "8081", "workdir/cert.pem", "workdir/key.pem")
 listen (server, "127.0.0.1", "8080")
 
-set_server_option (server, "disable", "keepalive")
+set_server_option (server, "timeout", 5)
+--set_server_option (server, "disable", "keepalive")
 --set_server_option (server, "disable", "deflate")
 
 
