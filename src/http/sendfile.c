@@ -27,7 +27,7 @@ int hin_pipe_copy_deflate (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, in
     hin_buffer_t * new = hin_pipe_buffer_get (pipe);
     char * ptr = new->ptr;
     int nsz = 8;
-    if (http->flags & HIN_HTTP_CHUNKED) {
+    if (http->peer_flags & HIN_HTTP_CHUNKED) {
       new->sz -= 20; // size of max nr, 4 crlf + 0+crlfcrlf
       new->count = 0;
       int n = header (client, new, "%-*x\r\n", nsz, 0);
@@ -41,7 +41,7 @@ int hin_pipe_copy_deflate (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, in
     if (have > 0) {
       new->count = have;
       new->fd = pipe->out.fd;
-      if (http->flags & HIN_HTTP_CHUNKED) {
+      if (http->peer_flags & HIN_HTTP_CHUNKED) {
         header (client, new, "\r\n");
         if (http->z.avail_out != 0) {
           header (client, new, "0\r\n\r\n");
@@ -111,11 +111,15 @@ hin_pipe_t * send_file (hin_client_t * client, int filefd, off_t pos, off_t coun
   pipe->read_callback = NULL;
   pipe->finish_callback = done_file;
   pipe->extra_callback = extra;
-  
-  if (http->flags & HIN_HTTP_CHUNKED) {
-    pipe->read_callback = hin_pipe_copy_chunked;
+
+  int httpd_request_chunked (httpd_client_t * http);
+  if (http->peer_flags & HIN_HTTP_CHUNKED) {
+    if (httpd_request_chunked (http)) {
+      pipe->read_callback = hin_pipe_copy_chunked;
+    }
   }
-  if (http->flags & HIN_HTTP_DEFLATE) {
+  if (http->peer_flags & HIN_HTTP_DEFLATE) {
+    httpd_request_chunked (http);
     pipe->read_callback = hin_pipe_copy_deflate;
   }
 

@@ -102,14 +102,12 @@ int cgi_send (hin_client_t * client, int fd) {
   hin_pipe_advance (pipe);
 }
 
+int httpd_request_chunked (httpd_client_t * http);
+
 int hin_cgi (hin_client_t * client, const char * exe_path, const char * script_path) {
   httpd_client_t * http = (httpd_client_t*)&client->extra;
-  if ((http->flags & HIN_HTTP_VER0) == 0) {
-    http->flags |= HIN_HTTP_CHUNKED;
-  } else {
-    http->flags &= ~HIN_HTTP_KEEP;
-  }
-  http->state |= HIN_SERVICE;
+  httpd_request_chunked (http);
+  http->state |= HIN_REQ_DATA;
 
   const char * msg = "HTTP/1.1 200 OK\r\n";
   write (client->sockfd, msg, strlen (msg));
@@ -173,7 +171,7 @@ int hin_cgi (hin_client_t * client, const char * exe_path, const char * script_p
   var (&env, "REDIRECT_STATUS=%d", http->status);
   var (&env, "REQUEST_SCHEME=http");
   var (&env, "SERVER_NAME=localhost");
-  var (&env, "SERVER_PROTOCOL=HTTP/1.%d", http->flags & HIN_HTTP_VER0 ? 0 : 1);
+  var (&env, "SERVER_PROTOCOL=HTTP/1.%d", http->peer_flags & HIN_HTTP_VER0 ? 0 : 1);
   var (&env, "SERVER_SOFTWARE=hin");
 
   char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];

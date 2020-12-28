@@ -16,7 +16,7 @@ void httpd_client_clean (httpd_client_t * http) {
 int httpd_client_start_request (hin_client_t * client) {
   if (master.debug & DEBUG_PROTO) printf ("httpd request begin\n");
   httpd_client_t * http = (httpd_client_t*)&client->extra;
-  http->state |= HIN_HEADERS;
+  http->state |= HIN_REQ_HEADERS;
 
   hin_client_t * server = (hin_client_t*)client->parent;
   hin_server_data_t * data = (hin_server_data_t*)server->parent;
@@ -30,8 +30,8 @@ int httpd_client_reread (hin_client_t * client);
 
 int httpd_client_finish (hin_client_t * client) {
   httpd_client_t * http = (httpd_client_t*)&client->extra;
-  if ((http->state & (HIN_SERVICE|HIN_POST|HIN_WAIT)) == 0) {
-    if ((http->flags & HIN_HTTP_KEEP)) {
+  if ((http->state & (HIN_REQ_DATA | HIN_REQ_POST | HIN_REQ_WAIT)) == 0) {
+    if ((http->peer_flags & HIN_HTTP_KEEPALIVE)) {
       httpd_client_clean (http);
       httpd_client_start_request (client);
       httpd_client_reread (client);
@@ -40,7 +40,7 @@ int httpd_client_finish (hin_client_t * client) {
       hin_lines_request (client->read_buffer);
       httpd_client_clean (http);
       client->read_buffer = NULL;
-      http->state |= HIN_END;
+      http->state |= HIN_REQ_END;
     }
   }
 }
@@ -48,7 +48,7 @@ int httpd_client_finish (hin_client_t * client) {
 int httpd_client_finish_request (hin_client_t * client) {
   if (master.debug & DEBUG_PROTO) printf ("httpd request done\n");
   httpd_client_t * http = (httpd_client_t*)&client->extra;
-  http->state = (http->state & ~HIN_SERVICE);
+  http->state = (http->state & ~HIN_REQ_DATA);
   httpd_client_finish (client);
 }
 
@@ -90,7 +90,7 @@ int post_done (hin_pipe_t * pipe) {
   //close (pipe->out);
   hin_client_t * client = (hin_client_t*)pipe->parent;
   httpd_client_t * http = (httpd_client_t*)client->extra;
-  http->state &= ~HIN_POST;
+  http->state &= ~HIN_REQ_POST;
   httpd_client_finish (client);
 }
 
@@ -114,7 +114,7 @@ int httpd_client_read_callback (hin_client_t * client, string_t * source) {
     printf ("post initial %ld %ld fd %d '%.*s'\n", http->post_sz, source->len, http->post_fd, consume, source->ptr);
     write (http->post_fd, source->ptr, consume);
     if (left > 0) {
-      http->state |= HIN_POST;
+      http->state |= HIN_REQ_POST;
       // request more post
       receive_file (client, http->post_fd, consume, left, 0, post_done);
       //return used;
@@ -126,18 +126,18 @@ int httpd_client_read_callback (hin_client_t * client, string_t * source) {
   int hin_server_callback (hin_client_t * client);
   hin_server_callback (client);
 
-  if (http->flags & HIN_HTTP_CAN_DEFLATE) {
+  if (http->peer_flags & HIN_HTTP_DEFLATE) {
     int hin_client_deflate_init (httpd_client_t * http);
     hin_client_deflate_init (http);
   }
 
-  if ((http->state & ~(HIN_HEADERS|HIN_END)) == 0) {
+  if ((http->state & ~(HIN_REQ_HEADERS|HIN_REQ_END)) == 0) {
     printf ("httpd 500 missing request\n");
     httpd_respond_error (client, 500, NULL);
     hin_client_shutdown (client);
     return used;
   }
-  if (http->state & HIN_HEADERS) {
+  if (http->state & HIN_REQ_HEADERS) {
     httpd_client_reread (client);
   }
   return used;

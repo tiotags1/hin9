@@ -3,10 +3,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <hin.h>
+#include "hin.h"
 #include "http.h"
 #include <basic_pattern.h>
 
+/*
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -131,4 +132,4 @@ int httpd_parse_post (hin_client_t * client, string_t * source) {
 
   return (uintptr_t)source->ptr - (uintptr_t)start.ptr;
 }
-
+*/

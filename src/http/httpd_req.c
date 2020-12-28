@@ -43,7 +43,7 @@ int httpd_respond_error (hin_client_t * client, int status, const char * body) {
   hin_request_write (buf);
 
   httpd_client_t * http = (httpd_client_t*)&client->extra;
-  http->state |= HIN_SERVICE;
+  http->state |= HIN_REQ_DATA;
 }
 
 static int httpd_close_filefd_callback (hin_buffer_t * buffer, int ret) {
@@ -72,7 +72,7 @@ static int httpd_headers_write_callback (hin_buffer_t * buffer, int ret) {
     httpd_close_filefd (buffer, http);
     return 0;
   } else {
-    hin_pipe_t * pipe = send_file (client, http->filefd, http->pos, http->count, http->flags & (HIN_HTTP_DEFLATE | HIN_HTTP_CHUNKED), NULL);
+    hin_pipe_t * pipe = send_file (client, http->filefd, http->pos, http->count, 0, NULL);
     pipe->out_error_callback = httpd_pipe_error_callback;
   }
   return 1;
@@ -91,20 +91,20 @@ static int httpd_statx_callback (hin_buffer_t * buf, int ret) {
   struct statx stat1 = *(struct statx *)buf->ptr;
   struct statx * stat = &stat1;
 
-  http->sz = stat->stx_size;
+  off_t sz = stat->stx_size;
   buf->callback = httpd_headers_write_callback;
 
-  if (http->count < 0) http->count = http->sz - http->pos;
-  if (http->pos != 0 || http->count != http->sz) {
-    if (http->status != 200 || (http->disable & HIN_DISABLE_RANGE)) {
+  if (http->count < 0) http->count = sz - http->pos;
+  if (http->pos != 0 || http->count != sz) {
+    if (http->status != 200 || (http->disable & HIN_HTTP_RANGE)) {
       http->pos = 0;
-      http->count = http->sz;
+      http->count = sz;
     } else {
       http->status = 206;
     }
   }
 
-  if (http->pos < 0 || http->pos > http->sz || http->pos + http->count > http->sz) {
+  if (http->pos < 0 || http->pos > sz || http->pos + http->count > sz) {
     printf ("http 416 error out of range\n");
     httpd_respond_error (client, 416, NULL);
     httpd_close_filefd (buf, http);
@@ -112,7 +112,7 @@ static int httpd_statx_callback (hin_buffer_t * buf, int ret) {
   }
 
   if (master.debug & DEBUG_PIPE) {
-    printf ("fstat %s size %ld\n", http->file_path, http->sz);
+    printf ("fstat %s size %ld\n", http->file_path, sz);
     printf ("sending file %s to sockfd %d filefd %d\n", http->file_path, client->sockfd, http->filefd);
   }
 
@@ -126,10 +126,10 @@ static int httpd_statx_callback (hin_buffer_t * buf, int ret) {
   char buffer[80];
 
   if (1) {
-    if (http->disable & HIN_DISABLE_MODIFIED_SINCE) {
+    if (http->disable & HIN_HTTP_MODIFIED) {
       http->modified_since = 0;
     }
-    if (http->disable & HIN_DISABLE_ETAG) {
+    if (http->disable & HIN_HTTP_ETAG) {
       http->etag = 0;
     }
     time_t rawtime = stat->stx_mtime.tv_sec;
@@ -143,53 +143,56 @@ static int httpd_statx_callback (hin_buffer_t * buf, int ret) {
     }
   }
 
-  if (http->disable & HIN_DISABLE_DEFLATE) {
-    http->flags &= ~HIN_HTTP_DEFLATE;
+  if (http->disable & HIN_HTTP_DEFLATE) {
+    http->peer_flags &= ~HIN_HTTP_DEFLATE;
   }
-  if (http->disable & HIN_DISABLE_CHUNKED) {
-    http->flags &= ~HIN_HTTP_CHUNKED;
+  if (http->disable & HIN_HTTP_CHUNKED) {
+    if (http->peer_flags & HIN_HTTP_CHUNKED) {
+      http->peer_flags &= ~HIN_HTTP_KEEPALIVE;
+    }
+    http->peer_flags &= ~HIN_HTTP_CHUNKED;
   }
 
-  header (client, buf, "HTTP/1.%d %d %s\r\n", http->flags & HIN_HTTP_VER0 ? 0 : 1, http->status, http_status_name (http->status));
-  if ((http->disable & HIN_DISABLE_DATE) == 0) {
+  header (client, buf, "HTTP/1.%d %d %s\r\n", http->peer_flags & HIN_HTTP_VER0 ? 0 : 1, http->status, http_status_name (http->status));
+  if ((http->disable & HIN_HTTP_DATE) == 0) {
     time (&rawtime);
     info = gmtime (&rawtime);
     strftime (buffer, sizeof buffer, "%a, %d %b %Y %X GMT", info);
 
     header (client, buf, "Data: %s\r\n", buffer);
   }
-  if ((http->disable & HIN_DISABLE_MODIFIED_SINCE) == 0) {
+  if ((http->disable & HIN_HTTP_MODIFIED) == 0) {
     rawtime = stat->stx_mtime.tv_sec;
     info = gmtime (&rawtime);
     strftime (buffer, sizeof buffer, "%a, %d %b %Y %X GMT", info);
     header (client, buf, "Last-Modified: %s\r\n", buffer);
   }
-  if ((http->disable & HIN_DISABLE_ETAG) == 0) {
+  if ((http->disable & HIN_HTTP_ETAG) == 0) {
     header (client, buf, "ETag: \"%lx\"\r\n", etag);
   }
-  if (http->flags & HIN_HTTP_DEFLATE) {
+  if (http->peer_flags & HIN_HTTP_DEFLATE) {
     header (client, buf, "Content-Encoding: deflate\r\n");
   }
-  if (http->flags & HIN_HTTP_CHUNKED) {
+  if (http->peer_flags & HIN_HTTP_CHUNKED) {
     header (client, buf, "Transfer-Encoding: chunked\r\n");
   }
-  if (http->sz > 0 && !(http->flags & HIN_HTTP_DEFLATE)) {
-    header (client, buf, "Content-Length: %ld\r\n", http->sz);
+  if (sz > 0 && !(http->peer_flags & HIN_HTTP_DEFLATE)) {
+    header (client, buf, "Content-Length: %ld\r\n", sz);
   }
-  if ((http->disable & HIN_DISABLE_CACHE) == 0) {
+  if ((http->disable & HIN_HTTP_CACHE) == 0) {
     if (http->cache > 0) {
       header (client, buf, "Cache-Control: public, max-age=%ld\r\n", http->cache);
     } else if (http->cache < 0) {
       header (client, buf, "Cache-Control: no-cache, no-store\r\n");
     }
   }
-  if ((http->disable & HIN_DISABLE_RANGE) == 0) {
+  if ((http->disable & HIN_HTTP_RANGE) == 0) {
     header (client, buf, "Accept-Ranges: bytes\r\n");
   }
   if (http->status == 206) {
-    header (client, buf, "Content-Range: bytes %ld-%ld/%ld\r\n", http->pos, http->pos+http->count-1, http->sz);
+    header (client, buf, "Content-Range: bytes %ld-%ld/%ld\r\n", http->pos, http->pos+http->count-1, sz);
   }
-  if (http->flags & HIN_HTTP_KEEP) {
+  if (http->peer_flags & HIN_HTTP_KEEPALIVE) {
     header (client, buf, "Connection: keep-alive\r\n");
   } else {
     header (client, buf, "Connection: close\r\n");
@@ -223,7 +226,7 @@ int httpd_handle_file_request (hin_client_t * client, const char * path, off_t p
   http->file_path = strdup (path);
   http->pos = pos;
   http->count = count;
-  http->state |= HIN_SERVICE;
+  http->state |= HIN_REQ_DATA;
 
   hin_buffer_t * buf = malloc (sizeof (*buf) + READ_SZ);
   memset (buf, 0, sizeof (*buf));
@@ -247,16 +250,13 @@ int httpd_parse_req (hin_client_t * client, string_t * source) {
   int used = httpd_parse_headers (client, source);
   if (used <= 0) return used;
 
-  http->headers.ptr = orig.ptr;
-  http->headers.len = used;
-  http->rest.ptr = http->headers.ptr+used;
-  http->rest.len = (uintptr_t)(orig.ptr+orig.len) - (uintptr_t)http->rest.ptr;
-  if (http->rest.len > http->post_sz) http->rest.len = http->post_sz;
+  http->headers = orig;
+  if (http->headers.len > used + http->post_sz) http->headers.len = used + http->post_sz;
 
-  if (http->disable & HIN_DISABLE_KEEPALIVE) {
-    http->flags &= ~HIN_HTTP_KEEP;
+  if (http->disable & HIN_HTTP_KEEPALIVE) {
+    http->peer_flags &= ~HIN_HTTP_KEEPALIVE;
   }
-  http->state &= ~HIN_HEADERS;
+  http->state &= ~HIN_REQ_HEADERS;
 
   return used;
 }

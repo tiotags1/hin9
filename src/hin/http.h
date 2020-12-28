@@ -6,17 +6,13 @@
 
 #include "uri.h"
 
-enum { HTTP_FORM_MULTIPART=1 };
-
-enum { HIN_HEADERS = 0x1, HIN_POST = 0x2, HIN_SERVICE = 0x4, HIN_WAIT = 0x8, HIN_END = 0x10 };
-
-enum { HIN_HTTP_KEEP = 0x1, HIN_HTTP_VER0 = 0x4, HIN_HTTP_CHUNKED = 0x8, HIN_HTTP_DEFLATE = 0x10, HIN_HTTP_CAN_DEFLATE = 0x20 };
+enum { HIN_REQ_HEADERS = 0x1, HIN_REQ_DATA = 0x2, HIN_REQ_POST = 0x4, HIN_REQ_WAIT = 0x8, HIN_REQ_END = 0x10 };
 
 enum { HIN_HTTP_GET = 1, HIN_HTTP_POST };
 
-enum { HIN_DISABLE_KEEPALIVE = 0x1, HIN_DISABLE_RANGE = 0x2, HIN_DISABLE_MODIFIED_SINCE = 0x4, HIN_DISABLE_ETAG = 0x8,
-HIN_DISABLE_CACHE = 0x10, HIN_DISABLE_POST = 0x20, HIN_DISABLE_CHUNKED = 0x40, HIN_DISABLE_DEFLATE = 0x80,
-HIN_DISABLE_DATE = 0x100 };
+enum { HIN_HTTP_KEEPALIVE = 0x1, HIN_HTTP_RANGE = 0x2, HIN_HTTP_MODIFIED = 0x4, HIN_HTTP_ETAG = 0x8,
+HIN_HTTP_CACHE = 0x10, HIN_HTTP_CHUNKED = 0x20, HIN_HTTP_DEFLATE = 0x40, HIN_HTTP_DATE = 0x80,
+HIN_HTTP_VER0 = 0x100 };
 
 typedef struct {
   char * name;
@@ -27,27 +23,24 @@ typedef struct {
 
 typedef struct {
   uint32_t state;
-  uint32_t flags;
-  uint32_t disable;
+  uint32_t peer_flags, disable;
 
   int status;
   int method;
 
   int filefd;
   const char * file_path;
-  off_t pos, count, sz;
+  off_t pos, count;
 
   time_t cache;
   time_t modified_since;
   uint64_t etag;
 
   int post_fd;
-  int post_type;
   off_t post_sz;
   char * post_sep;
-  httpd_client_field_t field;
 
-  string_t headers, rest;
+  string_t headers;
   z_stream z;
 } httpd_client_t;
 

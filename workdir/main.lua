@@ -15,6 +15,7 @@ function GetFileExtension (url)
 end
 
 to_cache = {ico=true, txt=true, js=true, jpg=true, png=true, css=true}
+undeflate = {ico=true, jpg=true, png=true, bin=true, iso=true}
 
 local server = create_httpd (function (server, req)
   local path, query, method, version = parse_path (req)
@@ -43,6 +44,9 @@ local server = create_httpd (function (server, req)
   end
   local file_path, file_name = sanitize_path (req, "htdocs", path)
   --print (string.format ("file_path for '%s' ext '%s' res '%s'", path, ext, file_path))
+  if (undeflate[ext]) then
+    set_option (req, "disable", "deflate")
+  end
   if (ext == "php") then
     return cgi (req, "/usr/bin/php-cgi", file_path)
   elseif (to_cache[ext]) then
@@ -54,6 +58,7 @@ end)
 listen (server, "127.0.0.1", "8080")
 
 set_server_option (server, "disable", "keepalive")
+--set_server_option (server, "disable", "deflate")
 
 
 

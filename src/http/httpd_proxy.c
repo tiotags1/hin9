@@ -80,7 +80,7 @@ static int connected (hin_client_t * client, int ret) {
 
 int hin_proxy (hin_client_t * client, const char * url) {
   httpd_client_t * http = (httpd_client_t*)client->extra;
-  http->state |= HIN_SERVICE;
+  http->state |= HIN_REQ_DATA;
 
   hin_uri_t info;
   if (hin_parse_uri (url, 0, &info) < 0) {

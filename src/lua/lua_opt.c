@@ -10,23 +10,23 @@
 
 uint32_t get_mask (const char * name) {
   if (strcmp (name, "keepalive") == 0) {
-    return HIN_DISABLE_KEEPALIVE;
+    return HIN_HTTP_KEEPALIVE;
   } else if (strcmp (name, "range") == 0) {
-    return HIN_DISABLE_RANGE;
+    return HIN_HTTP_RANGE;
   } else if (strcmp (name, "modified_since") == 0) {
-    return HIN_DISABLE_MODIFIED_SINCE;
+    return HIN_HTTP_MODIFIED;
   } else if (strcmp (name, "etag") == 0) {
-    return HIN_DISABLE_ETAG;
+    return HIN_HTTP_ETAG;
   } else if (strcmp (name, "cache") == 0) {
-    return HIN_DISABLE_CACHE;
+    return HIN_HTTP_CACHE;
   } else if (strcmp (name, "post") == 0) {
-    return HIN_DISABLE_POST;
+    return HIN_HTTP_POST;
   } else if (strcmp (name, "chunked") == 0) {
-    return HIN_DISABLE_CHUNKED;
+    return HIN_HTTP_CHUNKED;
   } else if (strcmp (name, "deflate") == 0) {
-    return HIN_DISABLE_DEFLATE;
+    return HIN_HTTP_DEFLATE;
   } else if (strcmp (name, "date") == 0) {
-    return HIN_DISABLE_DATE;
+    return HIN_HTTP_DATE;
   } else if (strcmp (name, "all") == 0) {
     return 0xffffffff;
   } else {
@@ -86,11 +86,7 @@ static int l_hin_get_option (lua_State *L) {
 
   httpd_client_t * http = (httpd_client_t*)client->extra;
   if (strcmp (name, "keepalive") == 0) {
-    if (http->flags & HIN_HTTP_KEEP) lua_pushboolean (L, 1);
-    else lua_pushboolean (L, 0);
-    return 1;
-  } else if (strcmp (name, "deflate") == 0) {
-    if (http->flags & HIN_HTTP_DEFLATE) lua_pushboolean (L, 1);
+    if (http->disable & HIN_HTTP_KEEPALIVE) lua_pushboolean (L, 1);
     else lua_pushboolean (L, 0);
     return 1;
   } else {
@@ -114,7 +110,7 @@ static int l_hin_set_option (lua_State *L) {
     int value = lua_toboolean (L, 3);
     printf ("set keepalive to %d\n", value);
     if (value) {  }
-    else { http->flags &= ~HIN_HTTP_KEEP; }
+    else { http->peer_flags &= ~HIN_HTTP_KEEPALIVE; }
     return 0;
   } else if (strcmp (name, "status") == 0) {
     http->status = lua_tonumber (L, 3);

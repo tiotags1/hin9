@@ -48,7 +48,7 @@ int httpd_parse_headers_line (httpd_client_t * http, string_t * line) {
     while (match_string (line, "([%w]+)", &param) > 0) {
       if (match_string (&param, "deflate") > 0) {
         if (master.debug) printf (" can use deflate\n");
-        http->flags |= HIN_HTTP_CAN_DEFLATE;
+        http->peer_flags |= HIN_HTTP_DEFLATE;
       }
       if (match_string (line, "%s*,%s*") <= 0) break;
     }
@@ -72,17 +72,16 @@ int httpd_parse_headers_line (httpd_client_t * http, string_t * line) {
   } else if (match_string (line, "Connection:%s*") > 0) {
     if (match_string (line, "close") > 0) {
       if (master.debug) printf ("connection requested closed\n");
-      http->flags &= ~HIN_HTTP_KEEP;
+      http->peer_flags &= ~HIN_HTTP_KEEPALIVE;
     } else if (match_string (line, "keep%-alive") > 0) {
       if (master.debug) printf ("connection requested keepalive\n");
-      http->flags |= HIN_HTTP_KEEP;
+      http->peer_flags |= HIN_HTTP_KEEPALIVE;
     }
   } else if (http->method == HIN_HTTP_POST) {
     if (match_string (line, "Content%-Length: (%d+)", &param) > 0) {
       http->post_sz = atoi (param.ptr);
       if (master.debug & DEBUG_POST) printf ("Content length is %ld\n", http->post_sz);
     } else if (match_string (line, "Content%-Type: multipart/form%-data; boundary=([%-%w]+)", &param) > 0) {
-      http->post_type = HTTP_FORM_MULTIPART;
       char * new = malloc (param.len + 2 + 1);
       new[0] = '-';
       new[1] = '-';
@@ -132,9 +131,9 @@ int httpd_parse_headers (hin_client_t * client, string_t * source) {
     return -1;
   }
   if (*param.ptr != '1') {
-    http->flags |= HIN_HTTP_VER0;
+    http->peer_flags |= HIN_HTTP_VER0;
   } else {
-    http->flags |= HIN_HTTP_KEEP;
+    http->peer_flags |= HIN_HTTP_KEEPALIVE;
   }
   if (check_equal_string (&method, "GET") > 0) {
     http->method = HIN_HTTP_GET;
@@ -149,7 +148,7 @@ int httpd_parse_headers (hin_client_t * client, string_t * source) {
 
   if (master.debug & DEBUG_HEADERS)
     printf ("method '%.*s' path '%.*s' HTTP/1.%d fd %d\n", (int)method.len, method.ptr,
-      (int)path.len, path.ptr, http->flags & HIN_HTTP_VER0 ? 0 : 1, client->sockfd);
+      (int)path.len, path.ptr, http->peer_flags & HIN_HTTP_VER0 ? 0 : 1, client->sockfd);
 
   http->count = -1;
 
