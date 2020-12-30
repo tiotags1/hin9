@@ -42,6 +42,7 @@ int hin_pipe_copy_deflate (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, in
       new->count = have;
       new->fd = pipe->out.fd;
       if (http->peer_flags & HIN_HTTP_CHUNKED) {
+        new->count += nsz + 2;
         header (client, new, "\r\n");
         if (http->z.avail_out != 0) {
           header (client, new, "0\r\n\r\n");
@@ -52,6 +53,7 @@ int hin_pipe_copy_deflate (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, in
         int offset = nsz - num;
         char * ptr = new->buffer + offset;
         snprintf (ptr, num+1, "%x", have);
+        ptr[num] = '\r';
         new->ptr = ptr;
         new->count -= offset;
       }

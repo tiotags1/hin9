@@ -106,7 +106,9 @@ int httpd_request_chunked (httpd_client_t * http) {
   if (http->peer_flags & HIN_HTTP_VER0) {
     http->peer_flags &= ~(HIN_HTTP_KEEPALIVE | HIN_HTTP_CHUNKED);
   } else {
-    http->peer_flags |= HIN_HTTP_CHUNKED;
+    if (http->peer_flags & HIN_HTTP_KEEPALIVE) {
+      http->peer_flags |= HIN_HTTP_CHUNKED;
+    }
     return 1;
   }
   return 0;
