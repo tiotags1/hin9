@@ -7,22 +7,25 @@
 #include <hin.h>
 
 static hin_buffer_t * buffer = NULL;
+static hin_buffer_t * timeout_buffer = NULL;
+
+void hin_stop ();
 
 int console_execute (string_t * source) {
   if (match_string (source, "q") > 0) {
     printf ("do quit\n");
-    master.quit = 1;
-    buffer = NULL;
-    //close (0);
+    hin_stop ();
+  } else if (match_string (source, "r") > 0) {
+    int hin_restart ();
+    hin_restart ();
   }
 }
 
 static int hin_console_read_callback (hin_buffer_t * buf, int ret) {
   if (ret == 0) {
-    printf ("free console\n");
-    master.quit = 1;
-    buffer = NULL;
-    return 1;
+    printf ("console EOF\n");
+    hin_stop ();
+    return 0;
   }
   string_t temp;
   temp.ptr = buf->ptr;
@@ -36,6 +39,8 @@ static int hin_console_read_callback (hin_buffer_t * buf, int ret) {
 void hin_console_clean () {
   if (buffer)
     hin_buffer_clean (buffer);
+  if (timeout_buffer)
+    hin_buffer_clean (timeout_buffer);
 }
 
 static int hin_timer_callback (hin_buffer_t * buffer, int ret) {
@@ -66,6 +71,7 @@ void hin_console_init () {
   buf->callback = hin_timer_callback;
   buf->count = buf->sz = sizeof (struct timespec);
   buf->ptr = buf->buffer;
+  timeout_buffer = buf;
   struct timespec * ts = (struct timespec *)&buf->buffer;
   ts->tv_sec = 1;
   ts->tv_nsec = 0;

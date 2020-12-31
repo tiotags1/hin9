@@ -32,7 +32,6 @@ void lua_server_clean (hin_server_data_t * server) {
 
   // TODO this is bad
   lua_close (L);
-  printf ("closed lua\n");
 
   free (server);
 }

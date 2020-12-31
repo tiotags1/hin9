@@ -17,6 +17,10 @@ void hin_clean () {
   }
   void hin_console_clean ();
   hin_console_clean ();
+  int hin_event_clean ();
+  hin_event_clean ();
+
+  printf ("hin close ...\n");
   #ifdef BASIC_USE_MALLOC_DEBUG
   print_unfree ();
   #endif
@@ -51,15 +55,13 @@ int main (int argc, const char * argv[]) {
   //master.debug &= ~(DEBUG_URING);
   void hin_init_sharedmem ();
   hin_init_sharedmem ();
-
   void hin_event_init ();
   hin_event_init ();
-  void hin_console_init ();
   void hin_console_init ();
   hin_console_init ();
 
   int lua_init ();
-  if (lua_init () < 0) { 
+  if (lua_init () < 0) {
     printf ("could not load config file\n");
     return -1;
   }

@@ -9,7 +9,6 @@
 typedef struct {
   int sockfd;
   int type;	// listen/connection, udp/tcp, etc
-  int port;
   struct sockaddr in_addr;
   socklen_t in_len;
 } hin_master_socket_t;

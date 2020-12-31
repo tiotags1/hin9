@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "hin.h"
+#include "http.h"
 #include "lua.h"
 #include "ssl.h"
 
@@ -43,14 +44,15 @@ static int l_hin_listen (lua_State *L) {
   }
   const char * addr = lua_tostring (L, 2);
   const char * port = lua_tostring (L, 3);
-  const char * cert = lua_tostring (L, 4);
-  const char * key = lua_tostring (L, 5);
+  const char * type = lua_tostring (L, 4);
+  const char * cert = lua_tostring (L, 5);
+  const char * key = lua_tostring (L, 6);
   SSL_CTX * ctx = NULL;
   if (cert && key) {
     ctx = hin_ssl_init (cert, key);
     if (ctx == NULL) return 0;
   } else {
-    int ssl = lua_toboolean (L, 4);
+    int ssl = lua_toboolean (L, 5);
     if (ssl) {
       if (default_ctx == NULL) {
         printf ("ssl not init\n");
@@ -59,8 +61,7 @@ static int l_hin_listen (lua_State *L) {
     }
   }
 
-  hin_client_t * httpd_create (const char * addr, const char * port, void * ssl);
-  hin_client_t * sock = httpd_create (addr, port, ctx);
+  hin_client_t * sock = httpd_create (addr, port, type, ctx);
   sock->parent = server;
   lua_pushlightuserdata (L, sock);
 

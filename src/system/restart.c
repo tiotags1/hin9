@@ -10,20 +10,33 @@
 
 #include <hin.h>
 
-static void sig_restart (int signo) {
-  printf("hin restart ...\n", signo);
+void hin_stop () {
+  master.quit = 1;
+  void httpd_timer_flush ();
+  httpd_timer_flush ();
+}
+
+int hin_restart () {
+  printf("hin restart ...\n");
   int pid = fork ();
-  if (pid != 0) {
-    printf ("closing former process\n");
+  if (pid == 0) {
+    printf ("close issued to former process\n");
     // wait for child to finish init
     // if finished ok then set quit 1
-    exit (0);
+    hin_stop ();
+    return 0;
   }
+  int hin_event_clean ();
+  hin_event_clean ();
   printf ("running exe file '%s'\n", master.exe_path);
   char * buf = NULL;
   asprintf (&buf, "--reuse=%d", master.sharefd);
   char * argv[] = {master.exe_path, buf, NULL};
   execvp (master.exe_path, argv);
+}
+
+static void sig_restart (int signo) {
+  hin_restart ();
 }
 
 int install_sighandler () {
@@ -52,11 +65,11 @@ int install_sighandler () {
 static int hin_use_sharedmem (int sharefd) {
   hin_master_share_t * share = mmap (NULL, 4096, PROT_READ|PROT_WRITE, MAP_SHARED, sharefd, 0);
   master.share = share;
-  printf ("resuing sockets\n");
+  /*printf ("resuing sockets\n");
   for (int i=0; i<share->nsocket; i++) {
     hin_master_socket_t * sock = &share->sockets[i];
     printf ("%d. socket %d\n", i, sock->sockfd);
-  }
+  }*/
 }
 
 static int hin_create_sharedmem () {

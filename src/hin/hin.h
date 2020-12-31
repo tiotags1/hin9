@@ -94,7 +94,8 @@ typedef struct hin_server_struct {
 } hin_server_blueprint_t;
 
 hin_client_t * hin_connect (const char * host, const char * port, int extra_size, int (*callback) (hin_client_t * client, int ret));
-int hin_socket_listen (const char * address, const char * port, hin_client_t * client);
+int hin_socket_listen (const char * address, const char * port, const char * sock_type, hin_client_t * client);
+int hin_socket_search (const char * addr, const char *port, const char * sock_type, hin_client_t * client);
 
 void hin_client_shutdown (hin_client_t * client);
 void hin_client_close (hin_client_t * client);
@@ -128,6 +129,8 @@ int hin_lines_request (hin_buffer_t * buffer);
 int hin_lines_reread (hin_client_t * client);
 #include <basic_pattern.h>
 hin_buffer_t * hin_lines_create (hin_client_t * client, int sockfd, int (*callback) (hin_client_t * client, string_t * source));
+
+int hin_client_addr (char * str, int len, struct sockaddr * ai_addr, socklen_t ai_addrlen);
 
 #endif
 

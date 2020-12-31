@@ -26,10 +26,8 @@ local server = create_httpd (function (server, req)
   --for i, k in pairs (h) do
   --  print ("header ", i, k)
   --end
-  --set_option (req, "keepalive", false)
   --set_option (req, "status", 403)
   --set_option (req, "cache", -1)
-  --set_option (req, "disable", "keepalive")
   local ext = GetFileExtension (path)
   if (path == "/proxy") then
     return proxy (req, "http://localhost:28005/")
@@ -54,10 +52,21 @@ local server = create_httpd (function (server, req)
   end
   send_file (req, file_path, 0, -1)
 end)
---listen (server, "127.0.0.1", "8081", "workdir/cert.pem", "workdir/key.pem")
-listen (server, "127.0.0.1", "8080")
 
-set_server_option (server, "timeout", 5)
+--[[
+  listen
+  1st param: server object
+  2nd param: bind address
+  3rd param: port number
+  4th param: ipv4, ipv6, any/nil
+  5th and 6th param: ssl certificate and ssl key
+]]
+--listen (server, "localhost", "8081", nil, "workdir/cert.pem", "workdir/key.pem")
+listen (server, "localhost", "8080", "ipv4")
+--listen (server, nil, "8080", "ipv4")
+--listen (server, nil, "8080", "any")
+
+set_server_option (server, "timeout", 15)
 --set_server_option (server, "disable", "keepalive")
 --set_server_option (server, "disable", "deflate")
 

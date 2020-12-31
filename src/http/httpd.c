@@ -14,12 +14,15 @@ void httpd_client_ping (hin_client_t * client, int timeout) {
 
 static void httpd_client_timer (hin_client_t * client, basic_time_t * now) {
   httpd_client_t * http = (httpd_client_t *)&client->extra;
-  if (http->next_time.sec == 0) return 0;
+  if (http->next_time.sec == 0) return ;
   basic_ftime dt = basic_time_fdiff (now, &http->next_time);
   if (dt < 0) {
+    int do_close = 0;
+    if (http->state & (HIN_REQ_HEADERS | HIN_REQ_POST)) do_close = 1;
     if (master.debug & DEBUG_TIMER)
-      printf ("httpd timer shutdown %d %.6f\n", client->sockfd, dt);
-    hin_client_shutdown (client);
+      printf ("httpd timer shutdown %d %s%.6f\n", client->sockfd, do_close ? "close " : "", dt);
+    if (do_close)
+      hin_client_shutdown (client);
   } else {
     if (master.debug & DEBUG_TIMER)
       printf ("httpd timer %d %.6f\n", client->sockfd, dt);
@@ -32,6 +35,18 @@ void httpd_timer () {
     hin_server_blueprint_t * bp = (hin_server_blueprint_t*)&server->extra;
     for (hin_client_t * client = bp->active_client; client; client = client->next) {
       httpd_client_timer (client, &now);
+    }
+  }
+}
+
+void httpd_timer_flush () {
+  basic_time_t now = basic_time_get ();
+  now.sec -= 1;
+  for (hin_client_t * server = master.server_list; server; server = server->next) {
+    hin_server_blueprint_t * bp = (hin_server_blueprint_t*)&server->extra;
+    for (hin_client_t * client = bp->active_client; client; client = client->next) {
+      httpd_client_t * http = (httpd_client_t *)&client->extra;
+      http->next_time = now;
     }
   }
 }
@@ -179,9 +194,15 @@ int httpd_client_accept (hin_client_t * client) {
   client->read_buffer = hin_lines_create (client, client->sockfd, httpd_client_read_callback);
 }
 
-hin_client_t * httpd_create (const char * addr, const char * port, void * ssl_ctx) {
+hin_client_t * httpd_create (const char * addr, const char * port, const char * sock_type, void * ssl_ctx) {
   hin_client_t * server = calloc (1, sizeof *server + sizeof (hin_server_blueprint_t));
-  int sockfd = hin_socket_listen (addr, port, server);
+  int sockfd;
+  sockfd = hin_socket_search (addr, port, sock_type, server);
+  if (sockfd < 0) {
+    sockfd = hin_socket_listen (addr, port, sock_type, server);
+  } else {
+    printf ("reused sockfd %d\n", sockfd);
+  }
   if (sockfd < 0) {
     printf ("can't listen on %s:%s\n", addr, port);
     free (server);

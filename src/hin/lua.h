@@ -2,9 +2,9 @@
 #ifndef HIN_LUA_H
 #define HIN_LUA_H
 
-#include <lua.h>
-#include <lualib.h>
-#include <lauxlib.h>
+#include <lua5.1/lua.h>
+#include <lua5.1/lualib.h>
+#include <lua5.1/lauxlib.h>
 
 typedef struct { const char * name; int (*ptr) (lua_State *); } lua_function_t;
 

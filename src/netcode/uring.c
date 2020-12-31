@@ -16,7 +16,20 @@
 struct io_uring ring;
 
 int hin_event_init () {
-  io_uring_queue_init (QUEUE_DEPTH, &ring, 0);
+  int err = io_uring_queue_init (QUEUE_DEPTH, &ring, 0);
+  if (err < 0) {
+    printf ("io_uring_queue_init failed %s\n", strerror (-err));
+    exit (1);
+  }
+  err = io_uring_ring_dontfork (&ring);
+  if (err < 0) {
+    printf ("io_uring_ring_dontfork failed %s\n", strerror (-err));
+    exit (1);
+  }
+}
+
+int hin_event_clean () {
+  io_uring_queue_exit (&ring);
 }
 
 int hin_ssl_read (hin_buffer_t * crypt, int ret);
