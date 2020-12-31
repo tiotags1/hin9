@@ -201,7 +201,11 @@ int hin_cgi (hin_client_t * client, const char * exe_path, const char * script_p
   while (find_line (&source, &line)) {
     if (line.len == 0) break;
     if (match_string (&line, "([%w_%-]+):%s*", &param1) > 0) {
-      var (&env, "HTTP_%.*s=%.*s", param1.len, param1.ptr, line.len, line.ptr);
+      if (matchi_string (&param1, "content%-type") > 0) {
+        var (&env, "CONTENT_TYPE=%.*s", line.len, line.ptr);
+      } else {
+        var (&env, "HTTP_%.*s=%.*s", param1.len, param1.ptr, line.len, line.ptr);
+      }
       upcase (&env);
     }
   }
