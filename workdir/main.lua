@@ -28,6 +28,7 @@ local server = create_httpd (function (server, req)
   --end
   --set_option (req, "status", 403)
   --set_option (req, "cache", -1)
+  --add_header (req, "Hello", "from server")
   local ext = GetFileExtension (path)
   if (path == "/proxy") then
     return proxy (req, "http://localhost:28005/")

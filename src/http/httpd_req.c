@@ -197,6 +197,9 @@ static int httpd_statx_callback (hin_buffer_t * buf, int ret) {
   } else {
     header (client, buf, "Connection: close\r\n");
   }
+  if (http->append_headers) {
+    header (client, buf, "%s", http->append_headers);
+  }
   header (client, buf, "\r\n");
 
   if (master.debug & DEBUG_RW) printf ("responding '\n%.*s'\n", buf->count, buf->ptr);

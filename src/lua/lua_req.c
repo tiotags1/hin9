@@ -207,7 +207,7 @@ static int l_hin_sanitize_path (lua_State *L) {
 static int l_hin_remote_address (lua_State *L) {
   hin_client_t *client = (hin_client_t*)lua_touserdata (L, 1);
   if (client == NULL || client->magic != HIN_CLIENT_MAGIC) {
-    printf ("lua hin_sanitize_path need a valid client\n");
+    printf ("lua hin_remote_address need a valid client\n");
     return 0;
   }
 
@@ -228,6 +228,27 @@ static int l_hin_remote_address (lua_State *L) {
   return 0;
 }
 
+static int l_hin_add_header (lua_State *L) {
+  hin_client_t *client = (hin_client_t*)lua_touserdata (L, 1);
+  if (client == NULL || client->magic != HIN_CLIENT_MAGIC) {
+    printf ("lua hin_add_header need a valid client\n");
+    return 0;
+  }
+  httpd_client_t * http = (httpd_client_t*)&client->extra;
+
+  const char * name = lua_tostring (L, 2);
+  const char * data = lua_tostring (L, 2);
+
+  char * new = NULL;
+  char * old = http->append_headers;
+  int num = asprintf (&new, "%s: %s\r\n%s", name, data, old ? old : "");
+
+  if (old) free (old);
+  http->append_headers = new;
+
+  return 0;
+}
+
 static lua_function_t functs [] = {
 {"parse_path",		l_hin_parse_path },
 {"parse_headers",	l_hin_parse_headers },
@@ -237,6 +258,7 @@ static lua_function_t functs [] = {
 {"respond",		l_hin_respond },
 {"sanitize_path",	l_hin_sanitize_path },
 {"remote_address",	l_hin_remote_address },
+{"add_header",		l_hin_add_header },
 {NULL, NULL},
 };
 
