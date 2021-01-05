@@ -67,6 +67,7 @@ int main (int argc, const char * argv[]) {
   }
 
   printf ("hin serve ...\n");
+  master.share->done = 1;
 
   void hin_event_loop ();
   hin_event_loop ();

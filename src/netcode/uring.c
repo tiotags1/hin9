@@ -11,7 +11,7 @@
 
 #include <hin.h>
 
-#define QUEUE_DEPTH             256
+#define QUEUE_DEPTH             512
 
 struct io_uring ring;
 
@@ -159,13 +159,32 @@ int hin_request_statx (hin_buffer_t * buffer, int dfd, const char * path, int fl
   return 0;
 }
 
+static int hin_event_check_alive () {
+  if (master.wait_restart) {
+    if (master.share->done == 0) {
+      printf ("not done\n");
+    } else if (master.share->done > 0) {
+      printf ("restart succesful\n");
+      hin_stop ();
+      master.share->done = 0;
+    } else {
+      printf ("failed to restart\n");
+      master.share->done = 0;
+    }
+  }
+  if (master.quit == 0) return 1;
+  if (master.num_active > 0) return 1;
+  return 0;
+}
+
 int hin_event_loop () {
   struct io_uring_cqe *cqe;
   int err;
 
-  while (master.quit == 0 || master.num_active > 0) {
-    if (io_uring_wait_cqe (&ring, &cqe) < 0) {
-      printf ("error: io_uring_wait_cqe: %s\n", strerror (errno));
+  while (hin_event_check_alive ()) {
+    if ((err = io_uring_wait_cqe (&ring, &cqe)) < 0) {
+      if (err != EINTR)
+        printf ("error: io_uring_wait_cqe: %s\n", strerror (errno));
       io_uring_cqe_seen (&ring, cqe);
       continue;
     }

@@ -41,13 +41,13 @@ local server = create_httpd (function (server, req)
   elseif (path == "/hello") then
     return respond (req, 200, "Hello world")
   end
-  local file_path, file_name = sanitize_path (req, "htdocs", path)
-  --print (string.format ("file_path for '%s' ext '%s' res '%s'", path, ext, file_path))
+  local root = "htdocs"
+  local file_path, file_name = sanitize_path (req, root, path)
   if (undeflate[ext]) then
     set_option (req, "disable", "deflate")
   end
   if (ext == "php") then
-    return cgi (req, "/usr/bin/php-cgi", file_path)
+    return cgi (req, "/usr/bin/php-cgi", root, file_path)
   elseif (to_cache[ext]) then
     set_option (req, "cache", 604800)
   end

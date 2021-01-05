@@ -26,7 +26,7 @@ typedef struct {
   int quit;
   int num_active;
   uint32_t debug;
-  int done;
+  int wait_restart;
   //int access_fd;
   //int error_fd;
   void * servers;
@@ -36,6 +36,9 @@ typedef struct {
 } hin_master_t;
 
 extern hin_master_t master;
+
+void hin_stop ();
+int hin_restart ();
 
 #endif
 

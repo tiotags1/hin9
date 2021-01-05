@@ -71,25 +71,27 @@ int hin_pipe_copy_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, in
 
   //if (num <= 0) return 0; // chunked requires it
 
-  hin_buffer_t * buf = malloc (sizeof *buf + READ_SZ + 50);
+  hin_buffer_t * buf = malloc (sizeof *buf + num + 50);
   memset (buf, 0, sizeof (*buf));
   buf->parent = (void*)pipe;
   buf->flags = 0;
   buf->ptr = buf->buffer;
   buf->count = 0;
-  buf->sz = READ_SZ;
+  buf->sz = num + 50;
   buf->ssl = pipe->ssl;
 
   //buffer->count = num;
-  header (client, buf, "%x\r\n", num);
+  if (num > 0) {
+    header (client, buf, "%x\r\n", num);
 
-  memcpy (buf->ptr + buf->count, buffer->ptr, num);
-  buf->count += num;
+    memcpy (buf->ptr + buf->count, buffer->ptr, num);
+    buf->count += num;
 
-  header (client, buf, "\r\n");
+    header (client, buf, "\r\n");
+  }
 
-  if (flush && num > 0) {
-    header (client, buf, "%x\r\n\r\n", 0);
+  if (flush) {
+    header (client, buf, "0\r\n\r\n");
   }
 
   hin_pipe_write (pipe, buf);

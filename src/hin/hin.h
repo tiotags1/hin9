@@ -127,8 +127,7 @@ int hin_buffer_eat (hin_buffer_t * buffer, int num);
 
 int hin_lines_request (hin_buffer_t * buffer);
 int hin_lines_reread (hin_client_t * client);
-#include <basic_pattern.h>
-hin_buffer_t * hin_lines_create (hin_client_t * client, int sockfd, int (*callback) (hin_client_t * client, string_t * source));
+hin_buffer_t * hin_lines_create (hin_client_t * client, int sockfd, int (*callback) (hin_client_t * client, hin_buffer_t * source));
 
 int hin_client_addr (char * str, int len, struct sockaddr * ai_addr, socklen_t ai_addrlen);
 

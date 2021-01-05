@@ -35,7 +35,7 @@ int httpd_respond_error (hin_client_t * client, int status, const char * body) {
     freeable = 1;
     asprintf ((char**)&body, "<html><head></head><body><h1>Error %d: %s</h1></body></html>", status, http_status_name (status));
   }
-  header (client, buf, "HTTP/1.1 %d %s\r\nConnection: close\r\n", status, http_status_name (status));
+  header (client, buf, "HTTP/1.1 %d %s\r\n", status, http_status_name (status));
   header (client, buf, "Content-Length: %ld\r\n", strlen (body));
   header (client, buf, "\r\n");
   header (client, buf, "%s", body);
@@ -60,13 +60,17 @@ static int httpd_close_filefd (hin_buffer_t * buffer, httpd_client_t * http) {
 
 static int httpd_pipe_error_callback (hin_pipe_t * pipe) {
   printf ("error in client %d\n", pipe->out.fd);
-  hin_client_shutdown (pipe->parent);
+  httpd_client_shutdown (pipe->parent);
 }
 
 static int httpd_headers_write_callback (hin_buffer_t * buffer, int ret) {
   hin_client_t * client = (hin_client_t*)buffer->parent;
   httpd_client_t * http = (httpd_client_t*)&client->extra;
-  if (ret != buffer->count) printf ("not sent all of it ? %d/%d\n", ret, buffer->count);
+  if (ret < 0) {
+    httpd_client_shutdown (client);
+    return -1;
+  }
+  if (ret != buffer->count) printf ("httpd error not sent headers ? %d/%d\n", ret, buffer->count);
   if (http->status == 304) {
     httpd_client_finish_request (client);
     httpd_close_filefd (buffer, http);
@@ -159,7 +163,7 @@ static int httpd_statx_callback (hin_buffer_t * buf, int ret) {
     info = gmtime (&rawtime);
     strftime (buffer, sizeof buffer, "%a, %d %b %Y %X GMT", info);
 
-    header (client, buf, "Data: %s\r\n", buffer);
+    header (client, buf, "Date: %s\r\n", buffer);
   }
   if ((http->disable & HIN_HTTP_MODIFIED) == 0) {
     rawtime = stat->stx_mtime.tv_sec;

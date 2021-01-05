@@ -64,6 +64,7 @@ typedef struct {
 int find_line (string_t * source, string_t * line);
 int header (hin_client_t * client, hin_buffer_t * buffer, const char * fmt, ...);
 const char * http_status_name (int nr);
+int hin_string_equali (string_t * source, const char * format, ...);
 
 int httpd_parse_req (hin_client_t * client, string_t * source);
 
@@ -75,10 +76,9 @@ hin_pipe_t * receive_file (hin_client_t * client, int filefd, off_t pos, off_t c
 int hin_client_ssl_init (hin_client_t * client);
 void hin_client_ssl_cleanup (hin_client_t * client);
 
-int httpd_client_finish (hin_client_t * client);
 int httpd_client_start_request (hin_client_t * client);
 int httpd_client_finish_request (hin_client_t * client);
-int httpd_client_finish_post (hin_client_t * client);
+int httpd_client_shutdown (hin_client_t * client);
 
 int hin_request_headers (hin_client_t * client);
 

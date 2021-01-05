@@ -6,7 +6,8 @@
 #include <hin.h>
 
 typedef struct {
-  int (*callback) (hin_client_t * client, string_t * source);
+  int (*callback) (hin_client_t * client, hin_buffer_t * source);
+  int (*close_callback) (hin_buffer_t * buffer);
 } hin_lines_t;
 
 void hin_buffer_clean (hin_buffer_t * buffer) {
@@ -61,14 +62,12 @@ int hin_buffer_eat (hin_buffer_t * buffer, int num) {
 static int hin_lines_read_callback (hin_buffer_t * buffer, int ret);
 
 int hin_lines_request (hin_buffer_t * buffer) {
-  hin_client_t * client = (hin_client_t*)buffer->parent;
   int sz;
   int new_pos = buffer->ptr - buffer->data;
   int left = buffer->sz - new_pos;
   if (left < (sz / 2)) { sz = READ_SZ; }
   else { sz = left; }
   hin_buffer_prepare (buffer, sz);
-  buffer->flags = HIN_SOCKET | (client->flags & HIN_SSL);
   buffer->callback = hin_lines_read_callback;
   hin_request_read (buffer);
 }
@@ -84,44 +83,51 @@ static int hin_lines_close_callback (hin_buffer_t * buffer, int ret) {
 }
 
 static int hin_lines_read_callback (hin_buffer_t * buffer, int ret) {
-  hin_client_t * client = (hin_client_t*)buffer->parent;
   hin_lines_t * lines = (hin_lines_t*)&buffer->buffer;
+  int err = 0;
 
   if (ret <= 0) {
-    buffer->fd = client->sockfd;
-    buffer->callback = hin_lines_close_callback;
-    hin_request_close (buffer);
-    return 0;
+    if (lines->close_callback)
+      err = lines->close_callback (buffer);
+    return err;
   }
 
   buffer->ptr += ret;
   buffer->count -= ret;
 
-  string_t source;
-  source.ptr = buffer->data;
-  source.len = buffer->ptr - buffer->data;
-  int num = lines->callback (buffer->parent, &source);
+  int num = lines->callback (buffer->parent, buffer);
   if (num < 0) {
-    printf ("lines client error\n");
-    hin_client_shutdown (client);
-    return -1;
+    if (lines->close_callback) {
+      err = lines->close_callback (buffer);
+    } else {
+      printf ("lines client error\n");
+    }
+    return err;
   }
   if (num > 0) {
     hin_buffer_eat (buffer, num);
   }
   if (num == 0)
     hin_lines_request (buffer);
+
   return 0;
 }
 
-hin_buffer_t * hin_lines_create (hin_client_t * client, int sockfd, int (*callback) (hin_client_t * client, string_t * source)) {
+static int hin_lines_httpd_close_callback (hin_buffer_t * buffer) {
+  hin_client_t * client = (hin_client_t*)buffer->parent;
+  hin_lines_t * lines = (hin_lines_t*)&buffer->buffer;
+  buffer->callback = hin_lines_close_callback;
+  hin_request_close (buffer);
+  return 0;
+}
+
+hin_buffer_t * hin_lines_create (hin_client_t * client, int sockfd, int (*callback) (hin_client_t * client, hin_buffer_t * source)) {
   hin_buffer_t * buf = calloc (1, sizeof *buf + sizeof (hin_lines_t));
   buf->type = HIN_DYN_BUFFER;
   buf->flags = 0;
   buf->fd = sockfd;
   buf->callback = hin_lines_read_callback;
-  buf->count = READ_SZ;
-  buf->sz = READ_SZ;
+  buf->count = buf->sz = READ_SZ;
   buf->pos = 0;
   buf->data = malloc (buf->sz);
   buf->ptr = buf->data;
@@ -130,6 +136,33 @@ hin_buffer_t * hin_lines_create (hin_client_t * client, int sockfd, int (*callba
   buf->ssl = &client->ssl;
   hin_lines_t * lines = (hin_lines_t*)&buf->buffer;
   lines->callback = callback;
+  lines->close_callback = hin_lines_httpd_close_callback;
+  hin_request_read (buf);
+  return buf;
+}
+
+static int hin_lines_cgi_close_callback (hin_buffer_t * buffer) {
+  hin_client_t * client = (hin_client_t*)buffer->parent;
+  hin_lines_t * lines = (hin_lines_t*)&buffer->buffer;
+  //buffer->callback = hin_lines_close_callback;
+  //hin_request_close (buffer);
+  //printf ("cgi close headers\n");
+  return 1;
+}
+
+hin_buffer_t * hin_lines_create_cgi (hin_client_t * client, int sockfd, int (*callback) (hin_client_t * client, hin_buffer_t * source)) {
+  hin_buffer_t * buf = calloc (1, sizeof *buf + sizeof (hin_lines_t));
+  buf->type = HIN_DYN_BUFFER;
+  buf->fd = sockfd;
+  buf->callback = hin_lines_read_callback;
+  buf->count = buf->sz = READ_SZ;
+  buf->pos = 0;
+  buf->data = malloc (buf->sz);
+  buf->ptr = buf->data;
+  buf->parent = client;
+  hin_lines_t * lines = (hin_lines_t*)&buf->buffer;
+  lines->callback = callback;
+  lines->close_callback = hin_lines_cgi_close_callback;
   hin_request_read (buf);
   return buf;
 }

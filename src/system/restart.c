@@ -19,11 +19,10 @@ void hin_stop () {
 int hin_restart () {
   printf("hin restart ...\n");
   int pid = fork ();
-  if (pid == 0) {
-    printf ("close issued to former process\n");
-    // wait for child to finish init
-    // if finished ok then set quit 1
-    hin_stop ();
+  if (pid != 0) {
+    printf ("wait restart issued to former process\n");
+    master.share->done = 0;
+    master.wait_restart = 1;
     return 0;
   }
   int hin_event_clean ();
@@ -33,10 +32,15 @@ int hin_restart () {
   asprintf (&buf, "--reuse=%d", master.sharefd);
   char * argv[] = {master.exe_path, buf, NULL};
   execvp (master.exe_path, argv);
+  printf ("crash\n");
 }
 
 static void sig_restart (int signo) {
   hin_restart ();
+}
+
+static void sig_child (int signo) {
+  //printf ("got sigchld\n");
 }
 
 int install_sighandler () {
@@ -58,6 +62,8 @@ int install_sighandler () {
   sigaction (SIGUSR1, NULL, &old_action);
   if (old_action.sa_handler != SIG_IGN)
     sigaction (SIGUSR1, &new_action, NULL);
+
+  signal (SIGCHLD, sig_child);
 
   return 0;
 }

@@ -5,6 +5,11 @@
 
 #include <hin.h>
 
+static int httpd_proxy_close (hin_client_t * client) {
+  printf ("proxy error should close\n");
+  // TODO proxy client close
+}
+
 static int http_client_responded (hin_buffer_t * buffer, int ret) {
   printf ("done\n");
   return 1;
@@ -13,6 +18,7 @@ static int http_client_responded (hin_buffer_t * buffer, int ret) {
 static int http_client_read_callback (hin_buffer_t * buffer, int ret) {
   if (ret < 0) {
     printf ("error!! '%s'\n", strerror (-ret));
+    httpd_proxy_close (buffer->parent);
     return -1;
   }
   hin_client_t * client = (hin_client_t*)buffer->parent;
@@ -34,6 +40,10 @@ static int http_client_read_callback (hin_buffer_t * buffer, int ret) {
 
 static int http_client_sent_callback (hin_buffer_t * buffer, int ret) {
   printf ("sent done\n");
+  if (ret < 0) {
+    httpd_proxy_close (buffer->parent);
+    return -1;
+  }
   buffer->count = buffer->sz;
   buffer->callback = http_client_read_callback;
   hin_request_read (buffer);

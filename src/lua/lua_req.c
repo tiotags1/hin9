@@ -121,11 +121,12 @@ static int l_hin_cgi (lua_State *L) {
   httpd_client_t * http = (httpd_client_t*)client->extra;
 
   const char * exe_path = lua_tostring (L, 2);
-  const char * script_path = lua_tostring (L, 3);
+  const char * root_path = lua_tostring (L, 3);
+  const char * script_path = lua_tostring (L, 4);
   if (exe_path == NULL) return 0;
 
-  int hin_cgi (hin_client_t * client, const char * exe_path, const char * path);
-  if (hin_cgi (client, exe_path, script_path) < 0) {
+  int hin_cgi (hin_client_t * client, const char * exe_path, const char * root, const char * path);
+  if (hin_cgi (client, exe_path, root_path, script_path) < 0) {
     httpd_respond_error (client, 500, NULL);
     return 0;
   }
@@ -245,7 +246,6 @@ static int l_hin_add_header (lua_State *L) {
 
   if (old) free (old);
   http->append_headers = new;
-
   return 0;
 }
 

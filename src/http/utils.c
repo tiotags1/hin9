@@ -108,6 +108,7 @@ int httpd_request_chunked (httpd_client_t * http) {
   } else {
     if (http->peer_flags & HIN_HTTP_KEEPALIVE) {
       http->peer_flags |= HIN_HTTP_CHUNKED;
+      if (master.debug & DEBUG_RW) printf ("chunked selected on connection ?\n");
     }
     return 1;
   }
@@ -128,4 +129,20 @@ int hin_client_deflate_init (httpd_client_t * http) {
   return 0;
 }
 
+int hin_string_equali (string_t * source, const char * format, ...) {
+  va_list argptr;
+  va_start (argptr, format);
+  string_t orig = *source;
+
+  int used = match_string_virtual (source, PATTERN_CASE, format, argptr);
+
+  va_end (argptr);
+
+  *source = orig;
+  if (used != orig.len) {
+    return -1;
+  }
+
+  return used;
+}
 

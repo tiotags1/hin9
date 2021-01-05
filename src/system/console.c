@@ -31,8 +31,8 @@ static int hin_console_read_callback (hin_buffer_t * buf, int ret) {
   temp.ptr = buf->ptr;
   temp.len = ret;
   buf->ptr[ret] = '\0';
-  console_execute (&temp);
   hin_request_read (buf);
+  console_execute (&temp);
   return 0;
 }
 
