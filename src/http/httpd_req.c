@@ -7,9 +7,46 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#include <hin.h>
 #include <basic_pattern.h>
+
+#include "hin.h"
 #include "http.h"
+#include "conf.h"
+
+int httpd_write_common_headers (hin_client_t * client, hin_buffer_t * buf) {
+  httpd_client_t * http = (httpd_client_t *)&client->extra;
+
+  if ((http->disable & HIN_HTTP_DATE) == 0) {
+    time_t rawtime;
+    time (&rawtime);
+    header_date (client, buf, "Date", rawtime);
+  }
+  if ((http->disable & HIN_HTTP_SERVNAME) == 0) {
+    header (client, buf, "Server: %s\r\n", HIN_HTTPD_SERVER_NAME);
+  }
+  if (http->peer_flags & HIN_HTTP_DEFLATE) {
+    header (client, buf, "Content-Encoding: deflate\r\n");
+  }
+  if (http->peer_flags & HIN_HTTP_CHUNKED) {
+    header (client, buf, "Transfer-Encoding: chunked\r\n");
+  }
+  if ((http->disable & HIN_HTTP_CACHE) == 0) {
+    if (http->cache > 0) {
+      header (client, buf, "Cache-Control: public, max-age=%ld\r\n", http->cache);
+    } else if (http->cache < 0) {
+      header (client, buf, "Cache-Control: no-cache, no-store\r\n");
+    }
+  }
+  if (http->peer_flags & HIN_HTTP_KEEPALIVE) {
+    header (client, buf, "Connection: keep-alive\r\n");
+  } else {
+    header (client, buf, "Connection: close\r\n");
+  }
+  if (http->append_headers) {
+    header (client, buf, "%s", http->append_headers);
+  }
+  return 0;
+}
 
 static int http_error_write_callback (hin_buffer_t * buffer, int ret) {
   hin_client_t * client = (hin_client_t*)buffer->parent;
@@ -19,6 +56,8 @@ static int http_error_write_callback (hin_buffer_t * buffer, int ret) {
 }
 
 int httpd_respond_error (hin_client_t * client, int status, const char * body) {
+  httpd_client_t * http = (httpd_client_t *)&client->extra;
+
   hin_buffer_t * buf = malloc (sizeof (*buf) + READ_SZ);
   memset (buf, 0, sizeof (*buf));
   buf->flags = HIN_SOCKET | (client->flags & HIN_SSL);
@@ -33,16 +72,18 @@ int httpd_respond_error (hin_client_t * client, int status, const char * body) {
   int freeable = 0;
   if (body == NULL) {
     freeable = 1;
-    asprintf ((char**)&body, "<html><head></head><body><h1>Error %d: %s</h1></body></html>", status, http_status_name (status));
+    if (asprintf ((char**)&body, "<html><head></head><body><h1>Error %d: %s</h1></body></html>", status, http_status_name (status)) < 0)
+      perror ("asprintf");
   }
+  http->disable |= HIN_HTTP_CHUNKED | HIN_HTTP_DEFLATE | HIN_HTTP_CACHE;
   header (client, buf, "HTTP/1.1 %d %s\r\n", status, http_status_name (status));
+  httpd_write_common_headers (client, buf);
   header (client, buf, "Content-Length: %ld\r\n", strlen (body));
   header (client, buf, "\r\n");
   header (client, buf, "%s", body);
   if (freeable) free ((char*)body);
   hin_request_write (buf);
 
-  httpd_client_t * http = (httpd_client_t*)&client->extra;
   http->state |= HIN_REQ_DATA;
 }
 
@@ -126,8 +167,6 @@ static int httpd_statx_callback (hin_buffer_t * buf, int ret) {
   etag += stat->stx_size;
 
   time_t rawtime;
-  struct tm *info;
-  char buffer[80];
 
   if (1) {
     if (http->disable & HIN_HTTP_MODIFIED) {
@@ -147,48 +186,22 @@ static int httpd_statx_callback (hin_buffer_t * buf, int ret) {
     }
   }
 
-  if (http->disable & HIN_HTTP_DEFLATE) {
-    http->peer_flags &= ~HIN_HTTP_DEFLATE;
-  }
   if (http->disable & HIN_HTTP_CHUNKED) {
-    if (http->peer_flags & HIN_HTTP_CHUNKED) {
-      http->peer_flags &= ~HIN_HTTP_KEEPALIVE;
-    }
-    http->peer_flags &= ~HIN_HTTP_CHUNKED;
+    http->peer_flags &= ~HIN_HTTP_KEEPALIVE;
   }
+  http->peer_flags &= ~http->disable;
 
   header (client, buf, "HTTP/1.%d %d %s\r\n", http->peer_flags & HIN_HTTP_VER0 ? 0 : 1, http->status, http_status_name (http->status));
-  if ((http->disable & HIN_HTTP_DATE) == 0) {
-    time (&rawtime);
-    info = gmtime (&rawtime);
-    strftime (buffer, sizeof buffer, "%a, %d %b %Y %X GMT", info);
+  httpd_write_common_headers (client, buf);
 
-    header (client, buf, "Date: %s\r\n", buffer);
-  }
   if ((http->disable & HIN_HTTP_MODIFIED) == 0) {
-    rawtime = stat->stx_mtime.tv_sec;
-    info = gmtime (&rawtime);
-    strftime (buffer, sizeof buffer, "%a, %d %b %Y %X GMT", info);
-    header (client, buf, "Last-Modified: %s\r\n", buffer);
+    header_date (client, buf, "Last-Modified", stat->stx_mtime.tv_sec);
   }
   if ((http->disable & HIN_HTTP_ETAG) == 0) {
     header (client, buf, "ETag: \"%lx\"\r\n", etag);
   }
-  if (http->peer_flags & HIN_HTTP_DEFLATE) {
-    header (client, buf, "Content-Encoding: deflate\r\n");
-  }
-  if (http->peer_flags & HIN_HTTP_CHUNKED) {
-    header (client, buf, "Transfer-Encoding: chunked\r\n");
-  }
-  if (sz > 0 && !(http->peer_flags & HIN_HTTP_DEFLATE)) {
+  if (sz && (http->peer_flags & HIN_HTTP_CHUNKED) == 0) {
     header (client, buf, "Content-Length: %ld\r\n", sz);
-  }
-  if ((http->disable & HIN_HTTP_CACHE) == 0) {
-    if (http->cache > 0) {
-      header (client, buf, "Cache-Control: public, max-age=%ld\r\n", http->cache);
-    } else if (http->cache < 0) {
-      header (client, buf, "Cache-Control: no-cache, no-store\r\n");
-    }
   }
   if ((http->disable & HIN_HTTP_RANGE) == 0) {
     header (client, buf, "Accept-Ranges: bytes\r\n");
@@ -196,14 +209,7 @@ static int httpd_statx_callback (hin_buffer_t * buf, int ret) {
   if (http->status == 206) {
     header (client, buf, "Content-Range: bytes %ld-%ld/%ld\r\n", http->pos, http->pos+http->count-1, sz);
   }
-  if (http->peer_flags & HIN_HTTP_KEEPALIVE) {
-    header (client, buf, "Connection: keep-alive\r\n");
-  } else {
-    header (client, buf, "Connection: close\r\n");
-  }
-  if (http->append_headers) {
-    header (client, buf, "%s", http->append_headers);
-  }
+
   header (client, buf, "\r\n");
 
   if (master.debug & DEBUG_RW) printf ("responding '\n%.*s'\n", buf->count, buf->ptr);
@@ -220,11 +226,18 @@ static int httpd_open_filefd_callback (hin_buffer_t * buf, int ret) {
     httpd_respond_error (client, 404, NULL);
     return -1;
   }
-  buf->callback = httpd_statx_callback;
   http->filefd = ret;
   memset (buf->ptr, 0, sizeof (struct statx));
-  hin_request_statx (buf, ret, "", AT_EMPTY_PATH, STATX_ALL);
-  return 0;
+
+  if (HIN_HTTPD_ASYNC_STATX) {
+    buf->callback = httpd_statx_callback;
+    hin_request_statx (buf, ret, "", AT_EMPTY_PATH, STATX_ALL);
+    return 0;
+  } else {
+    int ret1 = statx (ret, "", AT_EMPTY_PATH, STATX_ALL, (struct statx *)buf->ptr);
+    if (ret1 < 0) ret1 = -errno;
+    return httpd_statx_callback (buf, ret1);
+  }
 }
 
 int httpd_handle_file_request (hin_client_t * client, const char * path, off_t pos, off_t count, uintptr_t param) {
@@ -245,8 +258,15 @@ int httpd_handle_file_request (hin_client_t * client, const char * path, off_t p
   buf->parent = client;
   buf->ssl = &client->ssl;
 
-  buf->callback = httpd_open_filefd_callback;
-  hin_request_openat (buf, AT_FDCWD, path, O_RDONLY | O_CLOEXEC, 0);
+  if (HIN_HTTPD_ASYNC_OPEN) {
+    buf->callback = httpd_open_filefd_callback;
+    hin_request_openat (buf, AT_FDCWD, path, O_RDONLY | O_CLOEXEC, 0);
+    return 0;
+  } else {
+    int ret1 = openat (AT_FDCWD, path, O_RDONLY | O_CLOEXEC, 0);
+    if (ret1 < 0) ret1 = -errno;
+    return httpd_open_filefd_callback (buf, ret1);
+  }
 }
 
 int httpd_parse_req (hin_client_t * client, string_t * source) {

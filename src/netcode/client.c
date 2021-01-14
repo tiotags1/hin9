@@ -8,13 +8,32 @@
 
 #include <hin.h>
 
+static int hin_do_close (hin_buffer_t * buf, int ret) {
+  if (ret < 0) {
+    printf ("error closing %d %s\n", buf->fd, strerror (-ret));
+  }
+  if (master.debug & DEBUG_SOCKET) printf ("new close %d\n", buf->fd);
+
+  hin_client_t * client = (hin_client_t*)buf->parent;
+  hin_client_t * server = (hin_client_t*)client->parent;
+  hin_server_blueprint_t * bp = (hin_server_blueprint_t*)&server->extra;
+  hin_client_list_remove (&bp->active_client, client);
+
+  free (client);
+  master.num_active--;
+  return 1;
+}
+
 void hin_client_shutdown (hin_client_t * client) {
   if (master.debug & DEBUG_SOCKET) printf ("socket shutdown %d\n", client->sockfd);
-  shutdown (client->sockfd, SHUT_RDWR);
-  //shutdown (client->sockfd, SHUT_RD);
-  //close (client->sockfd);
-  // TODO let client shutdown or else time_wait
-  // why does shutdown make it worse ?
+  hin_buffer_t * buf = malloc (sizeof *buf);
+  memset (buf, 0, sizeof (*buf));
+  buf->flags = HIN_SOCKET | (client->flags & HIN_SSL);
+  buf->fd = client->sockfd;
+  buf->callback = hin_do_close;
+  buf->parent = client;
+  buf->ssl = &client->ssl;
+  hin_request_close (buf);
 }
 
 void hin_client_close (hin_client_t * client) {
@@ -61,6 +80,7 @@ void hin_client_list_remove (hin_client_t ** list, hin_client_t * new) {
     if (new->prev)
       new->prev->next = new->next;
   }
+  new->next = new->prev = NULL;
 }
 
 void hin_client_list_add (hin_client_t ** list, hin_client_t * new) {

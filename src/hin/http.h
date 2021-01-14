@@ -13,9 +13,7 @@ enum { HIN_HTTP_GET = 1, HIN_HTTP_POST };
 
 enum { HIN_HTTP_KEEPALIVE = 0x1, HIN_HTTP_RANGE = 0x2, HIN_HTTP_MODIFIED = 0x4, HIN_HTTP_ETAG = 0x8,
 HIN_HTTP_CACHE = 0x10, HIN_HTTP_CHUNKED = 0x20, HIN_HTTP_DEFLATE = 0x40, HIN_HTTP_DATE = 0x80,
-HIN_HTTP_VER0 = 0x100 };
-
-#define HTTPD_TIMEOUT 10
+HIN_HTTP_VER0 = 0x100, HIN_HTTP_SERVNAME = 0x200 };
 
 typedef struct {
   char * name;
@@ -61,8 +59,11 @@ typedef struct {
 
 #include <basic_pattern.h>
 
-int find_line (string_t * source, string_t * line);
 int header (hin_client_t * client, hin_buffer_t * buffer, const char * fmt, ...);
+int header_date (hin_client_t * client, hin_buffer_t * buffer, const char * name, time_t time);
+int httpd_write_common_headers (hin_client_t * client, hin_buffer_t * buf);
+
+int find_line (string_t * source, string_t * line);
 const char * http_status_name (int nr);
 int hin_string_equali (string_t * source, const char * format, ...);
 

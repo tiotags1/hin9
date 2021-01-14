@@ -63,8 +63,10 @@ void hin_console_init () {
   buf->ptr = buf->buffer;
   hin_request_read (buf);
   buffer = buf;
+}
 
-  buf = malloc (sizeof (*buf) + sizeof (struct timespec));
+void hin_timer_init () {
+  hin_buffer_t * buf = malloc (sizeof (*buf) + sizeof (struct timespec));
   memset (buf, 0, sizeof (*buf));
   buf->flags = 0;
   buf->fd = 0;
@@ -77,7 +79,5 @@ void hin_console_init () {
   ts->tv_nsec = 0;
   hin_request_timeout (buf, ts, 0, 0);
 }
-
-
 
 

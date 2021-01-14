@@ -53,12 +53,18 @@ int main (int argc, const char * argv[]) {
   master.debug = 0;
   //master.debug |= DEBUG_SOCKET;
   //master.debug &= ~(DEBUG_URING);
+  #if 0
+  int hin_worker_init ();
+  hin_worker_init ();
+  #endif
   void hin_init_sharedmem ();
   hin_init_sharedmem ();
   void hin_event_init ();
   hin_event_init ();
   void hin_console_init ();
   hin_console_init ();
+  void hin_timer_init ();
+  hin_timer_init ();
 
   int lua_init ();
   if (lua_init () < 0) {

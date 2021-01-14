@@ -9,28 +9,10 @@
 #include <unistd.h>
 #include <fcntl.h> 
 
-#include <hin.h>
-
-#define QUEUE_DEPTH             512
+#include "hin.h"
+#include "conf.h"
 
 struct io_uring ring;
-
-int hin_event_init () {
-  int err = io_uring_queue_init (QUEUE_DEPTH, &ring, 0);
-  if (err < 0) {
-    printf ("io_uring_queue_init failed %s\n", strerror (-err));
-    exit (1);
-  }
-  err = io_uring_ring_dontfork (&ring);
-  if (err < 0) {
-    printf ("io_uring_ring_dontfork failed %s\n", strerror (-err));
-    exit (1);
-  }
-}
-
-int hin_event_clean () {
-  io_uring_queue_exit (&ring);
-}
 
 int hin_ssl_read (hin_buffer_t * crypt, int ret);
 int hin_ssl_write (hin_buffer_t * crypt);
@@ -62,8 +44,7 @@ int hin_request_write (hin_buffer_t * buffer) {
     io_uring_prep_write (sqe, buffer->fd, buffer->ptr, buffer->count, buffer->pos);
   }
   io_uring_sqe_set_data (sqe, buffer);
-  io_uring_submit (&ring);
-  if (master.debug & DEBUG_URING) printf ("request writ buf %p for callback %p\n", buffer, buffer->callback);
+  if (master.debug & DEBUG_URING) printf ("request%d writ buf %p for callback %p\n", master.child_nr, buffer, buffer->callback);
   return 0;
 }
 
@@ -91,8 +72,7 @@ int hin_request_read (hin_buffer_t * buffer) {
     io_uring_prep_read (sqe, buffer->fd, buffer->ptr, buffer->count, buffer->pos);
   }
   io_uring_sqe_set_data (sqe, buffer);
-  io_uring_submit (&ring);
-  if (master.debug & DEBUG_URING) printf ("request read buf %p for callback %p\n", buffer, buffer->callback);
+  if (master.debug & DEBUG_URING) printf ("request%d read buf %p for callback %p\n", master.child_nr, buffer, buffer->callback);
   return 0;
 }
 
@@ -105,8 +85,7 @@ int hin_request_accept (hin_buffer_t * buffer, int flags) {
   struct io_uring_sqe *sqe = io_uring_get_sqe (&ring);
   io_uring_prep_accept (sqe, server->sockfd, &client->in_addr, &client->in_len, flags);
   io_uring_sqe_set_data (sqe, buffer);
-  io_uring_submit (&ring);
-  if (master.debug & DEBUG_URING) printf ("request accept buf %p for callback %p\n", buffer, buffer->callback);
+  if (master.debug & DEBUG_URING) printf ("request%d accept buf %p for callback %p\n", master.child_nr, buffer, buffer->callback);
   return 0;
 }
 
@@ -116,8 +95,7 @@ int hin_request_connect (hin_buffer_t * buffer) {
   struct io_uring_sqe *sqe = io_uring_get_sqe (&ring);
   io_uring_prep_connect (sqe, buffer->fd, &client->in_addr, client->in_len);
   io_uring_sqe_set_data (sqe, buffer);
-  io_uring_submit (&ring);
-  if (master.debug & DEBUG_URING) printf ("request connect buf %p for callback %p\n", buffer, buffer->callback);
+  if (master.debug & DEBUG_URING) printf ("request%d connect buf %p for callback %p\n", master.child_nr, buffer, buffer->callback);
   return 0;
 }
 
@@ -125,8 +103,7 @@ int hin_request_close (hin_buffer_t * buffer) {
   struct io_uring_sqe *sqe = io_uring_get_sqe (&ring);
   io_uring_prep_close (sqe, buffer->fd);
   io_uring_sqe_set_data (sqe, buffer);
-  io_uring_submit (&ring);
-  if (master.debug & DEBUG_URING) printf ("request close buf %p for callback %p\n", buffer, buffer->callback);
+  if (master.debug & DEBUG_URING) printf ("request%d close buf %p for callback %p\n", master.child_nr, buffer, buffer->callback);
   return 0;
 }
 
@@ -134,8 +111,7 @@ int hin_request_openat (hin_buffer_t * buffer, int dfd, const char * path, int f
   struct io_uring_sqe *sqe = io_uring_get_sqe (&ring);
   io_uring_prep_openat (sqe, dfd, path, flags, mode);
   io_uring_sqe_set_data (sqe, buffer);
-  io_uring_submit (&ring);
-  if (master.debug & DEBUG_URING) printf ("request openat buf %p for callback %p\n", buffer, buffer->callback);
+  if (master.debug & DEBUG_URING) printf ("request%d openat buf %p for callback %p\n", master.child_nr, buffer, buffer->callback);
   return 0;
 }
 
@@ -143,8 +119,7 @@ int hin_request_timeout (hin_buffer_t * buffer, struct timespec * ts, int count,
   struct io_uring_sqe *sqe = io_uring_get_sqe (&ring);
   io_uring_prep_timeout (sqe, ts, count, flags);
   io_uring_sqe_set_data (sqe, buffer);
-  io_uring_submit (&ring);
-  if (master.debug & DEBUG_URING) printf ("request timeout buf %p for callback %p\n", buffer, buffer->callback);
+  if (master.debug & DEBUG_URING) printf ("request%d timeout buf %p for callback %p\n", master.child_nr, buffer, buffer->callback);
   return 0;
 }
 
@@ -154,9 +129,36 @@ int hin_request_statx (hin_buffer_t * buffer, int dfd, const char * path, int fl
   //if (buffer->count < sizeof (struct statx)) { printf ("need more space inside buffer to statx\n"); return -1; }
   io_uring_prep_statx (sqe, dfd, path, flags, mask, (struct statx *)buffer->ptr);
   io_uring_sqe_set_data (sqe, buffer);
-  io_uring_submit (&ring);
-  if (master.debug & DEBUG_URING) printf ("request statx buf %p for callback %p\n", buffer, buffer->callback);
+  if (master.debug & DEBUG_URING) printf ("request%d statx buf %p for callback %p\n", master.child_nr, buffer, buffer->callback);
   return 0;
+}
+
+int hin_event_init () {
+  struct io_uring_params params;
+  memset (&params, 0, sizeof params);
+
+  if (ring.ring_fd > 0)
+    io_uring_queue_exit (&ring);
+
+  memset (&ring, 0, sizeof (ring));
+  int err = io_uring_queue_init_params (HIN_URING_QUEUE_DEPTH, &ring, &params);
+  if (err < 0) {
+    fprintf (stderr, "io_uring_queue_init failed %s\n", strerror (-err));
+    exit (1);
+  }
+  #if HIN_URING_DONT_FORK
+  err = io_uring_ring_dontfork (&ring);
+  if (err < 0) {
+    printf ("io_uring_ring_dontfork failed %s\n", strerror (-err));
+    exit (1);
+  }
+  #endif
+}
+
+int hin_event_clean () {
+  if (ring.ring_fd > 0)
+    io_uring_queue_exit (&ring);
+  memset (&ring, 0, sizeof (ring));
 }
 
 static int hin_event_check_alive () {
@@ -182,15 +184,16 @@ int hin_event_loop () {
   int err;
 
   while (hin_event_check_alive ()) {
+    io_uring_submit (&ring);
     if ((err = io_uring_wait_cqe (&ring, &cqe)) < 0) {
-      if (err != EINTR)
-        printf ("error: io_uring_wait_cqe: %s\n", strerror (errno));
+      if (err == -EINTR) continue;
+      printf ("error: io_uring_wait_cqe: %s\n", strerror (errno));
       io_uring_cqe_seen (&ring, cqe);
       continue;
     }
 
     hin_buffer_t * buffer = (hin_buffer_t *)cqe->user_data;
-    if (master.debug & DEBUG_URING) printf ("request done buf %p for callback %p\n", buffer, buffer->callback);
+    if (master.debug & DEBUG_URING) printf ("request%d done buf %p for callback %p\n", master.child_nr, buffer, buffer->callback);
 
     io_uring_cqe_seen (&ring, cqe);
     err = buffer->callback (buffer, cqe->res);
@@ -198,7 +201,7 @@ int hin_event_loop () {
       if (buffer->error_callback && buffer->error_callback (buffer, cqe->res)) {}
     }
     if (err) {
-      if (master.debug & DEBUG_URING) printf ("cleanup buffer %p\n", buffer);
+      if (master.debug & DEBUG_URING) printf ("cleanup%d buffer %p\n", master.child_nr, buffer);
       hin_buffer_clean (buffer);
     }
   }

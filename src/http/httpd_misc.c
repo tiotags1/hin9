@@ -16,9 +16,9 @@ static void httpd_client_timer (hin_client_t * client, basic_time_t * now) {
   httpd_client_t * http = (httpd_client_t *)&client->extra;
   if (http->next_time.sec == 0) return ;
   basic_ftime dt = basic_time_fdiff (now, &http->next_time);
-  if (dt < 0) {
+  if (dt < 0.0) {
     int do_close = 0;
-    if (http->state & (HIN_REQ_HEADERS | HIN_REQ_POST)) do_close = 1;
+    if (http->state & (HIN_REQ_HEADERS | HIN_REQ_POST | HIN_REQ_END)) do_close = 1;
     if (master.debug & DEBUG_TIMER)
       printf ("httpd timer shutdown %d %s%.6f\n", client->sockfd, do_close ? "close " : "", dt);
     if (do_close)
@@ -71,6 +71,13 @@ int header (hin_client_t * client, hin_buffer_t * buffer, const char * fmt, ...)
 
   va_end(ap);
   return len;
+}
+
+int header_date (hin_client_t * client, hin_buffer_t * buf, const char * name, time_t time) {
+  char buffer[80];
+  struct tm *info = gmtime (&time);
+  strftime (buffer, sizeof buffer, "%a, %d %b %Y %X GMT", info);
+  return header (client, buf, "%s: %s\r\n", name, buffer);
 }
 
 time_t hin_date_str_to_time (string_t * source) {

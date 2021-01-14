@@ -8,6 +8,7 @@
 #include "http.h"
 #include "lua.h"
 #include "ssl.h"
+#include "conf.h"
 
 extern SSL_CTX * default_ctx;
 SSL_CTX * hin_ssl_init (const char * cert, const char * key);
@@ -25,7 +26,7 @@ static int l_hin_create_httpd (lua_State *L) {
   server->callback = ref;
   server->L = L;
   server->magic = HIN_SERVER_MAGIC;
-  server->timeout = HTTPD_TIMEOUT;
+  server->timeout = HIN_HTTPD_TIMEOUT;
   lua_pushlightuserdata (L, server);
 
   hin_server_data_t * prev = master.servers;

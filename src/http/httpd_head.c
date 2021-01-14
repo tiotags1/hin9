@@ -7,9 +7,11 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#include <hin.h>
 #include <basic_pattern.h>
+
+#include "hin.h"
 #include "http.h"
+#include "conf.h"
 
 time_t hin_date_str_to_time (string_t * source);
 
@@ -118,6 +120,10 @@ int httpd_parse_headers (hin_client_t * client, string_t * source) {
   if (http->method == HIN_HTTP_POST && http->post_sz <= 0) {
     printf ("httpd post missing size\n");
     httpd_respond_error (client, 411, NULL);
+    httpd_client_shutdown (client);
+  } else if (http->post_sz >= HIN_HTTPD_MAX_POST_SIZE) {
+    printf ("httpd post size %ld >= %ld\n", http->post_sz, (long)HIN_HTTPD_MAX_POST_SIZE);
+    httpd_respond_error (client, 413, NULL);
     httpd_client_shutdown (client);
   }
 

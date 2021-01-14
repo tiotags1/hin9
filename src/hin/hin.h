@@ -2,6 +2,8 @@
 #ifndef HIN_H
 #define HIN_H
 
+#include <stdint.h>
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/uio.h>
@@ -64,6 +66,7 @@ struct hin_pipe_struct {
   int (*extra_callback) (hin_pipe_t * pipe);
   int (*out_error_callback) (hin_pipe_t * pipe);
   int (*in_error_callback) (hin_pipe_t * pipe);
+  hin_buffer_t * (*buffer_callback) (hin_pipe_t * pipe);
 };
 
 struct hin_client_struct {
@@ -93,6 +96,13 @@ typedef struct hin_server_struct {
   char extra[];
 } hin_server_blueprint_t;
 
+typedef struct {
+  int (*read_callback) (hin_buffer_t * buffer);
+  int (*close_callback) (hin_buffer_t * buffer);
+} hin_lines_t;
+
+#include "worker.h"
+
 hin_client_t * hin_connect (const char * host, const char * port, int extra_size, int (*callback) (hin_client_t * client, int ret));
 int hin_socket_listen (const char * address, const char * port, const char * sock_type, hin_client_t * client);
 int hin_socket_search (const char * addr, const char *port, const char * sock_type, hin_client_t * client);
@@ -112,6 +122,7 @@ int hin_request_timeout (hin_buffer_t * buffer, struct timespec * ts, int count,
 
 hin_buffer_t * hin_pipe_buffer_get (hin_pipe_t * pipe);
 int hin_pipe_advance (hin_pipe_t * pipe);
+int hin_pipe_finish (hin_pipe_t * pipe);
 
 void hin_buffer_clean (hin_buffer_t * buffer);
 
@@ -127,7 +138,7 @@ int hin_buffer_eat (hin_buffer_t * buffer, int num);
 
 int hin_lines_request (hin_buffer_t * buffer);
 int hin_lines_reread (hin_client_t * client);
-hin_buffer_t * hin_lines_create (hin_client_t * client, int sockfd, int (*callback) (hin_client_t * client, hin_buffer_t * source));
+hin_buffer_t * hin_lines_create_raw ();
 
 int hin_client_addr (char * str, int len, struct sockaddr * ai_addr, socklen_t ai_addrlen);
 

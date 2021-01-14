@@ -8,7 +8,6 @@
 
 void httpd_client_ping (hin_client_t * client, int timeout);
 int httpd_client_reread (hin_client_t * client);
-int httpd_client_read_callback (hin_client_t * client, hin_buffer_t * buffer);
 
 void httpd_client_clean (httpd_client_t * http) {
   if (http->file_path) free ((void*)http->file_path);
@@ -41,7 +40,8 @@ int httpd_client_finish (hin_client_t * client) {
       httpd_client_reread (client);
     } else {
       hin_client_shutdown (client);
-      hin_lines_request (client->read_buffer);
+      if (client->read_buffer)
+        hin_buffer_clean (client->read_buffer);
       httpd_client_clean (http);
       client->read_buffer = NULL;
       http->state |= HIN_REQ_END;
@@ -71,7 +71,8 @@ int httpd_client_close (hin_client_t * client) {
 
 int httpd_client_accept (hin_client_t * client) {
   httpd_client_start_request (client);
-  client->read_buffer = hin_lines_create (client, client->sockfd, httpd_client_read_callback);
+  hin_buffer_t * hin_lines_create (hin_client_t * client);
+  client->read_buffer = hin_lines_create (client);
 }
 
 hin_client_t * httpd_create (const char * addr, const char * port, const char * sock_type, void * ssl_ctx) {

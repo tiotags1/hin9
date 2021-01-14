@@ -24,6 +24,14 @@ int hin_server_accept (hin_buffer_t * buffer, int ret) {
   if (ret < 0) {
     if (master.quit) return 1;
     printf ("failed to accept ? %d '%s'\n", server->sockfd, strerror (-ret));
+    switch (-ret) {
+    case EBADF:
+    case EINVAL:
+    case ENOTSOCK:
+    case EOPNOTSUPP:
+      return 0;
+    default: break;
+    }
     hin_request_accept (buffer, bp->accept_flags);
     return 0;
   }

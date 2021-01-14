@@ -25,6 +25,8 @@ const char * http_status_name (int nr) {
   case 403: return "Forbidden";
   case 404: return "Not Found";
   case 408: return "Request Timeout";
+  case 411: return "Length Required";
+  case 413: return "Payload Too Large";
   case 416: return "Range Not Satisfiable";
   case 500: return "Server error";
   case 501: return "Not Implemented";

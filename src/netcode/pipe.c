@@ -64,7 +64,12 @@ int hin_pipe_advance (hin_pipe_t * pipe) {
   }
 
   if (pipe->out.flags & HIN_DONE) {
-    hin_buffer_t * new = hin_pipe_buffer_get (pipe);
+    hin_buffer_t * new = NULL;
+    if (pipe->buffer_callback == NULL) {
+      new = hin_pipe_buffer_get (pipe);
+    } else {
+      new = pipe->buffer_callback (pipe);
+    }
     hin_pipe_read_next (new);
     pipe->out.flags &= (~HIN_DONE);
   }
@@ -109,10 +114,17 @@ int hin_pipe_write_callback (hin_buffer_t * buffer, int ret) {
 }
 
 int hin_pipe_copy_raw (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush) {
-  if (num <= 0) return 0;
+  if (num <= 0 || flush) return 1;
   buffer->count = num;
   hin_pipe_write (pipe, buffer);
   return 0;
+}
+
+int hin_pipe_finish (hin_pipe_t * pipe) {
+  if (master.debug & DEBUG_PIPE) printf ("pipe finish function\n");
+  pipe->flags |= HIN_DONE;
+  pipe->in.flags |= HIN_DONE;
+  //hin_pipe_advance (pipe);
 }
 
 int hin_pipe_read_callback (hin_buffer_t * buffer, int ret) {
@@ -146,12 +158,13 @@ int hin_pipe_read_callback (hin_buffer_t * buffer, int ret) {
   if (master.debug & DEBUG_PIPE) printf ("pipe read  %d/%d fd %d left %ld %s\n",
     ret, buffer->count, buffer->fd, pipe->count, pipe->flags & HIN_DONE ? "done" : "");
 
+  int ret1 = 0;
   if (pipe->read_callback == NULL) {
-    hin_pipe_copy_raw (pipe, buffer, ret, pipe->flags & HIN_DONE ? 1 : 0);
+    ret1 = hin_pipe_copy_raw (pipe, buffer, ret, pipe->flags & HIN_DONE ? 1 : 0);
   } else {
-    if (pipe->read_callback (pipe, buffer, ret, pipe->flags & HIN_DONE ? 1 : 0))
-      hin_buffer_clean (buffer);
+    ret1 = pipe->read_callback (pipe, buffer, ret, pipe->flags & HIN_DONE ? 1 : 0);
   }
+  if (ret1) hin_buffer_clean (buffer);
 
   if (pipe->write == NULL) {
     pipe->out.flags |= HIN_DONE;

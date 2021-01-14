@@ -1,4 +1,12 @@
 
+* httpd common headers (date, server name, etc) so cgi and others can send date and servername
+* compile time configuration for a few variable
+* refactoring lines buffer (still buggy)
+* removed shutdown call and replaced it with async close (buggy atm)
+* replaced async statx with normal statx (+1000 req/sec woo)
+* better handling of child death
+
+commit c2cbe0ca558fdfcba321a3757c8e6a1c6df8d75b
 * cgi proper header parsing
 * cgi docroot
 * cgi servername given from http host

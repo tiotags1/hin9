@@ -2,11 +2,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
+
 #include <unistd.h>
 #include <fcntl.h>
-#include <errno.h>
 #include <signal.h>
 #include <sys/mman.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #include <hin.h>
 
@@ -29,7 +32,8 @@ int hin_restart () {
   hin_event_clean ();
   printf ("running exe file '%s'\n", master.exe_path);
   char * buf = NULL;
-  asprintf (&buf, "--reuse=%d", master.sharefd);
+  if (asprintf (&buf, "--reuse=%d", master.sharefd) < 0)
+    perror ("asprintf");
   char * argv[] = {master.exe_path, buf, NULL};
   execvp (master.exe_path, argv);
   printf ("crash\n");
@@ -39,31 +43,44 @@ static void sig_restart (int signo) {
   hin_restart ();
 }
 
-static void sig_child (int signo) {
-  //printf ("got sigchld\n");
+static void sig_child_handler (int signo) {
+  pid_t pid;
+  int status;
+
+  while ((pid = waitpid (-1, &status, WNOHANG)) > 0) {
+    if (WIFSIGNALED (status)) {
+      if (WTERMSIG(status) == SIGSEGV) {
+        // It was terminated by a segfault
+        printf ("child %d sigsegv\n", pid);
+      } else {
+        printf ("child %d terminated due to another signal\n", pid);
+      }
+    }
+    #if 0
+    int hin_worker_closed (int pid);
+    if (hin_worker_closed (pid) <= 0) {
+      printf ("child %d died\n", pid);
+    }
+    #endif
+  }
 }
 
 int install_sighandler () {
-  // SIGPIPE
-  sigset_t set;
-  sigemptyset (&set);
-  sigaddset (&set, SIGPIPE);
-  if (pthread_sigmask (SIG_BLOCK, &set, NULL) != 0)
-    return -1;
+  // It's better to use sigaction() over signal().  You won't run into the
+  // issue where BSD signal() acts one way and Linux or SysV acts another.
+  struct sigaction sa;
+  memset (&sa, 0, sizeof sa);
+  sigemptyset (&sa.sa_mask);
+  sa.sa_flags = 0;
 
-  // SIGUSR1 -- restart
-  struct sigaction new_action, old_action;
+  sa.sa_handler = SIG_IGN;
+  sigaction (SIGPIPE, &sa, NULL);
 
-  // Set up the structure to specify the new action.
-  new_action.sa_handler = sig_restart;
-  sigemptyset (&new_action.sa_mask);
-  new_action.sa_flags = 0;
+  sa.sa_handler = sig_restart;
+  sigaction (SIGUSR1, &sa, NULL);
 
-  sigaction (SIGUSR1, NULL, &old_action);
-  if (old_action.sa_handler != SIG_IGN)
-    sigaction (SIGUSR1, &new_action, NULL);
-
-  signal (SIGCHLD, sig_child);
+  sa.sa_handler = sig_child_handler;
+  sigaction (SIGCHLD, &sa, NULL);
 
   return 0;
 }
@@ -71,11 +88,6 @@ int install_sighandler () {
 static int hin_use_sharedmem (int sharefd) {
   hin_master_share_t * share = mmap (NULL, 4096, PROT_READ|PROT_WRITE, MAP_SHARED, sharefd, 0);
   master.share = share;
-  /*printf ("resuing sockets\n");
-  for (int i=0; i<share->nsocket; i++) {
-    hin_master_socket_t * sock = &share->sockets[i];
-    printf ("%d. socket %d\n", i, sock->sockfd);
-  }*/
 }
 
 static int hin_create_sharedmem () {
