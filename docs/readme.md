@@ -1,9 +1,9 @@
 hin9
 ====
 
-a linux webserver using liburing, ssl, dynamic deflate, http1.1 pipelining, 304 status
+a linux webserver using liburing, ssl, dynamic deflate, http1.1 pipelining, 304 status, simple reverse proxy functions, simple (and inefficient) cgi support
 
-uses lua for configuration and scripting
+uses lua for configuration and scripting, setting a file to be cached is as simple as "set\_option (req, "cache", num-seconds)" or adding a custom header "add\_header (req, "Hello", "from server")"
 
 server tries to mitigate DDoS effects by offering a very robust way of dropping clients and mitigating the effects of keeping too many connections open, should offer good performance for video serving, web file uploading
 
@@ -20,4 +20,5 @@ roadmap
 * caching reverse proxy
 * fastcgi
 * better daemon support
+* improve perfomance by removing syscalls (yes that includes calls to io\_uring\_submit)
 

@@ -26,8 +26,8 @@ typedef struct {
   int quit;
   int num_active;
   uint32_t debug;
-  int wait_restart;
-  int child_nr;
+  int restart_pid;
+  int id;
   //int access_fd;
   //int error_fd;
   void * servers;

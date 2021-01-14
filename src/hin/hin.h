@@ -29,7 +29,8 @@ enum { HIN_CLIENT = 1, HIN_DYN_BUFFER, HIN_SERVER, HIN_DOWNLOAD };
 
 enum { DEBUG_OTHER = 0x1, DEBUG_PIPE = 0x2, DEBUG_HEADERS = 0x4, DEBUG_RW = 0x8,
   DEBUG_SSL = 0x10, DEBUG_PROTO = 0x20, DEBUG_URING = 0x40, DEBUG_SOCKET = 0x80,
-  DEBUG_CGI = 0x100, DEBUG_POST = 0x200, DEBUG_CONFIG = 0x400, DEBUG_TIMER = 0x800 };
+  DEBUG_CGI = 0x100, DEBUG_POST = 0x200, DEBUG_CONFIG = 0x400, DEBUG_TIMER = 0x800,
+  DEBUG_PROXY = 0x1000 };
 
 typedef int (*hin_callback_t) (hin_buffer_t * buffer, int ret);
 
@@ -98,6 +99,7 @@ typedef struct hin_server_struct {
 
 typedef struct {
   int (*read_callback) (hin_buffer_t * buffer);
+  int (*eat_callback) (hin_buffer_t * buffer, int num);
   int (*close_callback) (hin_buffer_t * buffer);
 } hin_lines_t;
 

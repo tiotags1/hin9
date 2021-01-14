@@ -95,7 +95,7 @@ int hin_pipe_write_callback (hin_buffer_t * buffer, int ret) {
     pipe->out.pos += ret;
   }
   if (ret < buffer->count) {
-    printf ("pipe write incomplete write %d\n", buffer->fd);
+    printf ("pipe write incomplete %d %d/%d\n", buffer->fd, ret, buffer->count);
     buffer->ptr += ret;
     buffer->count -= ret;
     hin_request_write (buffer);
@@ -157,6 +157,14 @@ int hin_pipe_read_callback (hin_buffer_t * buffer, int ret) {
 
   if (master.debug & DEBUG_PIPE) printf ("pipe read  %d/%d fd %d left %ld %s\n",
     ret, buffer->count, buffer->fd, pipe->count, pipe->flags & HIN_DONE ? "done" : "");
+
+  if (ret < buffer->count) {
+    printf ("pipe read incomplete %d %d/%d\n", buffer->fd, ret, buffer->count);
+    buffer->ptr += ret;
+    buffer->count -= ret;
+    hin_request_read (buffer);
+    return 0;
+  }
 
   int ret1 = 0;
   if (pipe->read_callback == NULL) {

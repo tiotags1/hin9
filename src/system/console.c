@@ -23,7 +23,7 @@ int console_execute (string_t * source) {
 
 static int hin_console_read_callback (hin_buffer_t * buf, int ret) {
   if (ret == 0) {
-    printf ("console EOF\n");
+    if (master.debug & DEBUG_OTHER) printf ("console EOF\n");
     hin_stop ();
     return 0;
   }

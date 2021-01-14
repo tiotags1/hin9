@@ -90,11 +90,16 @@ static int hin_lines_read_callback (hin_buffer_t * buffer, int ret) {
     }
     return err;
   }
-  if (num > 0) {
-    hin_buffer_eat (buffer, num);
+  if (lines->eat_callback) {
+    if (lines->eat_callback (buffer, num))
+      hin_buffer_clean (buffer);
+  } else {
+    if (num > 0) {
+      hin_buffer_eat (buffer, num);
+    }
+    if (num == 0)
+      hin_lines_request (buffer);
   }
-  if (num == 0)
-    hin_lines_request (buffer);
 
   return 0;
 }

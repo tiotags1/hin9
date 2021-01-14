@@ -1,7 +1,8 @@
 
 * bugs
   * ssl renegotiation
-  * cgi post doesn't work yet
+  * cgi and proxy don't support deflate, keepalives or chunked encoding
+  * if responses are larger than READ_SZ (4096 atm) it won't print overflowing headers
 
 
 * reverse proxy

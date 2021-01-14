@@ -25,7 +25,7 @@ int hin_restart () {
   if (pid != 0) {
     printf ("wait restart issued to former process\n");
     master.share->done = 0;
-    master.wait_restart = 1;
+    master.restart_pid = pid;
     return 0;
   }
   int hin_event_clean ();
@@ -55,6 +55,10 @@ static void sig_child_handler (int signo) {
       } else {
         printf ("child %d terminated due to another signal\n", pid);
       }
+    }
+    if (master.restart_pid == pid) {
+      printf ("restart to %d failed status %d\n", pid, status);
+      master.restart_pid = 0;
     }
     #if 0
     int hin_worker_closed (int pid);

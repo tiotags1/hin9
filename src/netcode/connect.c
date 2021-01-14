@@ -24,7 +24,7 @@ static int complete (hin_buffer_t * buffer, int fd) {
   }
 
   client->sockfd = fd;
-  printf ("connect complete %d %s:%s\n", client->sockfd, hbuf, sbuf);
+  if (master.debug & DEBUG_SOCKET) printf ("connect complete %d %s:%s\n", client->sockfd, hbuf, sbuf);
 
   int (*callback) (hin_client_t * client, int ret) = NULL;
   memcpy (&callback, buffer->buffer, sizeof (void*));
@@ -96,7 +96,7 @@ static int hin_connect_recheck (hin_buffer_t * buffer, int ret) {
 }
 
 hin_client_t * hin_connect (const char * host, const char * port, int extra_size, int (*callback) (hin_client_t * client, int ret)) {
-  printf ("connect %s:%s\n", host, port);
+  if (master.debug & DEBUG_SOCKET) printf ("connect start %s:%s\n", host, port);
   struct addrinfo hints;
   struct addrinfo *result, *rp;
   int sfd, s, j;

@@ -1,4 +1,8 @@
 
+* proxy deletes previous headers and adds only default server headers
+* message when graceful restart fails
+
+commit 0fdc1fe55d649408c36e5273466aae3cae8099b3
 * httpd common headers (date, server name, etc) so cgi and others can send date and servername
 * compile time configuration for a few variable
 * refactoring lines buffer (still buggy)
@@ -16,7 +20,7 @@ commit c2cbe0ca558fdfcba321a3757c8e6a1c6df8d75b
 
 commit abf9a79884f23dfea1425036248f00178105441d
 * graceful restart initial implementation
-  * after 1-2 restarts liburing crashes in io_uring setup syscall claming no resources
+  * after 1-2 restarts liburing crashes in io_uring setup syscall claiming no resources
   * doesn't wait for new server to finish setup before it issues close
 * added ability to request an ipv6 or ipv4 socket
 * flush httpd timeout so it closes when you close the server
