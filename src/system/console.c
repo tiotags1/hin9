@@ -4,7 +4,9 @@
 #include <string.h>
 #include <signal.h>
 
-#include <hin.h>
+#include <basic_pattern.h>
+
+#include "hin.h"
 
 static hin_buffer_t * buffer = NULL;
 static hin_buffer_t * timeout_buffer = NULL;

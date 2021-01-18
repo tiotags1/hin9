@@ -1,4 +1,12 @@
 
+* enabled keepalive/pipelining for file, cgi and proxy via chunked encoding
+* enabled deflate for file and proxy
+* cgi deflate has a bug
+* changed the way hin\_client\_t and httpd\_client\_t interact
+* changed async connect function parameters
+* configuration to disable x-powered-by
+
+commit 9edb1d56262107c1ccfafaa32c8ee447658b9702
 * proxy deletes previous headers and adds only default server headers
 * message when graceful restart fails
 

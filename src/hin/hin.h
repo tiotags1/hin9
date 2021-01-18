@@ -14,7 +14,6 @@ typedef struct hin_pipe_struct hin_pipe_t;
 
 #include "ssl.h"
 #include "master.h"
-#include "http.h"
 
 #define READ_SZ                 4096
 //65536
@@ -42,7 +41,7 @@ struct hin_buffer_struct {
   hin_callback_t error_callback;
   off_t pos;
   int count, sz;
-  hin_client_t * parent;
+  void * parent;
   struct hin_buffer_struct * prev, * next;
   char * ptr, * data;
   hin_ssl_t * ssl;
@@ -59,7 +58,7 @@ struct hin_pipe_struct {
   hin_pipe_dir_t in, out;
   uint32_t flags;
   off_t count, sz;
-  void * parent, * data;
+  void * parent, * parent1, * data;
   hin_buffer_t * write;
   hin_ssl_t * ssl;
   int (*read_callback) (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush);
@@ -76,15 +75,14 @@ struct hin_client_struct {
   uint32_t flags;
   uint32_t magic;
   void * parent;
-  hin_buffer_t * read_buffer;
   struct sockaddr in_addr;
   socklen_t in_len;
   hin_ssl_t ssl;
   struct hin_client_struct * prev, * next;
-  char extra[];
 };
 
 typedef struct hin_server_struct {
+  hin_client_t c;
   int (*client_handle) (hin_client_t * client);
   int (*client_close) (hin_client_t * client);
   int (*client_error) (hin_client_t * client);
@@ -103,12 +101,11 @@ typedef struct {
   int (*close_callback) (hin_buffer_t * buffer);
 } hin_lines_t;
 
-#include "worker.h"
-
-hin_client_t * hin_connect (const char * host, const char * port, int extra_size, int (*callback) (hin_client_t * client, int ret));
+int hin_connect (hin_client_t * client, const char * host, const char * port, int (*callback) (hin_client_t * client, int ret));
 int hin_socket_listen (const char * address, const char * port, const char * sock_type, hin_client_t * client);
 int hin_socket_search (const char * addr, const char *port, const char * sock_type, hin_client_t * client);
 
+void hin_client_unlink (hin_client_t * client);
 void hin_client_shutdown (hin_client_t * client);
 void hin_client_close (hin_client_t * client);
 
@@ -125,6 +122,7 @@ int hin_request_timeout (hin_buffer_t * buffer, struct timespec * ts, int count,
 hin_buffer_t * hin_pipe_buffer_get (hin_pipe_t * pipe);
 int hin_pipe_advance (hin_pipe_t * pipe);
 int hin_pipe_finish (hin_pipe_t * pipe);
+int hin_pipe_append (hin_pipe_t * pipe, hin_buffer_t * buffer);
 
 void hin_buffer_clean (hin_buffer_t * buffer);
 

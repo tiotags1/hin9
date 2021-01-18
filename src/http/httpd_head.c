@@ -67,7 +67,7 @@ int httpd_parse_headers_line (httpd_client_t * http, string_t * line) {
   return 1;
 }
 
-int httpd_parse_headers (hin_client_t * client, string_t * source) {
+int httpd_parse_headers (httpd_client_t * http, string_t * source) {
   string_t line, method, path, param, param1, param2;
   string_t orig = *source;
 
@@ -78,12 +78,13 @@ int httpd_parse_headers (hin_client_t * client, string_t * source) {
   }
 
   *source = orig;
-  httpd_client_t * http = (httpd_client_t*)&client->extra;
+  hin_client_t * client = &http->c;
 
+  line.len = 0;
   if (find_line (source, &line) == 0 || match_string (&line, "(%a+) ("HIN_HTTP_PATH_ACCEPT") HTTP/1.([01])", &method, &path, &param) <= 0) {
-    printf ("httpd 400 error parsing request line\n");
-    httpd_respond_error (client, 400, NULL);
-    httpd_client_shutdown (client);
+    printf ("httpd 400 error parsing request line '%.*s'\n", (int)line.len, line.ptr);
+    httpd_respond_error (http, 400, NULL);
+    httpd_client_shutdown (http);
     return -1;
   }
   if (*param.ptr != '1') {
@@ -97,8 +98,8 @@ int httpd_parse_headers (hin_client_t * client, string_t * source) {
     http->method = HIN_HTTP_POST;
   } else {
     printf ("httpd 405 error unknown method\n");
-    httpd_respond_error (client, 405, NULL);
-    httpd_client_shutdown (client);
+    httpd_respond_error (http, 405, NULL);
+    httpd_client_shutdown (http);
     return -1;
   }
 
@@ -119,12 +120,12 @@ int httpd_parse_headers (hin_client_t * client, string_t * source) {
 
   if (http->method == HIN_HTTP_POST && http->post_sz <= 0) {
     printf ("httpd post missing size\n");
-    httpd_respond_error (client, 411, NULL);
-    httpd_client_shutdown (client);
+    httpd_respond_error (http, 411, NULL);
+    httpd_client_shutdown (http);
   } else if (http->post_sz >= HIN_HTTPD_MAX_POST_SIZE) {
     printf ("httpd post size %ld >= %ld\n", http->post_sz, (long)HIN_HTTPD_MAX_POST_SIZE);
-    httpd_respond_error (client, 413, NULL);
-    httpd_client_shutdown (client);
+    httpd_respond_error (http, 413, NULL);
+    httpd_client_shutdown (http);
   }
 
   return (uintptr_t)source->ptr - (uintptr_t)orig.ptr;

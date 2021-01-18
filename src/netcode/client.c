@@ -5,44 +5,16 @@
 
 #include <sys/socket.h>
 #include <netdb.h>
+#include <unistd.h>
 
-#include <hin.h>
+#include "hin.h"
+#include "http.h"
 
-static int hin_do_close (hin_buffer_t * buf, int ret) {
-  if (ret < 0) {
-    printf ("error closing %d %s\n", buf->fd, strerror (-ret));
-  }
-  if (master.debug & DEBUG_SOCKET) printf ("new close %d\n", buf->fd);
-
-  hin_client_t * client = (hin_client_t*)buf->parent;
-  hin_client_t * server = (hin_client_t*)client->parent;
-  hin_server_blueprint_t * bp = (hin_server_blueprint_t*)&server->extra;
-  hin_client_list_remove (&bp->active_client, client);
-
-  free (client);
-  master.num_active--;
-  return 1;
-}
-
-void hin_client_shutdown (hin_client_t * client) {
-  if (master.debug & DEBUG_SOCKET) printf ("socket shutdown %d\n", client->sockfd);
-  hin_buffer_t * buf = malloc (sizeof *buf);
-  memset (buf, 0, sizeof (*buf));
-  buf->flags = HIN_SOCKET | (client->flags & HIN_SSL);
-  buf->fd = client->sockfd;
-  buf->callback = hin_do_close;
-  buf->parent = client;
-  buf->ssl = &client->ssl;
-  hin_request_close (buf);
-}
-
-void hin_client_close (hin_client_t * client) {
-  if (master.debug & DEBUG_SOCKET) printf ("socket closed %d\n", client->sockfd);
-
-  //if (close (client->sockfd) < 0) perror ("close socket");
+void hin_client_unlink (hin_client_t * client) {
+  if (master.debug & DEBUG_SOCKET) printf ("socket unlink %d\n", client->sockfd);
 
   hin_client_t * server = (hin_client_t*)client->parent;
-  hin_server_blueprint_t * bp = (hin_server_blueprint_t*)&server->extra;
+  hin_server_blueprint_t * bp = (hin_server_blueprint_t*)server;
   hin_client_list_remove (&bp->active_client, client);
 
   free (client);
@@ -50,15 +22,16 @@ void hin_client_close (hin_client_t * client) {
 }
 
 void hin_client_clean (hin_client_t * client) {
-  //if (client->read_buffer)
-  //  hin_buffer_clean (client->read_buffer);
+  httpd_client_t * http = (httpd_client_t*)client;
+  if (http->read_buffer)
+    hin_buffer_clean (http->read_buffer);
   //free (client);
-  hin_client_shutdown (client);
+  //hin_client_shutdown (client);
   close (client->sockfd);
 }
 
 void hin_server_clean (hin_client_t * server) {
-  hin_server_blueprint_t * bp = (hin_server_blueprint_t*)&server->extra;
+  hin_server_blueprint_t * bp = (hin_server_blueprint_t*)server;
   for (hin_client_t * elem = bp->active_client; elem; elem = elem->next) {
     //hin_client_shutdown (elem);
     hin_client_clean (elem);
@@ -94,7 +67,7 @@ void hin_client_list_add (hin_client_t ** list, hin_client_t * new) {
 
 int handle_client (hin_client_t * client) {
   hin_client_t * server = (hin_client_t*)client->parent;
-  hin_server_blueprint_t * bp = (hin_server_blueprint_t*)&server->extra;
+  hin_server_blueprint_t * bp = (hin_server_blueprint_t*)server;
 
   if (bp->ssl_ctx) {
     hin_accept_ssl_init (client);

@@ -4,7 +4,9 @@
 #include <string.h>
 #include <signal.h>
 
-#include <hin.h>
+#include <basic_pattern.h>
+
+#include "hin.h"
 
 hin_master_t master;
 

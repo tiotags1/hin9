@@ -23,6 +23,7 @@ typedef struct {
 } httpd_client_field_t;
 
 typedef struct {
+  hin_client_t c;
   uint32_t state;
   uint32_t peer_flags, disable;
 
@@ -30,7 +31,7 @@ typedef struct {
   int method;
 
   int filefd;
-  const char * file_path;
+  char * file_path;
   off_t pos, count;
 
   time_t cache;
@@ -45,11 +46,14 @@ typedef struct {
 
   basic_time_t next_time;
 
+  hin_buffer_t * read_buffer;
+
   string_t headers;
   z_stream z;
 } httpd_client_t;
 
 typedef struct {
+  hin_client_t c;
   char * save_path;
   hin_uri_t uri;
   off_t sz;
@@ -60,6 +64,7 @@ typedef struct {
 #include <basic_pattern.h>
 
 int header (hin_client_t * client, hin_buffer_t * buffer, const char * fmt, ...);
+int header_raw (hin_client_t * client, hin_buffer_t * buffer, const char * data, int len);
 int header_date (hin_client_t * client, hin_buffer_t * buffer, const char * name, time_t time);
 int httpd_write_common_headers (hin_client_t * client, hin_buffer_t * buf);
 
@@ -67,9 +72,9 @@ int find_line (string_t * source, string_t * line);
 const char * http_status_name (int nr);
 int hin_string_equali (string_t * source, const char * format, ...);
 
-int httpd_parse_req (hin_client_t * client, string_t * source);
+int httpd_parse_req (httpd_client_t * http, string_t * source);
 
-int httpd_respond_error (hin_client_t * client, int status, const char * body);
+int httpd_respond_error (httpd_client_t * http, int status, const char * body);
 
 hin_pipe_t * send_file (hin_client_t * client, int filefd, off_t pos, off_t count, uint32_t flags, int (*extra) (hin_pipe_t *));
 hin_pipe_t * receive_file (hin_client_t * client, int filefd, off_t pos, off_t count, uint32_t flags, int (*extra) (hin_pipe_t *));
@@ -77,9 +82,9 @@ hin_pipe_t * receive_file (hin_client_t * client, int filefd, off_t pos, off_t c
 int hin_client_ssl_init (hin_client_t * client);
 void hin_client_ssl_cleanup (hin_client_t * client);
 
-int httpd_client_start_request (hin_client_t * client);
-int httpd_client_finish_request (hin_client_t * client);
-int httpd_client_shutdown (hin_client_t * client);
+int httpd_client_start_request (httpd_client_t * http);
+int httpd_client_finish_request (httpd_client_t * http);
+int httpd_client_shutdown (httpd_client_t * http);
 
 int hin_request_headers (hin_client_t * client);
 

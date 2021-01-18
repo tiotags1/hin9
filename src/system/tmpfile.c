@@ -6,7 +6,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#include <hin.h>
+#include "hin.h"
 
 static int hin_tmpfile_callback (hin_buffer_t * buf, int ret) {
 

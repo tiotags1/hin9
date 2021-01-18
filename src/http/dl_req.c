@@ -3,13 +3,14 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include <hin.h>
+#include "hin.h"
+#include "http.h"
 
 #include <sys/stat.h>
 #include <fcntl.h>
 
 int http_client_send_data (hin_client_t * client, string_t * source) {
-  http_client_t * http = (http_client_t*)&client->extra;
+  http_client_t * http = (http_client_t*)client;
 
   off_t len = source->len;
   if (http->sz < len) {
@@ -41,7 +42,7 @@ int http_client_read_callback (hin_buffer_t * buffer, int ret) {
     return -1;
   }
   hin_client_t * client = (hin_client_t*)buffer->parent;
-  http_client_t * http = (http_client_t*)&client->extra;
+  http_client_t * http = (http_client_t*)client;
   string_t data;
   data.ptr = buffer->ptr;
   data.len = ret;
@@ -60,7 +61,7 @@ static int http_client_sent_callback (hin_buffer_t * buffer, int ret) {
 }
 
 int http_send_request (hin_client_t * client) {
-  http_client_t * http = (http_client_t*)client->extra;
+  http_client_t * http = (http_client_t*)client;
 
   hin_buffer_t * buf = malloc (sizeof (*buf) + READ_SZ);
   memset (buf, 0, sizeof (*buf));

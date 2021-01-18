@@ -14,7 +14,7 @@
 #include "conf.h"
 
 int httpd_write_common_headers (hin_client_t * client, hin_buffer_t * buf) {
-  httpd_client_t * http = (httpd_client_t *)&client->extra;
+  httpd_client_t * http = (httpd_client_t *)client;
 
   if ((http->disable & HIN_HTTP_DATE) == 0) {
     time_t rawtime;
@@ -49,14 +49,14 @@ int httpd_write_common_headers (hin_client_t * client, hin_buffer_t * buf) {
 }
 
 static int http_error_write_callback (hin_buffer_t * buffer, int ret) {
-  hin_client_t * client = (hin_client_t*)buffer->parent;
+  httpd_client_t * http = (httpd_client_t*)buffer->parent;
   if (ret != buffer->count) printf ("error http_error_write_callback not sent all of it %d/%d\n", ret, buffer->count);
-  httpd_client_finish_request (client);
+  httpd_client_finish_request (http);
   return 1;
 }
 
-int httpd_respond_error (hin_client_t * client, int status, const char * body) {
-  httpd_client_t * http = (httpd_client_t *)&client->extra;
+int httpd_respond_error (httpd_client_t * http, int status, const char * body) {
+  hin_client_t * client = &http->c;
 
   hin_buffer_t * buf = malloc (sizeof (*buf) + READ_SZ);
   memset (buf, 0, sizeof (*buf));
@@ -72,7 +72,7 @@ int httpd_respond_error (hin_client_t * client, int status, const char * body) {
   int freeable = 0;
   if (body == NULL) {
     freeable = 1;
-    if (asprintf ((char**)&body, "<html><head></head><body><h1>Error %d: %s</h1></body></html>", status, http_status_name (status)) < 0)
+    if (asprintf ((char**)&body, "<html><head></head><body><h1>Error %d: %s</h1></body></html>\n", status, http_status_name (status)) < 0)
       perror ("asprintf");
   }
   http->disable |= HIN_HTTP_CHUNKED | HIN_HTTP_DEFLATE | HIN_HTTP_CACHE;
@@ -93,9 +93,7 @@ static int httpd_close_filefd_callback (hin_buffer_t * buffer, int ret) {
 }
 
 static int httpd_close_filefd (hin_buffer_t * buffer, httpd_client_t * http) {
-  buffer->fd = http->filefd;
-  buffer->callback = httpd_close_filefd_callback;
-  hin_request_close (buffer);
+  close (http->filefd);
   return 0;
 }
 
@@ -104,32 +102,20 @@ static int httpd_pipe_error_callback (hin_pipe_t * pipe) {
   httpd_client_shutdown (pipe->parent);
 }
 
-static int httpd_headers_write_callback (hin_buffer_t * buffer, int ret) {
-  hin_client_t * client = (hin_client_t*)buffer->parent;
-  httpd_client_t * http = (httpd_client_t*)&client->extra;
-  if (ret < 0) {
-    httpd_client_shutdown (client);
-    return -1;
-  }
-  if (ret != buffer->count) printf ("httpd error not sent headers ? %d/%d\n", ret, buffer->count);
-  if (http->status == 304) {
-    httpd_client_finish_request (client);
-    httpd_close_filefd (buffer, http);
-    return 0;
-  } else {
-    hin_pipe_t * pipe = send_file (client, http->filefd, http->pos, http->count, 0, NULL);
-    pipe->out_error_callback = httpd_pipe_error_callback;
-  }
-  return 1;
+static int done_file (hin_pipe_t * pipe) {
+  if (master.debug & DEBUG_PIPE) printf ("pipe file transfer finished infd %d outfd %d\n", pipe->in.fd, pipe->out.fd);
+  if (pipe->extra_callback) pipe->extra_callback (pipe);
+  if (close (pipe->in.fd)) perror ("close in");
+
+  httpd_client_finish_request (pipe->parent);
 }
 
 static int httpd_statx_callback (hin_buffer_t * buf, int ret) {
   hin_client_t * client = (hin_client_t*)buf->parent;
-  httpd_client_t * http = (httpd_client_t*)&client->extra;
+  httpd_client_t * http = (httpd_client_t*)client;
   if (ret < 0) {
     printf ("http 404 error can't open '%s': %s\n", http->file_path, strerror (-ret));
-    httpd_respond_error (client, 404, NULL);
-
+    httpd_respond_error (http, 404, NULL);
     httpd_close_filefd (buf, http);
     return 0;
   }
@@ -137,7 +123,6 @@ static int httpd_statx_callback (hin_buffer_t * buf, int ret) {
   struct statx * stat = &stat1;
 
   off_t sz = stat->stx_size;
-  buf->callback = httpd_headers_write_callback;
 
   if (http->count < 0) http->count = sz - http->pos;
   if (http->pos != 0 || http->count != sz) {
@@ -151,7 +136,7 @@ static int httpd_statx_callback (hin_buffer_t * buf, int ret) {
 
   if (http->pos < 0 || http->pos > sz || http->pos + http->count > sz) {
     printf ("http 416 error out of range\n");
-    httpd_respond_error (client, 416, NULL);
+    httpd_respond_error (http, 416, NULL);
     httpd_close_filefd (buf, http);
     return 0;
   }
@@ -214,16 +199,42 @@ static int httpd_statx_callback (hin_buffer_t * buf, int ret) {
 
   if (master.debug & DEBUG_RW) printf ("responding '\n%.*s'\n", buf->count, buf->ptr);
 
-  hin_request_write (buf);
+  hin_pipe_t * pipe = calloc (1, sizeof (*pipe));
+  pipe->in.fd = http->filefd;
+  pipe->in.flags = HIN_OFFSETS;
+  pipe->in.pos = http->pos;
+  pipe->out.fd = client->sockfd;
+  pipe->out.flags = HIN_SOCKET | (client->flags & HIN_SSL);
+  pipe->out.pos = 0;
+  pipe->parent = client;
+  pipe->count = pipe->sz = http->count;
+  pipe->ssl = &client->ssl;
+  pipe->finish_callback = done_file;
+  pipe->out_error_callback = httpd_pipe_error_callback;
+
+  int httpd_pipe_set_chunked (httpd_client_t * http, hin_pipe_t * pipe);
+  httpd_pipe_set_chunked (http, pipe);
+
+  buf->parent = pipe;
+  hin_pipe_write (pipe, buf);
+
+  if (http->status == 304) {
+    pipe->count = 0;
+    pipe->flags |= HIN_DONE;
+    pipe->in.flags |= HIN_DONE;
+  }
+
+  hin_pipe_advance (pipe);
+
   return 0;
 }
 
 static int httpd_open_filefd_callback (hin_buffer_t * buf, int ret) {
   hin_client_t * client = (hin_client_t*)buf->parent;
-  httpd_client_t * http = (httpd_client_t*)&client->extra;
+  httpd_client_t * http = (httpd_client_t*)client;
   if (ret < 0) {
     printf ("http 404 error can't open '%s': %s\n", http->file_path, strerror (-ret));
-    httpd_respond_error (client, 404, NULL);
+    httpd_respond_error (http, 404, NULL);
     return -1;
   }
   http->filefd = ret;
@@ -241,7 +252,7 @@ static int httpd_open_filefd_callback (hin_buffer_t * buf, int ret) {
 }
 
 int httpd_handle_file_request (hin_client_t * client, const char * path, off_t pos, off_t count, uintptr_t param) {
-  httpd_client_t * http = (httpd_client_t*)&client->extra;
+  httpd_client_t * http = (httpd_client_t*)client;
 
   http->file_path = strdup (path);
   http->pos = pos;
@@ -269,8 +280,8 @@ int httpd_handle_file_request (hin_client_t * client, const char * path, off_t p
   }
 }
 
-int httpd_parse_req (hin_client_t * client, string_t * source) {
-  httpd_client_t * http = (httpd_client_t*)&client->extra;
+int httpd_parse_req (httpd_client_t * http, string_t * source) {
+  hin_client_t * client = &http->c;
   string_t orig = *source;
 
   int httpd_parse_headers (hin_client_t * client, string_t * source);

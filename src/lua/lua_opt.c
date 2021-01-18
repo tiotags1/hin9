@@ -5,8 +5,8 @@
 #include <string.h>
 
 #include "hin.h"
-#include "lua.h"
 #include "http.h"
+#include "lua.h"
 
 uint32_t get_mask (const char * name) {
   if (strcmp (name, "keepalive") == 0) {
@@ -91,7 +91,7 @@ static int l_hin_get_option (lua_State *L) {
   const char * name = lua_tostring (L, 2);
   if (name == NULL) { printf ("option nil\n"); return 0; }
 
-  httpd_client_t * http = (httpd_client_t*)client->extra;
+  httpd_client_t * http = (httpd_client_t*)client;
   if (strcmp (name, "keepalive") == 0) {
     if (http->disable & HIN_HTTP_KEEPALIVE) lua_pushboolean (L, 1);
     else lua_pushboolean (L, 0);
@@ -112,7 +112,7 @@ static int l_hin_set_option (lua_State *L) {
   const char * name = lua_tostring (L, 2);
   if (name == NULL) { printf ("option nil\n"); return 0; }
 
-  httpd_client_t * http = (httpd_client_t*)client->extra;
+  httpd_client_t * http = (httpd_client_t*)client;
   if (strcmp (name, "keepalive") == 0) {
     int value = lua_toboolean (L, 3);
     printf ("set keepalive to %d\n", value);

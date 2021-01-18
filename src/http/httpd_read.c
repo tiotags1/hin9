@@ -6,13 +6,14 @@
 #include <unistd.h>
 
 #include "hin.h"
+#include "http.h"
 #include "lua.h"
 #include "conf.h"
 
 int httpd_client_read_callback (hin_buffer_t * buffer);
 
-int httpd_client_reread (hin_client_t * client) {
-  hin_buffer_t * buffer = client->read_buffer;
+int httpd_client_reread (httpd_client_t * http) {
+  hin_buffer_t * buffer = http->read_buffer;
 
   string_t source;
   source.ptr = buffer->data;
@@ -22,7 +23,7 @@ int httpd_client_reread (hin_client_t * client) {
     num = httpd_client_read_callback (buffer);
   if (num < 0) {
     printf ("client error\n");
-    httpd_client_shutdown (client);
+    httpd_client_shutdown (http);
     return -1;
   } else if (num > 0) {
     hin_buffer_eat (buffer, num);
@@ -30,6 +31,7 @@ int httpd_client_reread (hin_client_t * client) {
     buffer->count = buffer->sz;
     hin_lines_request (buffer);
   }
+  return 0;
 }
 
 #include <sys/stat.h>
@@ -38,10 +40,10 @@ int httpd_client_finish (hin_client_t * client);
 int post_done (hin_pipe_t * pipe) {
   printf ("post done %d\n", pipe->out.fd);
   //close (pipe->out);
-  hin_client_t * client = (hin_client_t*)pipe->parent;
-  httpd_client_t * http = (httpd_client_t*)client->extra;
+  httpd_client_t * http = (httpd_client_t*)pipe->parent;
   http->state &= ~HIN_REQ_POST;
-  httpd_client_finish (client);
+  if (http->state & HIN_REQ_DATA) return 0;
+  return httpd_client_finish_request (http);
 }
 
 int httpd_client_read_callback (hin_buffer_t * buffer) {
@@ -50,15 +52,14 @@ int httpd_client_read_callback (hin_buffer_t * buffer) {
   source->len = buffer->ptr - buffer->data;
 
   hin_client_t * client = (hin_client_t*)buffer->parent;
-  httpd_client_t * http = (httpd_client_t*)&client->extra;
+  httpd_client_t * http = (httpd_client_t*)client;
 
   if (source->len >= HIN_HTTPD_MAX_HEADER_SIZE) {
-    httpd_respond_error (client, 413, NULL);
-    httpd_client_shutdown (client);
+    httpd_respond_error (http, 413, NULL);
     return -1;
   }
 
-  int used = httpd_parse_req (client, source);
+  int used = httpd_parse_req (http, source);
   if (used <= 0) return used;
   if (http->post_sz > 0) {
     int consume = source->len > http->post_sz ? http->post_sz : source->len;
@@ -80,56 +81,27 @@ int httpd_client_read_callback (hin_buffer_t * buffer) {
     }
   }
   http->status = 200;
+
+  // run lua processing
   int hin_server_callback (hin_client_t * client);
   hin_server_callback (client);
+
+  http->peer_flags &= ~http->disable;
+
+  if ((http->state & ~(HIN_REQ_HEADERS|HIN_REQ_END)) == 0) {
+    printf ("httpd 500 missing request\n");
+    httpd_respond_error (http, 500, NULL);
+    return -1;
+  }
 
   if (http->peer_flags & HIN_HTTP_DEFLATE) {
     int hin_client_deflate_init (httpd_client_t * http);
     hin_client_deflate_init (http);
   }
 
-  if ((http->state & ~(HIN_REQ_HEADERS|HIN_REQ_END)) == 0) {
-    printf ("httpd 500 missing request\n");
-    httpd_respond_error (client, 500, NULL);
-    httpd_client_shutdown (client);
-    return used;
-  }
-  if (http->state & HIN_REQ_HEADERS) {
-    httpd_client_reread (client);
-  }
   return used;
 }
 
-static int hin_lines_close_callback (hin_buffer_t * buffer, int ret) {
-  if (ret < 0) {
-    printf ("close fd %d had error %s\n", buffer->fd, strerror (-ret));
-    return 1;
-  }
-  hin_client_t * client = (hin_client_t*)buffer->parent;
-  hin_client_close (client);
-  return 1;
-}
-
-static int hin_lines_httpd_close_callback (hin_buffer_t * buffer) {
-  hin_client_t * client = (hin_client_t*)buffer->parent;
-  hin_lines_t * lines = (hin_lines_t*)&buffer->buffer;
-  buffer->callback = hin_lines_close_callback;
-  hin_request_close (buffer);
-  return 0;
-}
-
-hin_buffer_t * hin_lines_create (hin_client_t * client) {
-  hin_buffer_t * buf = hin_lines_create_raw ();
-  buf->fd = client->sockfd;
-  buf->parent = client;
-  buf->flags = HIN_SOCKET | (client->flags & HIN_SSL);
-  buf->ssl = &client->ssl;
-  hin_lines_t * lines = (hin_lines_t*)&buf->buffer;
-  lines->read_callback = httpd_client_read_callback;
-  lines->close_callback = hin_lines_httpd_close_callback;
-  hin_request_read (buf);
-  return buf;
-}
 
 
 

@@ -2,17 +2,18 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-
 #include <ctype.h>
 
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <netdb.h>
+#include <fcntl.h>
 
-#include <hin.h>
+#include "hin.h"
 #include "http.h"
 #include "uri.h"
+#include "worker.h"
+#include "conf.h"
 
 typedef struct {
   int pos;
@@ -48,25 +49,22 @@ static int hin_pipe_cgi_server_finish_callback (hin_pipe_t * pipe) {
   if (master.debug & DEBUG_PIPE) printf ("cgi transfer finished infd %d outfd %d\n", pipe->in.fd, pipe->out.fd);
   if (pipe->extra_callback) pipe->extra_callback (pipe);
   hin_worker_t * worker = (hin_worker_t *)pipe->parent;
-  hin_client_t * client = (hin_client_t*)worker->data;
-  httpd_client_t * http = (httpd_client_t*)&client->extra;
+  httpd_client_t * http = (httpd_client_t*)worker->data;
 
   #if 0
   hin_worker_reset (worker);
   #endif
   free (worker);
-  httpd_client_finish_request (client);
+  httpd_client_finish_request (http);
 }
 
 int hin_pipe_cgi_server_read_callback (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush) {
   hin_worker_t * worker = (hin_worker_t *)pipe->parent;
-  hin_client_t * client = (hin_client_t*)worker->data;
-  httpd_client_t * http = (httpd_client_t*)&client->extra;
+  httpd_client_t * http = (httpd_client_t*)worker->data;
 
   if (num <= 0 || flush) {
     if (master.debug & DEBUG_CGI) printf ("cgi pipe subprocess closed pipe\n");
     //hin_pipe_finish (pipe);
-    //httpd_client_finish_request (client);
     return 1;
   }
 
@@ -75,60 +73,27 @@ int hin_pipe_cgi_server_read_callback (hin_pipe_t * pipe, hin_buffer_t * buffer,
   return 0;
 }
 
-static int hin_cgi_headers_write_callback (hin_buffer_t * buf, int ret) {
-  hin_worker_t * worker = (hin_worker_t *)buf->parent;
-  hin_client_t * client = (hin_client_t*)worker->data;
-  httpd_client_t * http = (httpd_client_t*)client->extra;
-
-  hin_pipe_t * pipe = calloc (1, sizeof (*pipe));
-  pipe->in.fd = (int)buf->data;
-  pipe->in.flags = 0;
-  pipe->in.pos = 0;
-  pipe->out.fd = client->sockfd;
-  pipe->out.flags = HIN_DONE | HIN_SOCKET | (client->flags & HIN_SSL);
-  pipe->out.pos = 0;
-  pipe->parent = worker;
-  pipe->count = 0;
-  pipe->ssl = &client->ssl;
-
-  pipe->finish_callback = hin_pipe_cgi_server_finish_callback;
-  pipe->read_callback = hin_pipe_cgi_server_read_callback;
-
-  hin_pipe_advance (pipe);
-  return 1;
-}
-
 static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
   hin_worker_t * worker = (hin_worker_t *)buffer->parent;
   hin_client_t * client = (hin_client_t*)worker->data;
-  httpd_client_t * http = (httpd_client_t*)client->extra;
+  httpd_client_t * http = (httpd_client_t*)client;
   string_t source1, * source = &source1;
   source->ptr = buffer->data;
   source->len = buffer->ptr - buffer->data;
 
-  int sz = source->len + 512;
-  hin_buffer_t * buf = malloc (sizeof (*buf) + sz);
-  memset (buf, 0, sizeof (*buf));
-  buf->flags = HIN_SOCKET | (client->flags & HIN_SSL);
-  buf->fd = client->sockfd;
-  buf->callback = hin_cgi_headers_write_callback;
-  buf->count = 0;
-  buf->sz = sz;
-  buf->ptr = buf->buffer;
-  buf->parent = buffer->parent;
-  buf->ssl = &client->ssl;
-  buf->data = (void*)buffer->fd;
-
   string_t line, orig=*source, param1, param2;
   int status = 200;
+  off_t sz = 0;
   while (1) {
-    if (find_line (source, &line) == 0) { hin_buffer_clean (buf); return 0; }
+    if (find_line (source, &line) == 0) { return 0; }
     if (line.len == 0) break;
     if (master.debug & DEBUG_CGI)
       fprintf (stderr, "cgi header is '%.*s'\n", (int)line.len, line.ptr);
     if (hin_string_equali (&line, "Status: (%d+).*", &param1) > 0) {
       status = atoi (param1.ptr);
       if (master.debug & DEBUG_CGI) printf ("cgi status is %d\n", status);
+    } else if (hin_string_equali (&line, "Content%-Length: (%d+)", &param1) > 0) {
+      sz = atoi (param1.ptr);
     } else if (hin_string_equali (&line, "Content%-Encoding: .*") > 0) {
       http->disable |= HIN_HTTP_DEFLATE;
     } else if (hin_string_equali (&line, "Transfer%-Encoding: .*") > 0) {
@@ -140,6 +105,36 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
     }
   }
 
+  int len = source->len;
+  if (sz && sz < len) len = sz;
+
+  hin_pipe_t * pipe = calloc (1, sizeof (*pipe));
+  pipe->in.fd = buffer->fd;
+  pipe->in.flags = 0;
+  pipe->in.pos = 0;
+  pipe->out.fd = client->sockfd;
+  pipe->out.flags = HIN_SOCKET | (client->flags & HIN_SSL);
+  pipe->out.pos = 0;
+  pipe->parent = worker;
+  pipe->count = pipe->sz = sz > 0 ? sz - len : 0;
+  pipe->ssl = &client->ssl;
+  pipe->finish_callback = hin_pipe_cgi_server_finish_callback;
+  if (pipe->count == 0 && sz > 0) pipe->flags |= HIN_DONE;
+
+  int httpd_pipe_set_chunked (httpd_client_t * http, hin_pipe_t * pipe);
+  httpd_pipe_set_chunked (http, pipe);
+
+  int sz1 = source->len + 512;
+  hin_buffer_t * buf = malloc (sizeof (*buf) + sz1);
+  memset (buf, 0, sizeof (*buf));
+  buf->flags = HIN_SOCKET | (client->flags & HIN_SSL);
+  buf->fd = client->sockfd;
+  buf->count = 0;
+  buf->sz = sz1;
+  buf->ptr = buf->buffer;
+  buf->parent = pipe;
+  buf->ssl = &client->ssl;
+
   *source = orig;
   header (client, buf, "HTTP/1.%d %d %s\r\n", http->peer_flags & HIN_HTTP_VER0 ? 0 : 1, status, http_status_name (status));
   http->peer_flags = http->peer_flags & (~http->disable);
@@ -149,22 +144,30 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
   while (1) {
     if (find_line (source, &line) == 0) { hin_buffer_clean (buf); return 0; }
     if (line.len == 0) break;
-    if (hin_string_equali (&line, "Status: (%d+).*", &param1) > 0) {
+    if (hin_string_equali (&line, "Status: .*") > 0) {
+    } else if ((http->peer_flags & HIN_HTTP_CHUNKED) && hin_string_equali (&line, "Content%-Length: .*") > 0) {
+    } else if (HIN_HTTPD_DISABLE_POWERED_BY && hin_string_equali (&line, "X%-Powered%-By: .*") > 0) {
     } else {
       header (client, buf, "%.*s\r\n", line.len, line.ptr);
     }
   }
   header (client, buf, "\r\n");
 
-  if (http->peer_flags & HIN_HTTP_CHUNKED) {
-    header (client, buf, "%x\r\n%.*s\r\n", source->len, source->len, source->ptr);
-  } else {
-    header (client, buf, "%.*s", source->len, source->ptr);
-  }
+  hin_pipe_write (pipe, buf);
+
+  hin_buffer_t * buf1 = malloc (sizeof (*buf) + len);
+  memset (buf1, 0, sizeof (*buf));
+  buf1->count = buf1->sz = len;
+  buf1->ptr = buf1->buffer;
+  buf1->parent = pipe;
+  memcpy (buf1->ptr, source->ptr, len);
+  hin_pipe_append (pipe, buf1);
+
   if (master.debug & DEBUG_RW)
     printf ("cgi initial is '%.*s'\n", buf->count, buf->buffer);
 
-  hin_request_write (buf);
+  hin_pipe_advance (pipe);
+
   return -1;
 }
 
@@ -177,8 +180,8 @@ static int hin_cgi_headers_close_callback (hin_buffer_t * buffer) {
   return 1;
 }
 
-int hin_cgi_send (hin_client_t * client, hin_worker_t * worker, int fd) {
-  httpd_client_t * http = (httpd_client_t*)&client->extra;
+int hin_cgi_send (httpd_client_t * http, hin_worker_t * worker, int fd) {
+  hin_client_t * client = &http->c;
 
   // TODO disable when the rest is done
   http->disable |= HIN_HTTP_DEFLATE;
@@ -195,12 +198,10 @@ int hin_cgi_send (hin_client_t * client, hin_worker_t * worker, int fd) {
 
 int httpd_request_chunked (httpd_client_t * http);
 
-int hin_cgi (hin_client_t * client, const char * exe_path, const char * root_path, const char * script_path) {
-  httpd_client_t * http = (httpd_client_t*)&client->extra;
+int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_path, const char * script_path) {
+  hin_client_t * client = &http->c;
   httpd_request_chunked (http);
   http->state |= HIN_REQ_DATA;
-
-  http->peer_flags &= ~(HIN_HTTP_KEEPALIVE | HIN_HTTP_CHUNKED | HIN_HTTP_DEFLATE);
 
   hin_worker_t * worker = calloc (1, sizeof (*worker));
   worker->data = (void*)client;
@@ -214,7 +215,7 @@ int hin_cgi (hin_client_t * client, const char * exe_path, const char * root_pat
   if (pid != 0) {
     // this is root
     if (master.debug & DEBUG_CGI) printf ("cgi pipe fd %d %d pid %d\n", out_pipe[0], out_pipe[1], pid);
-    hin_cgi_send (client, worker, out_pipe[0]);
+    hin_cgi_send (http, worker, out_pipe[0]);
     close (out_pipe[1]);
     return out_pipe[0];
   }

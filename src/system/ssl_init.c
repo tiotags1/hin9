@@ -11,7 +11,7 @@
 #include <sys/uio.h>
 #include <fcntl.h>
 
-#include <hin.h>
+#include "hin.h"
 
 // Global SSL context
 SSL_CTX * default_ctx = NULL;
@@ -19,7 +19,7 @@ SSL_CTX * default_ctx = NULL;
 int hin_accept_ssl_init (hin_client_t * client) {
   hin_ssl_t * ssl = &client->ssl;
   hin_client_t * server = (hin_client_t*)client->parent;
-  hin_server_blueprint_t * bp = (hin_server_blueprint_t*)&server->extra;
+  hin_server_blueprint_t * bp = (hin_server_blueprint_t*)server;
 
   ssl->rbio = BIO_new (BIO_s_mem ());
   ssl->wbio = BIO_new (BIO_s_mem ());

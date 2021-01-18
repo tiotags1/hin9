@@ -3,7 +3,8 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include <hin.h>
+#include "hin.h"
+#include "http.h"
 
 int http_parse_headers_line (http_client_t * http, string_t * line) {
   string_t param, param1, param2;
@@ -25,7 +26,7 @@ int http_parse_headers (hin_client_t * client, string_t * source) {
   }
 
   *source = orig;
-  http_client_t * http = (http_client_t*)&client->extra;
+  http_client_t * http = (http_client_t*)client;
 
   if (find_line (source, &line) == 0 || match_string (&line, "HTTP/1.%d ([%w%/]+) %w+", &param1) <= 0) {
     printf ("httpd parsing error\n");

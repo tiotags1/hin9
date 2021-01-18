@@ -31,8 +31,8 @@ local server = create_httpd (function (server, req)
   --add_header (req, "Hello", "from server")
   local ext = GetFileExtension (path)
   local proxy_path = string.match (path, '^/proxy/(.*)')
-  if (proxy_path) then
-    return proxy (req, "http://localhost:28005/" .. proxy_path)
+  if (path == "/proxy" or proxy_path) then
+    return proxy (req, "http://localhost:28005/" .. (proxy_path or ""))
   elseif (path == "/test.test") then
     return cgi (req, "/usr/local/bin/fcgi_test", nil)
   elseif (path == "/test1.test") then

@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include <hin.h>
+#include "hin.h"
 
 // Obtain the return value of an SSL operation and convert into a simplified
 // error code, which is easier to examine for failure.

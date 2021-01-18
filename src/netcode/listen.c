@@ -3,12 +3,14 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include <hin.h>
+#include <unistd.h>
+
+#include "hin.h"
 
 int handle_client (hin_client_t * client);
 
 hin_client_t * new_client (hin_client_t * server) {
-  hin_server_blueprint_t * bp = (hin_server_blueprint_t*)&server->extra;
+  hin_server_blueprint_t * bp = (hin_server_blueprint_t*)server;
   int sz = sizeof (hin_client_t) + bp->user_data_size;
   hin_client_t * new = calloc (1, sz);
   new->parent = server;
@@ -19,7 +21,7 @@ hin_client_t * new_client (hin_client_t * server) {
 int hin_server_accept (hin_buffer_t * buffer, int ret) {
   hin_client_t * client = (hin_client_t*)buffer->parent;
   hin_client_t * server = (hin_client_t*)client->parent;
-  hin_server_blueprint_t * bp = (hin_server_blueprint_t*)&server->extra;
+  hin_server_blueprint_t * bp = (hin_server_blueprint_t*)server;
 
   if (ret < 0) {
     if (master.quit) return 1;

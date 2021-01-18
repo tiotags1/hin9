@@ -3,10 +3,10 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include <hin.h>
-#include "http.h"
-
 #include <basic_pattern.h>
+
+#include "hin.h"
+#include "http.h"
 
 const char * http_status_name (int nr) {
   switch (nr) {

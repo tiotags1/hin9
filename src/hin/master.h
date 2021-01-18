@@ -21,16 +21,14 @@ typedef struct {
 } hin_master_share_t;
 
 typedef struct {
+  int id;
+  uint32_t debug;
   char * exe_path;
   int sharefd;
   int quit;
-  int num_active;
-  uint32_t debug;
   int restart_pid;
-  int id;
-  //int access_fd;
-  //int error_fd;
   void * servers;
+  int num_active;
   hin_client_t * server_list;
   hin_client_t * download_list;
   hin_master_share_t * share;

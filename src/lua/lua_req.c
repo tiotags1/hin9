@@ -5,11 +5,9 @@
 #include <string.h>
 
 #include "hin.h"
-#include "lua.h"
 #include "http.h"
+#include "lua.h"
 #include "uri.h"
-
-int httpd_respond_error (hin_client_t * client, int status, const char *);
 
 static int l_hin_parse_path (lua_State *L) {
   hin_client_t *client = (hin_client_t*)lua_touserdata (L, 1);
@@ -17,7 +15,7 @@ static int l_hin_parse_path (lua_State *L) {
     printf ("lua hin_parse_path need a valid client\n");
     return 0;
   }
-  httpd_client_t * http = (httpd_client_t*)client->extra;
+  httpd_client_t * http = (httpd_client_t*)client;
 
   string_t temp = http->headers;
   string_t line, method, path, param;
@@ -47,7 +45,7 @@ static int l_hin_parse_headers (lua_State *L) {
     printf ("lua hin_parse_headers need a valid client\n");
     return 0;
   }
-  httpd_client_t * http = (httpd_client_t*)client->extra;
+  httpd_client_t * http = (httpd_client_t*)client;
   string_t temp = http->headers;
   string_t line, param;
   if (find_line (&temp, &line) == 0) {
@@ -82,7 +80,7 @@ static int l_hin_send_file (lua_State *L) {
     printf ("lua hin_send_file need a valid client\n");
     return 0;
   }
-  httpd_client_t * http = (httpd_client_t*)client->extra;
+  httpd_client_t * http = (httpd_client_t*)client;
   const char * path = lua_tostring (L, 2);
   if (path == NULL) { printf ("no path supplied\n"); return 0; }
   off_t pos = lua_tonumber (L, 3);
@@ -100,7 +98,7 @@ static int l_hin_proxy (lua_State *L) {
     printf ("lua hin_proxy need a valid client\n");
     return 0;
   }
-  httpd_client_t * http = (httpd_client_t*)client->extra;
+  httpd_client_t * http = (httpd_client_t*)client;
   const char * url = lua_tostring (L, 2);
   if (url == NULL) { printf ("no path supplied\n"); return 0; }
 
@@ -118,7 +116,7 @@ static int l_hin_cgi (lua_State *L) {
     printf ("lua hin_cgi need a valid client\n");
     return 0;
   }
-  httpd_client_t * http = (httpd_client_t*)client->extra;
+  httpd_client_t * http = (httpd_client_t*)client;
 
   const char * exe_path = lua_tostring (L, 2);
   const char * root_path = lua_tostring (L, 3);
@@ -127,7 +125,7 @@ static int l_hin_cgi (lua_State *L) {
 
   int hin_cgi (hin_client_t * client, const char * exe_path, const char * root, const char * path);
   if (hin_cgi (client, exe_path, root_path, script_path) < 0) {
-    httpd_respond_error (client, 500, NULL);
+    httpd_respond_error (http, 500, NULL);
     return 0;
   }
   return 0;
@@ -141,9 +139,9 @@ static int l_hin_respond (lua_State *L) {
   }
   int status = lua_tonumber (L, 2);
   const char * body = lua_tostring (L, 3);
-  httpd_client_t * http = (httpd_client_t*)client->extra;
+  httpd_client_t * http = (httpd_client_t*)client;
 
-  httpd_respond_error (client, status, body);
+  httpd_respond_error (http, status, body);
   return 0;
 }
 
@@ -235,7 +233,7 @@ static int l_hin_add_header (lua_State *L) {
     printf ("lua hin_add_header need a valid client\n");
     return 0;
   }
-  httpd_client_t * http = (httpd_client_t*)&client->extra;
+  httpd_client_t * http = (httpd_client_t*)client;
 
   const char * name = lua_tostring (L, 2);
   const char * data = lua_tostring (L, 2);

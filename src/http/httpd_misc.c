@@ -4,37 +4,36 @@
 #include <stdlib.h>
 
 #include "hin.h"
+#include "http.h"
 #include "lua.h"
 
-void httpd_client_ping (hin_client_t * client, int timeout) {
-  httpd_client_t * http = (httpd_client_t*)&client->extra;
+void httpd_client_ping (httpd_client_t * http, int timeout) {
   http->next_time = basic_time_get ();
   http->next_time.sec += timeout;
 }
 
-static void httpd_client_timer (hin_client_t * client, basic_time_t * now) {
-  httpd_client_t * http = (httpd_client_t *)&client->extra;
+static void httpd_client_timer (httpd_client_t * http, basic_time_t * now) {
   if (http->next_time.sec == 0) return ;
   basic_ftime dt = basic_time_fdiff (now, &http->next_time);
   if (dt < 0.0) {
     int do_close = 0;
     if (http->state & (HIN_REQ_HEADERS | HIN_REQ_POST | HIN_REQ_END)) do_close = 1;
     if (master.debug & DEBUG_TIMER)
-      printf ("httpd timer shutdown %d %s%.6f\n", client->sockfd, do_close ? "close " : "", dt);
+      printf ("httpd timer shutdown %d %s%.6f\n", http->c.sockfd, do_close ? "close " : "", dt);
     if (do_close)
-      hin_client_shutdown (client);
+      httpd_client_shutdown (http);
   } else {
     if (master.debug & DEBUG_TIMER)
-      printf ("httpd timer %d %.6f\n", client->sockfd, dt);
+      printf ("httpd timer %d %.6f\n", http->c.sockfd, dt);
   }
 }
 
 void httpd_timer () {
   basic_time_t now = basic_time_get ();
   for (hin_client_t * server = master.server_list; server; server = server->next) {
-    hin_server_blueprint_t * bp = (hin_server_blueprint_t*)&server->extra;
-    for (hin_client_t * client = bp->active_client; client; client = client->next) {
-      httpd_client_timer (client, &now);
+    hin_server_blueprint_t * bp = (hin_server_blueprint_t*)server;
+    for (httpd_client_t * http = (httpd_client_t*)bp->active_client; http; http = (httpd_client_t*)http->c.next) {
+      httpd_client_timer (http, &now);
     }
   }
 }
@@ -43,9 +42,9 @@ void httpd_timer_flush () {
   basic_time_t now = basic_time_get ();
   now.sec -= 1;
   for (hin_client_t * server = master.server_list; server; server = server->next) {
-    hin_server_blueprint_t * bp = (hin_server_blueprint_t*)&server->extra;
+    hin_server_blueprint_t * bp = (hin_server_blueprint_t*)server;
     for (hin_client_t * client = bp->active_client; client; client = client->next) {
-      httpd_client_t * http = (httpd_client_t *)&client->extra;
+      httpd_client_t * http = (httpd_client_t *)client;
       http->next_time = now;
     }
   }
@@ -53,7 +52,7 @@ void httpd_timer_flush () {
 
 void httpd_close_socket () {
   for (hin_client_t * server = master.server_list; server; server = server->next) {
-    hin_server_blueprint_t * bp = (hin_server_blueprint_t*)&server->extra;
+    hin_server_blueprint_t * bp = (hin_server_blueprint_t*)server;
     close (server->sockfd);
   }
 }
@@ -70,6 +69,15 @@ int header (hin_client_t * client, hin_buffer_t * buffer, const char * fmt, ...)
   buffer->count += len;
 
   va_end(ap);
+  return len;
+}
+
+int header_raw (hin_client_t * client, hin_buffer_t * buffer, const char * data, int len) {
+  int pos = buffer->count;
+  int sz = buffer->sz - buffer->count;
+  if (len > sz) return 0;
+  memcpy (buffer->ptr + pos, data, len);
+  buffer->count += len;
   return len;
 }
 

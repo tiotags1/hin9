@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include <hin.h>
+#include "hin.h"
 
 void hin_buffer_clean (hin_buffer_t * buffer) {
   if (buffer->type == HIN_DYN_BUFFER) {
@@ -16,8 +16,10 @@ void hin_buffer_list_remove (hin_buffer_t ** list, hin_buffer_t * new) {
   if (*list == new) {
     *list = new->next;
   } else {
-    printf ("fatal error\n");
-    exit (-1);
+    if (new->next)
+      new->next->prev = new->prev;
+    if (new->prev)
+      new->prev->next = new->next;
   }
   new->next = new->prev = NULL;
 }

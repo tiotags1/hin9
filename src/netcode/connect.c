@@ -1,16 +1,19 @@
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
-#include <string.h>
-#include <errno.h>
 #include <fcntl.h>
 
-#include <hin.h>
+#include "hin.h"
+
+typedef int (competion_callback_t) (hin_client_t * client, int ret);
 
 static int complete (hin_buffer_t * buffer, int fd) {
   hin_client_t * client = (hin_client_t*)buffer->parent;
@@ -26,11 +29,11 @@ static int complete (hin_buffer_t * buffer, int fd) {
   client->sockfd = fd;
   if (master.debug & DEBUG_SOCKET) printf ("connect complete %d %s:%s\n", client->sockfd, hbuf, sbuf);
 
-  int (*callback) (hin_client_t * client, int ret) = NULL;
-  memcpy (&callback, buffer->buffer, sizeof (void*));
-  callback (client, fd);
+  competion_callback_t * callback = (competion_callback_t*)buffer->prev;
+  int ret = callback (client, fd);
 
   freeaddrinfo ((struct addrinfo *)buffer->data);
+  if (ret) free (client);
   return 1;
 }
 
@@ -45,12 +48,12 @@ static int fail (hin_buffer_t * buffer, int err) {
     printf ("getnameinfo3 err '%s'\n", gai_strerror (err));
   }
 
-  int (*callback) (hin_client_t * client, int ret) = NULL;
-  memcpy (&callback, buffer->buffer, sizeof (void*));
-  callback (client, err);
+  competion_callback_t * callback = (competion_callback_t*)buffer->prev;
+  int ret = callback (client, err);
 
   printf ("connect failed %d %s:%s '%s'\n", client->sockfd, hbuf, sbuf, strerror (-err));
   freeaddrinfo ((struct addrinfo *)buffer->data);
+  if (ret) free (client);
   return 1;
 }
 
@@ -95,15 +98,15 @@ static int hin_connect_recheck (hin_buffer_t * buffer, int ret) {
   return fail (buffer, ret);
 }
 
-hin_client_t * hin_connect (const char * host, const char * port, int extra_size, int (*callback) (hin_client_t * client, int ret)) {
+int hin_connect (hin_client_t * client, const char * host, const char * port, int (*callback) (hin_client_t * client, int ret)) {
   if (master.debug & DEBUG_SOCKET) printf ("connect start %s:%s\n", host, port);
   struct addrinfo hints;
   struct addrinfo *result, *rp;
   int sfd, s, j;
   size_t len;
-  if (callback == NULL) {
-    printf ("can't connect without a callback ?\n");
-    return NULL;
+  if (client == NULL || callback == NULL) {
+    fprintf (stderr, "can't connect without a callback ?\n");
+    return -1;
   }
 
   memset(&hints, 0, sizeof(struct addrinfo));
@@ -115,22 +118,19 @@ hin_client_t * hin_connect (const char * host, const char * port, int extra_size
   s = getaddrinfo (host, port, &hints, &result);
   if (s != 0) {
     fprintf (stderr, "getaddrinfo: %s\n", gai_strerror (s));
-    return NULL;
+    return -1;
   }
 
-  hin_client_t * client = calloc (1, sizeof *client + extra_size);
-  //client->type = SOCKET_CONNECT;
   client->sockfd = -1;
   client->magic = HIN_CONNECT_MAGIC;
 
   hin_buffer_t * buffer = calloc (1, sizeof *buffer + sizeof (void*));
   buffer->data = buffer->ptr = (char*)result;
   buffer->parent = client;
-  memcpy (&buffer->buffer, &callback, sizeof (void*));
-  client->read_buffer = buffer;
+  buffer->prev = (hin_buffer_t*)callback;
   hin_connect_try_next (buffer);
 
-  return client;
+  return 0;
 }
 
 

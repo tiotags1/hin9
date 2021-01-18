@@ -3,15 +3,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <signal.h>
 
 #include <unistd.h>
 #include <fcntl.h>
-#include <signal.h>
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 
-#include <hin.h>
+#include "hin.h"
 
 void hin_stop () {
   master.quit = 1;

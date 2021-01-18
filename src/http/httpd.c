@@ -4,79 +4,114 @@
 #include <stdlib.h>
 
 #include "hin.h"
+#include "http.h"
 #include "lua.h"
 
-void httpd_client_ping (hin_client_t * client, int timeout);
-int httpd_client_reread (hin_client_t * client);
+void httpd_client_ping (httpd_client_t * http, int timeout);
+int httpd_client_reread (httpd_client_t * http);
 
 void httpd_client_clean (httpd_client_t * http) {
   if (http->file_path) free ((void*)http->file_path);
   if (http->post_sep) free ((void*)http->post_sep);
-  if (http->post_fd) close (http->post_fd);
+  if (http->post_fd) close (http->post_fd); // TODO cgi worker needs to keep this
   if (http->append_headers) free (http->append_headers);
-  memset (http, 0, sizeof (*http));
+  //memset (&http->state, 0, sizeof (httpd_client_t) - sizeof (hin_client_t));
+
+  http->state = http->peer_flags = http->disable = 0;
+  http->status = http->method = 0;
+  http->filefd = http->pos = http->count = 0;
+  http->cache = http->modified_since = 0;
+  http->etag = http->post_sz = 0;
+  http->post_fd = 0;
+  http->post_sep = http->file_path = http->append_headers = NULL;
 }
 
-int httpd_client_start_request (hin_client_t * client) {
+int httpd_client_start_request (httpd_client_t * http) {
   if (master.debug & DEBUG_PROTO) printf ("httpd request begin\n");
-  httpd_client_t * http = (httpd_client_t*)&client->extra;
   http->state |= HIN_REQ_HEADERS;
 
-  hin_client_t * server = (hin_client_t*)client->parent;
+  hin_client_t * server = (hin_client_t*)http->c.parent;
   hin_server_data_t * data = (hin_server_data_t*)server->parent;
   if (data) {
-    httpd_client_t * http = (httpd_client_t*)&client->extra;
     http->disable = data->disable;
   }
-  httpd_client_ping (client, data->timeout);
+  httpd_client_ping (http, data->timeout);
 }
 
-int httpd_client_finish (hin_client_t * client) {
-  httpd_client_t * http = (httpd_client_t*)&client->extra;
-  if ((http->state & (HIN_REQ_DATA | HIN_REQ_POST | HIN_REQ_WAIT)) == 0) {
-    if ((http->peer_flags & HIN_HTTP_KEEPALIVE)) {
-      httpd_client_clean (http);
-      httpd_client_start_request (client);
-      httpd_client_reread (client);
-    } else {
-      hin_client_shutdown (client);
-      if (client->read_buffer)
-        hin_buffer_clean (client->read_buffer);
-      httpd_client_clean (http);
-      client->read_buffer = NULL;
-      http->state |= HIN_REQ_END;
-    }
-  }
-}
-
-int httpd_client_finish_request (hin_client_t * client) {
+int httpd_client_finish_request (httpd_client_t * http) {
   if (master.debug & DEBUG_PROTO) printf ("httpd request done\n");
-  httpd_client_t * http = (httpd_client_t*)&client->extra;
-  http->state = (http->state & ~HIN_REQ_DATA);
-  httpd_client_finish (client);
+
+  // it waits for post data to finish
+  if (http->state & HIN_REQ_POST) return 0;
+  http->state &= ~HIN_REQ_DATA;
+
+  if ((http->peer_flags & HIN_HTTP_KEEPALIVE)) {
+    httpd_client_clean (http);
+    httpd_client_start_request (http);
+    httpd_client_reread (http);
+  } else {
+    if (http->read_buffer)
+      hin_buffer_clean (http->read_buffer);
+    http->read_buffer = NULL;
+    httpd_client_clean (http);
+    http->state |= HIN_REQ_END;
+    httpd_client_shutdown (http);
+  }
+  return 0;
 }
 
-int httpd_client_error (hin_client_t * client) {
-  printf ("httpd error !!!\n");
+static int httpd_client_close_callback (hin_buffer_t * buffer, int ret) {
+  httpd_client_t * http = (httpd_client_t*)buffer->parent;
+  if (ret < 0) {
+    printf ("httpd client close callback error: %s\n", strerror (-ret));
+    return -1;
+  }
+  if (master.debug & DEBUG_PROTO) printf ("httpd close client %d\n", http->c.sockfd);
+  if (http->read_buffer)
+    hin_buffer_clean (http->read_buffer);
+  hin_client_unlink (&http->c);
+  return 1;
 }
 
-int httpd_client_shutdown (hin_client_t * client) {
-  printf ("httpd reqest shutdown\n");
-  hin_client_shutdown (client);
+int httpd_client_buffer_shutdown (hin_buffer_t * buffer) {
+  httpd_client_t * http = (httpd_client_t*)buffer->parent;
+  if (master.debug & DEBUG_PROTO) printf ("httpd shutdown client %d\n", http->c.sockfd);
+  buffer->callback = httpd_client_close_callback;
+  hin_request_close (buffer);
+  return 0;
 }
 
-int httpd_client_close (hin_client_t * client) {
-  if (master.debug & DEBUG_PROTO) printf ("httpd close client\n");
+int httpd_client_shutdown (httpd_client_t * http) {
+  if (master.debug & DEBUG_SOCKET) printf ("socket shutdown %d\n", http->c.sockfd);
+  hin_buffer_t * buf = malloc (sizeof *buf);
+  memset (buf, 0, sizeof (*buf));
+  buf->flags = HIN_SOCKET | (http->c.flags & HIN_SSL);
+  buf->fd = http->c.sockfd;
+  buf->callback = httpd_client_close_callback;
+  buf->parent = (hin_client_t*)http;
+  buf->ssl = &http->c.ssl;
+  hin_request_close (buf);
 }
 
 int httpd_client_accept (hin_client_t * client) {
-  httpd_client_start_request (client);
-  hin_buffer_t * hin_lines_create (hin_client_t * client);
-  client->read_buffer = hin_lines_create (client);
+  httpd_client_t * http = (httpd_client_t*)client;
+  httpd_client_start_request (http);
+
+  hin_buffer_t * buf = hin_lines_create_raw ();
+  buf->fd = http->c.sockfd;
+  buf->parent = http;
+  buf->flags = HIN_SOCKET | (http->c.flags & HIN_SSL);
+  buf->ssl = &http->c.ssl;
+  hin_lines_t * lines = (hin_lines_t*)&buf->buffer;
+  int httpd_client_read_callback (hin_buffer_t * buffer);
+  lines->read_callback = httpd_client_read_callback;
+  lines->close_callback = httpd_client_buffer_shutdown;
+  hin_request_read (buf);
+  http->read_buffer = buf;
 }
 
 hin_client_t * httpd_create (const char * addr, const char * port, const char * sock_type, void * ssl_ctx) {
-  hin_client_t * server = calloc (1, sizeof *server + sizeof (hin_server_blueprint_t));
+  hin_client_t * server = calloc (1, sizeof (hin_server_blueprint_t));
   int sockfd;
   sockfd = hin_socket_search (addr, port, sock_type, server);
   if (sockfd < 0) {
@@ -95,9 +130,7 @@ hin_client_t * httpd_create (const char * addr, const char * port, const char * 
   server->sockfd = sockfd;
   server->type = HIN_SERVER;
   server->magic = HIN_SERVER_MAGIC;
-  hin_server_blueprint_t * bp = (hin_server_blueprint_t *)&server->extra;
-  bp->client_close = httpd_client_close;
-  bp->client_error = httpd_client_error;
+  hin_server_blueprint_t * bp = (hin_server_blueprint_t *)server;
   bp->client_handle = httpd_client_accept;
   bp->user_data_size = sizeof (httpd_client_t);
   bp->ssl_ctx = ssl_ctx;
