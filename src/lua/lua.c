@@ -6,6 +6,7 @@
 
 #include "hin.h"
 #include "lua.h"
+#include "conf.h"
 
 int hin_server_callback (hin_client_t * client) {
   if (client->parent == NULL) {
@@ -26,12 +27,11 @@ int hin_server_callback (hin_client_t * client) {
   }
 }
 
+static lua_State * internal_lua = NULL;
+
 void lua_server_clean (hin_server_data_t * server) {
   lua_State * L = server->L;
   luaL_unref (L, LUA_REGISTRYINDEX, server->callback);
-
-  // TODO this is bad
-  lua_close (L);
 
   free (server);
 }
@@ -43,6 +43,10 @@ void hin_lua_clean () {
     next = elem->next;
     lua_server_clean (elem);
   }
+  master.servers = NULL;
+
+  lua_close (internal_lua);
+  internal_lua = NULL;
 }
 
 int lua_init () {
@@ -58,11 +62,19 @@ int lua_init () {
   int hin_lua_config_init (lua_State * L);
   hin_lua_config_init (L);
 
-  if (run_file (L, "workdir/main.lua")) {
+  if (run_file (L, HIN_CONF_PATH)) {
     printf ("internal error\n");
     return -1;
   }
 
+  internal_lua = L;
+
+  return 0;
+}
+
+int lua_reload () {
+  hin_lua_clean ();
+  lua_init ();
   return 0;
 }
 

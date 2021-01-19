@@ -7,6 +7,7 @@
 #include <basic_pattern.h>
 
 #include "hin.h"
+#include "utils.h"
 
 static hin_buffer_t * buffer = NULL;
 static hin_buffer_t * timeout_buffer = NULL;
@@ -14,12 +15,16 @@ static hin_buffer_t * timeout_buffer = NULL;
 void hin_stop ();
 
 int console_execute (string_t * source) {
-  if (match_string (source, "q") > 0) {
+  if (hin_string_equali (source, "q\n") > 0) {
     printf ("do quit\n");
     hin_stop ();
-  } else if (match_string (source, "r") > 0) {
+  } else if (hin_string_equali (source, "r\n") > 0) {
     int hin_restart ();
     hin_restart ();
+  } else if (hin_string_equali (source, "reload\n") > 0) {
+    int lua_reload ();
+    if (lua_reload () < 0)
+      printf ("reload failed\n");
   }
 }
 

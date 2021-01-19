@@ -15,7 +15,7 @@ void httpd_client_clean (httpd_client_t * http) {
   if (http->post_sep) free ((void*)http->post_sep);
   if (http->post_fd) close (http->post_fd); // TODO cgi worker needs to keep this
   if (http->append_headers) free (http->append_headers);
-  //memset (&http->state, 0, sizeof (httpd_client_t) - sizeof (hin_client_t));
+  //memset (&http->state, 0, sizeof (httpd_client_t) - sizeof (hin_client_t)); // cleans things it shouldn't
 
   http->state = http->peer_flags = http->disable = 0;
   http->status = http->method = 0;
@@ -50,9 +50,6 @@ int httpd_client_finish_request (httpd_client_t * http) {
     httpd_client_start_request (http);
     httpd_client_reread (http);
   } else {
-    if (http->read_buffer)
-      hin_buffer_clean (http->read_buffer);
-    http->read_buffer = NULL;
     httpd_client_clean (http);
     http->state |= HIN_REQ_END;
     httpd_client_shutdown (http);
@@ -67,7 +64,7 @@ static int httpd_client_close_callback (hin_buffer_t * buffer, int ret) {
     return -1;
   }
   if (master.debug & DEBUG_PROTO) printf ("httpd close client %d\n", http->c.sockfd);
-  if (http->read_buffer)
+  if (http->read_buffer && http->read_buffer != buffer)
     hin_buffer_clean (http->read_buffer);
   hin_client_unlink (&http->c);
   return 1;

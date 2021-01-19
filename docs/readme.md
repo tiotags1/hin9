@@ -1,7 +1,7 @@
 hin9
 ====
 
-a linux webserver using liburing, ssl, dynamic deflate, http1.1 pipelining, 304 status, simple reverse proxy functions, simple (and inefficient) cgi support
+hinsightd a linux webserver using liburing, ssl, dynamic deflate, http1.1 pipelining, 304 status, simple reverse proxy functions, simple (and inefficient) cgi support
 
 uses lua for configuration and scripting, setting a file to be cached is as simple as "set\_option (req, "cache", num-seconds)" or adding a custom header "add\_header (req, "Hello", "from server")"
 

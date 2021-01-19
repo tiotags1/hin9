@@ -88,7 +88,10 @@ int httpd_client_read_callback (hin_buffer_t * buffer) {
 
   http->peer_flags &= ~http->disable;
 
-  if ((http->state & ~(HIN_REQ_HEADERS|HIN_REQ_END)) == 0) {
+  if (http->state & HIN_REQ_END) {
+    printf ("httpd issued forced shutdown\n");
+    return -1;
+  } if ((http->state & ~(HIN_REQ_HEADERS|HIN_REQ_END)) == 0) {
     printf ("httpd 500 missing request\n");
     httpd_respond_error (http, 500, NULL);
     return -1;

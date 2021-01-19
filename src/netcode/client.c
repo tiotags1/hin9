@@ -34,7 +34,7 @@ void hin_server_clean (hin_client_t * server) {
   hin_server_blueprint_t * bp = (hin_server_blueprint_t*)server;
   for (hin_client_t * elem = bp->active_client; elem; elem = elem->next) {
     //hin_client_shutdown (elem);
-    hin_client_clean (elem);
+    //hin_client_clean (elem);
   }
   free (bp->accept_client);
   hin_buffer_clean (bp->accept_buffer);

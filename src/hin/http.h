@@ -68,9 +68,7 @@ int header_raw (hin_client_t * client, hin_buffer_t * buffer, const char * data,
 int header_date (hin_client_t * client, hin_buffer_t * buffer, const char * name, time_t time);
 int httpd_write_common_headers (hin_client_t * client, hin_buffer_t * buf);
 
-int find_line (string_t * source, string_t * line);
 const char * http_status_name (int nr);
-int hin_string_equali (string_t * source, const char * format, ...);
 
 int httpd_parse_req (httpd_client_t * http, string_t * source);
 
@@ -86,12 +84,13 @@ int httpd_client_start_request (httpd_client_t * http);
 int httpd_client_finish_request (httpd_client_t * http);
 int httpd_client_shutdown (httpd_client_t * http);
 
-int hin_request_headers (hin_client_t * client);
+//int hin_request_headers (hin_client_t * client);
 
 // download
 hin_client_t * httpd_create (const char * addr, const char * port, const char * sock_type, void * ssl_ctx);
 hin_client_t * http_download (const char * url, const char * save_path, int (*read_callback) (hin_buffer_t * buffer, int num, int flush));
 
+#include "utils.h"
 
 #endif
 

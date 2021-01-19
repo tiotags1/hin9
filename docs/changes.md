@@ -1,4 +1,10 @@
 
+* connection 'shutdown' function that closes connection and returns nothing
+* bugfix direct responses included deflate http headers erroneously
+* bugfix double free when you return no response
+* compile time configuration for 'main.lua' path
+
+commit e07fd6cb1d87ce14d7e0f790c338341b80b0be5c
 * enabled keepalive/pipelining for file, cgi and proxy via chunked encoding
 * enabled deflate for file and proxy
 * cgi deflate has a bug

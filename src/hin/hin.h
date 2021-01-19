@@ -140,7 +140,5 @@ int hin_lines_request (hin_buffer_t * buffer);
 int hin_lines_reread (hin_client_t * client);
 hin_buffer_t * hin_lines_create_raw ();
 
-int hin_client_addr (char * str, int len, struct sockaddr * ai_addr, socklen_t ai_addrlen);
-
 #endif
 

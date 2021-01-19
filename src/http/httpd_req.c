@@ -76,6 +76,7 @@ int httpd_respond_error (httpd_client_t * http, int status, const char * body) {
       perror ("asprintf");
   }
   http->disable |= HIN_HTTP_CHUNKED | HIN_HTTP_DEFLATE | HIN_HTTP_CACHE;
+  http->peer_flags &= ~ http->disable;
   header (client, buf, "HTTP/1.%d %d %s\r\n", http->peer_flags & HIN_HTTP_VER0 ? 0 : 1, status, http_status_name (status));
   httpd_write_common_headers (client, buf);
   header (client, buf, "Content-Length: %ld\r\n", strlen (body));

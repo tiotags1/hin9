@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include "hin.h"
+#include "utils.h"
 
 int handle_client (hin_client_t * client);
 

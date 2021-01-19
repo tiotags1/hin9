@@ -247,6 +247,18 @@ static int l_hin_add_header (lua_State *L) {
   return 0;
 }
 
+static int l_hin_shutdown (lua_State *L) {
+  hin_client_t *client = (hin_client_t*)lua_touserdata (L, 1);
+  if (client == NULL || client->magic != HIN_CLIENT_MAGIC) {
+    printf ("lua hin_add_header need a valid client\n");
+    return 0;
+  }
+  httpd_client_t * http = (httpd_client_t*)client;
+  //httpd_client_shutdown (http);
+  http->state |= HIN_REQ_END;
+  return 0;
+}
+
 static lua_function_t functs [] = {
 {"parse_path",		l_hin_parse_path },
 {"parse_headers",	l_hin_parse_headers },
@@ -257,6 +269,7 @@ static lua_function_t functs [] = {
 {"sanitize_path",	l_hin_sanitize_path },
 {"remote_address",	l_hin_remote_address },
 {"add_header",		l_hin_add_header },
+{"shutdown",		l_hin_shutdown },
 {NULL, NULL},
 };
 

@@ -2,6 +2,8 @@
 #ifndef HIN_CONF_H
 #define HIN_CONF_H
 
+#define HIN_CONF_PATH "workdir/main.lua"
+
 #define HIN_URING_QUEUE_DEPTH 256
 #define HIN_URING_DONT_FORK 0
 
