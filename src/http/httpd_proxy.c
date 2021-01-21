@@ -5,24 +5,39 @@
 
 #include "hin.h"
 #include "http.h"
+#include "conf.h"
 
-static int httpd_proxy_close (hin_client_t * client) {
-  if (master.debug & DEBUG_PROXY) printf ("proxy error should close\n");
-  httpd_client_t * parent = (httpd_client_t*)client->parent;
-  http_client_shutdown (client);
+static int httpd_proxy_close (http_client_t * http) {
+  if (master.debug & DEBUG_PROXY) printf ("proxy close\n");
+  httpd_client_t * parent = (httpd_client_t*)http->c.parent;
+  if (HIN_HTTPD_PROXY_CONNECTION_REUSE) {
+    hin_client_list_add (&master.connection_list, &http->c);
+  } else {
+    http_client_shutdown (http);
+  }
   httpd_client_finish_request (parent);
 }
 
 static int httpd_proxy_pipe_close (hin_pipe_t * pipe) {
   if (master.debug & DEBUG_PROXY) printf ("proxy pipe close\n");
-  hin_client_t * client = pipe->parent1;
-  hin_client_t * parent = client->parent;
-  httpd_proxy_close (client);
+  http_client_t * http = pipe->parent1;
+  httpd_proxy_close (http);
+}
+
+static int httpd_proxy_pipe_in_error (hin_pipe_t * pipe) {
+  if (master.debug & DEBUG_PROXY) printf ("proxy proxied server connection error\n");
+  int http_client_shutdown (http_client_t * http);
+  http_client_shutdown (pipe->parent1);
+}
+
+static int httpd_proxy_pipe_out_error (hin_pipe_t * pipe) {
+  if (master.debug & DEBUG_PROXY) printf ("proxy requester error\n");
 }
 
 static int httpd_proxy_buffer_close (hin_buffer_t * buffer) {
-  hin_client_t * client = (hin_client_t*)buffer->parent;
-  httpd_proxy_close (client);
+  if (master.debug & DEBUG_PROXY) printf ("proxy header buffer close\n");
+  http_client_t * http = (http_client_t*)buffer->parent;
+  httpd_proxy_close (http);
 }
 
 static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer) {
@@ -77,12 +92,16 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer) {
   pipe->out.fd = client->sockfd;
   pipe->out.flags = HIN_SOCKET;
   pipe->out.pos = 0;
-  pipe->count = pipe->sz = sz > 0 ? sz - len : 0;
   pipe->parent = client;
   pipe->parent1 = client1;
   pipe->ssl = &client->ssl;
   pipe->finish_callback = httpd_proxy_pipe_close;
-  if (pipe->count == 0 && sz > 0) pipe->flags |= HIN_DONE;
+  pipe->in_error_callback = httpd_proxy_pipe_in_error;
+  pipe->out_error_callback = httpd_proxy_pipe_out_error;
+  if (sz > 0) {
+    pipe->count = pipe->sz = sz - len;
+    if (pipe->count == 0) pipe->flags |= HIN_DONE;
+  }
 
   httpd_client_t * http1 = (httpd_client_t*)client1;
 
@@ -104,13 +123,15 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer) {
 
   hin_pipe_write (pipe, buf);
 
-  hin_buffer_t * buf1 = malloc (sizeof (*buf) + len);
-  memset (buf1, 0, sizeof (*buf));
-  buf1->count = buf1->sz = len;
-  buf1->ptr = buf1->buffer;
-  buf1->parent = pipe;
-  memcpy (buf1->ptr, source.ptr, len);
-  hin_pipe_append (pipe, buf1);
+  if (len > 0) {
+    hin_buffer_t * buf1 = malloc (sizeof (*buf) + len);
+    memset (buf1, 0, sizeof (*buf));
+    buf1->count = buf1->sz = len;
+    buf1->ptr = buf1->buffer;
+    buf1->parent = pipe;
+    memcpy (buf1->ptr, source.ptr, len);
+    hin_pipe_append (pipe, buf1);
+  }
 
   hin_pipe_advance (pipe);
 
@@ -177,7 +198,11 @@ int http_client_start_request1 (hin_client_t * client, int ret) {
   } else {
     header (client, buf, "Host: %.*s\r\n", http->uri.host.len, http->uri.host.ptr);
   }
-  header (client, buf, "Connection: close\r\n");
+  if (HIN_HTTPD_PROXY_CONNECTION_REUSE) {
+    header (client, buf, "Connection: keep-alive\r\n");
+  } else {
+    header (client, buf, "Connection: close\r\n");
+  }
   header (client, buf, "\r\n");
   hin_request_write (buf);
 }
@@ -187,32 +212,52 @@ static int connected (hin_client_t * client, int ret) {
     printf ("proxy connection failed\n");
     httpd_client_t * parent = (httpd_client_t*)client->parent;
     httpd_respond_error (parent, 502, NULL);
-    return 1;
+    http_client_t * http = (http_client_t*)client;
+    void http_client_clean (http_client_t * http);
+    http_client_clean (http);
+    return 0;
   }
   http_client_start_request1 (client, ret);
   return 0;
 }
 
-int hin_proxy (hin_client_t * client, const char * url) {
-  httpd_client_t * http = (httpd_client_t*)client;
-  http->state |= HIN_REQ_DATA;
+http_client_t * hin_proxy (hin_client_t * parent_c, const char * url1) {
+  httpd_client_t * parent = (httpd_client_t*)parent_c;
+  parent->state |= HIN_REQ_DATA;
 
   hin_uri_t info;
+  char * url = strdup (url1);
   if (hin_parse_uri (url, 0, &info) < 0) {
     printf ("can't parse uri '%s'\n", url);
-    return -1;
+    free (url);
+    return NULL;
   }
 
-  char * h = strndup (info.host.ptr, info.host.len);
-  char * p = strndup (info.port.ptr, info.port.len);
-  hin_client_t * client1 = calloc (1, sizeof (http_client_t));
-  client1->parent = client;
-  int ret = hin_connect (client1, h, p, &connected);
-  if (ret < 0) { printf ("can't create connection\n"); return -1; }
-  http_client_t * http1 = (http_client_t*)client1;
-  http1->uri = info;
-  free (h);
-  free (p);
+  http_client_t * httpd_proxy_connection_get (string_t * host, string_t * port);
+  http_client_t * http = httpd_proxy_connection_get (&info.host, &info.port);
+  if (http) {
+    if (http->uri.all.ptr) free ((void*)http->uri.all.ptr);
+    http->c.parent = parent;
+    http->uri = info;
+    connected (&http->c, http->c.sockfd);
+    return http;
+  }
+
+  http = calloc (1, sizeof (http_client_t));
+  http->host = strndup (info.host.ptr, info.host.len);
+  if (info.port.len > 0) {
+    http->port = strndup (info.port.ptr, info.port.len);
+  } else {
+    http->port = strdup ("80");
+  }
+  http->c.parent = parent;
+  http->uri = info;
+
+  int ret = hin_connect (&http->c, http->host, http->port, &connected);
+  if (ret < 0) { printf ("can't create connection\n"); return NULL; }
+  master.num_connection++;
+
+  return http;
 }
 
 

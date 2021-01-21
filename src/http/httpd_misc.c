@@ -65,7 +65,7 @@ int header (hin_client_t * client, hin_buffer_t * buffer, const char * fmt, ...)
   int sz = buffer->sz - buffer->count;
   int len = vsnprintf (buffer->ptr + pos, sz, fmt, ap);
   //printf ("header send was '%.*s' count was %d\n", len, buffer->ptr + pos, buffer->count);
-  if (len >= sz) { va_end (ap); return 0; }
+  if (len >= sz) { printf ("'header' failed to write more\n"); va_end (ap); return 0; }
   buffer->count += len;
 
   va_end(ap);

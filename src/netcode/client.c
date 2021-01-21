@@ -18,7 +18,7 @@ void hin_client_unlink (hin_client_t * client) {
   hin_client_list_remove (&bp->active_client, client);
 
   free (client);
-  master.num_active--;
+  master.num_client--;
 }
 
 void hin_client_clean (hin_client_t * client) {
@@ -77,7 +77,7 @@ int handle_client (hin_client_t * client) {
     bp->client_handle (client);
   }
 
-  master.num_active++;
+  master.num_client++;
 
   return 0;
 }

@@ -1,4 +1,10 @@
 
+* proxy reuse backend connections
+* bugfix deflate connections for large files
+* bugfix crash for cgi deflate connection
+* speak the daemon's true name
+
+commit d8413ac553746055b6141c79c747bc13fb58353c
 * connection 'shutdown' function that closes connection and returns nothing
 * bugfix direct responses included deflate http headers erroneously
 * bugfix double free when you return no response

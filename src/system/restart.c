@@ -15,6 +15,8 @@
 
 void hin_stop () {
   master.quit = 1;
+  void httpd_proxy_connection_close_all ();
+  httpd_proxy_connection_close_all ();
   void httpd_timer_flush ();
   httpd_timer_flush ();
 }

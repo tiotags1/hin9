@@ -28,9 +28,10 @@ typedef struct {
   int quit;
   int restart_pid;
   void * servers;
-  int num_active;
+  int num_client;
+  int num_connection;
   hin_client_t * server_list;
-  hin_client_t * download_list;
+  hin_client_t * connection_list;
   hin_master_share_t * share;
 } hin_master_t;
 

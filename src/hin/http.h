@@ -54,6 +54,7 @@ typedef struct {
 
 typedef struct {
   hin_client_t c;
+  char * host, * port;
   char * save_path;
   hin_uri_t uri;
   off_t sz;
@@ -83,12 +84,13 @@ void hin_client_ssl_cleanup (hin_client_t * client);
 int httpd_client_start_request (httpd_client_t * http);
 int httpd_client_finish_request (httpd_client_t * http);
 int httpd_client_shutdown (httpd_client_t * http);
+int http_client_shutdown (http_client_t * http);
 
 //int hin_request_headers (hin_client_t * client);
 
 // download
 hin_client_t * httpd_create (const char * addr, const char * port, const char * sock_type, void * ssl_ctx);
-hin_client_t * http_download (const char * url, const char * save_path, int (*read_callback) (hin_buffer_t * buffer, int num, int flush));
+http_client_t * http_download (const char * url, const char * save_path, int (*read_callback) (hin_buffer_t * buffer, int num, int flush));
 
 #include "utils.h"
 

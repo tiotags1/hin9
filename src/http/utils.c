@@ -65,7 +65,7 @@ int hin_parse_uri (const char * url, int len, hin_uri_t * info) {
   memset (info, 0, sizeof (*info));
 
   c.ptr = (char*)url;
-  c.len = len;  
+  c.len = len;
 
   if (match_string (&c, "(https)://", &info->scheme) > 0) {
     info->https = 1;
@@ -110,7 +110,6 @@ int httpd_request_chunked (httpd_client_t * http) {
   } else {
     if (http->peer_flags & HIN_HTTP_KEEPALIVE) {
       http->peer_flags |= HIN_HTTP_CHUNKED;
-      if (master.debug & DEBUG_RW) printf ("chunked selected on connection ?\n");
     }
     return 1;
   }

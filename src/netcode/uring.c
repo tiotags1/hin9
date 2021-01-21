@@ -175,7 +175,8 @@ static int hin_event_check_alive () {
     }
   }
   if (master.quit == 0) return 1;
-  if (master.num_active > 0) return 1;
+  if (master.num_client > 0) return 1;
+  if (master.num_connection > 0) return 1;
   return 0;
 }
 

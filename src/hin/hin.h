@@ -29,7 +29,7 @@ enum { HIN_CLIENT = 1, HIN_DYN_BUFFER, HIN_SERVER, HIN_DOWNLOAD };
 enum { DEBUG_OTHER = 0x1, DEBUG_PIPE = 0x2, DEBUG_HEADERS = 0x4, DEBUG_RW = 0x8,
   DEBUG_SSL = 0x10, DEBUG_PROTO = 0x20, DEBUG_URING = 0x40, DEBUG_SOCKET = 0x80,
   DEBUG_CGI = 0x100, DEBUG_POST = 0x200, DEBUG_CONFIG = 0x400, DEBUG_TIMER = 0x800,
-  DEBUG_PROXY = 0x1000 };
+  DEBUG_PROXY = 0x1000, DEBUG_DEFLATE = 0x2000 };
 
 typedef int (*hin_callback_t) (hin_buffer_t * buffer, int ret);
 
@@ -58,7 +58,7 @@ struct hin_pipe_struct {
   hin_pipe_dir_t in, out;
   uint32_t flags;
   off_t count, sz;
-  void * parent, * parent1, * data;
+  void * parent, * parent1;
   hin_buffer_t * write;
   hin_ssl_t * ssl;
   int (*read_callback) (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush);

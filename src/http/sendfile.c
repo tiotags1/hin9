@@ -25,40 +25,41 @@ int hin_pipe_copy_deflate (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, in
   http->z.next_in = buffer->buffer;
   buffer->count = num;
 
+  if (master.debug & DEBUG_DEFLATE) printf ("deflate num %d flush %d\n", num, flush);
+  char numbuf[10]; // size of max nr (7 bytes) + crlf + \0
+
   do {
     hin_buffer_t * new = hin_pipe_buffer_get (pipe);
-    char * ptr = new->ptr;
-    int nsz = 8;
+    new->count = 0;
     if (http->peer_flags & HIN_HTTP_CHUNKED) {
-      new->sz -= 20; // size of max nr, 4 crlf + 0+crlfcrlf
-      new->count = 0;
-      int n = header (client, new, "%-*x\r\n", nsz, 0);
-      ptr += n;
+      new->sz -= (sizeof (numbuf) + 8); // crlf + 0+crlfcrlf + \0
+      new->count = sizeof (numbuf);
     }
     http->z.avail_out = new->sz;
-    http->z.next_out = ptr;
+    http->z.next_out = &new->buffer[new->count];
     int ret1 = deflate (&http->z, flush);
     have = new->sz - http->z.avail_out;
-    // add a write for new
+
     if (have > 0) {
-      new->count = have;
+      new->count += have;
       new->fd = pipe->out.fd;
+
       if (http->peer_flags & HIN_HTTP_CHUNKED) {
-        new->count += nsz + 2;
+        new->sz += sizeof (numbuf) + 8;
         header (client, new, "\r\n");
-        if (http->z.avail_out != 0) {
+        if (flush && (http->z.avail_out != 0)) {
           header (client, new, "0\r\n\r\n");
         }
 
-        int num = snprintf (new->buffer, 0, "%x", have);
-        if (num < 0) { printf ("weird error\n"); exit (1); }
-        int offset = nsz - num;
+        int num = snprintf (numbuf, sizeof (numbuf), "%x\r\n", have);
+        if (num < 0 || num >= sizeof (numbuf)) { printf ("weird error\n"); }
+        int offset = sizeof (numbuf) - num;
         char * ptr = new->buffer + offset;
-        snprintf (ptr, num+1, "%x", have);
-        ptr[num] = '\r';
+        memcpy (ptr, numbuf, num);
         new->ptr = ptr;
         new->count -= offset;
       }
+      if (master.debug & DEBUG_DEFLATE) printf ("deflate write to pipe %d bytes %d total flush %d\n", have, new->count, flush);
       hin_pipe_write (pipe, new);
     } else {
       hin_buffer_clean (new);
