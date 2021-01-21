@@ -66,8 +66,9 @@ static int httpd_client_close_callback (hin_buffer_t * buffer, int ret) {
   if (master.debug & DEBUG_PROTO) printf ("httpd close client %d\n", http->c.sockfd);
   if (http->read_buffer && http->read_buffer != buffer)
     hin_buffer_clean (http->read_buffer);
+  hin_buffer_clean (buffer);
   hin_client_unlink (&http->c);
-  return 1;
+  return 0;
 }
 
 int httpd_client_buffer_shutdown (hin_buffer_t * buffer) {

@@ -13,12 +13,37 @@
 
 #include "hin.h"
 
+int hin_check_alive () {
+  if (master.restart_pid) {
+    if (master.share->done == 0) {
+      printf ("not done\n");
+    } else if (master.share->done > 0) {
+      printf ("restart succesful\n");
+      hin_stop ();
+      master.share->done = 0;
+    } else {
+      printf ("failed to restart\n");
+      master.share->done = 0;
+    }
+  }
+  if (master.quit == 0) return 1;
+  if (master.debug & DEBUG_OTHER) printf ("hin live client %d conn %d\n", master.num_client, master.num_connection);
+  if (master.num_client > 0) return 1;
+  if (master.num_connection > 0) return 1;
+
+  void hin_clean ();
+  hin_clean ();
+
+  exit (0);
+}
+
 void hin_stop () {
   master.quit = 1;
   void httpd_proxy_connection_close_all ();
   httpd_proxy_connection_close_all ();
   void httpd_timer_flush ();
   httpd_timer_flush ();
+  hin_check_alive ();
 }
 
 int hin_restart () {

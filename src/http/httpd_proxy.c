@@ -75,7 +75,7 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer) {
     if (line.len == 0) break;
     if (master.debug & DEBUG_PROXY)
       printf ("proxy: header1 '%.*s'\n", (int)line.len, line.ptr);
-    if (hin_string_equali (&line, "Content%-Length: (%d+)", &param1) > 0) {
+    if (matchi_string_equal (&line, "Content%-Length: (%d+)", &param1) > 0) {
       sz = atoi (param1.ptr);
       if (master.debug & DEBUG_PROXY)
       printf ("proxy:   size is %ld\n", sz);

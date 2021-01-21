@@ -1,4 +1,7 @@
 
+* style changes and probably 0.0001% performance
+
+commit e20418ca053d857a74fae35ba64a4193c3584640
 * proxy reuse backend connections
 * bugfix deflate connections for large files
 * bugfix crash for cgi deflate connection

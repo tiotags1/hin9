@@ -161,30 +161,11 @@ int hin_event_clean () {
   memset (&ring, 0, sizeof (ring));
 }
 
-static int hin_event_check_alive () {
-  if (master.restart_pid) {
-    if (master.share->done == 0) {
-      printf ("not done\n");
-    } else if (master.share->done > 0) {
-      printf ("restart succesful\n");
-      hin_stop ();
-      master.share->done = 0;
-    } else {
-      printf ("failed to restart\n");
-      master.share->done = 0;
-    }
-  }
-  if (master.quit == 0) return 1;
-  if (master.num_client > 0) return 1;
-  if (master.num_connection > 0) return 1;
-  return 0;
-}
-
 int hin_event_loop () {
   struct io_uring_cqe *cqe;
   int err;
 
-  while (hin_event_check_alive ()) {
+  while (1) {
     io_uring_submit (&ring);
     if ((err = io_uring_wait_cqe (&ring, &cqe)) < 0) {
       if (err == -EINTR) continue;

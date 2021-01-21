@@ -15,13 +15,13 @@ static hin_buffer_t * timeout_buffer = NULL;
 void hin_stop ();
 
 int console_execute (string_t * source) {
-  if (hin_string_equali (source, "q\n") > 0) {
+  if (matchi_string_equal (source, "q\n") > 0) {
     printf ("do quit\n");
     hin_stop ();
-  } else if (hin_string_equali (source, "r\n") > 0) {
+  } else if (matchi_string_equal (source, "restart\n") > 0) {
     int hin_restart ();
     hin_restart ();
-  } else if (hin_string_equali (source, "reload\n") > 0) {
+  } else if (matchi_string_equal (source, "reload\n") > 0) {
     int lua_reload ();
     if (lua_reload () < 0)
       printf ("reload failed\n");

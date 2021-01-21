@@ -19,22 +19,13 @@ void hin_client_unlink (hin_client_t * client) {
 
   free (client);
   master.num_client--;
-}
-
-void hin_client_clean (hin_client_t * client) {
-  httpd_client_t * http = (httpd_client_t*)client;
-  if (http->read_buffer)
-    hin_buffer_clean (http->read_buffer);
-  //free (client);
-  //hin_client_shutdown (client);
-  close (client->sockfd);
+  hin_check_alive ();
 }
 
 void hin_server_clean (hin_client_t * server) {
   hin_server_blueprint_t * bp = (hin_server_blueprint_t*)server;
   for (hin_client_t * elem = bp->active_client; elem; elem = elem->next) {
     //hin_client_shutdown (elem);
-    //hin_client_clean (elem);
   }
   free (bp->accept_client);
   hin_buffer_clean (bp->accept_buffer);

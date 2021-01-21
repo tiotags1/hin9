@@ -89,18 +89,18 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
     if (line.len == 0) break;
     if (master.debug & DEBUG_CGI)
       fprintf (stderr, "cgi header is '%.*s'\n", (int)line.len, line.ptr);
-    if (hin_string_equali (&line, "Status: (%d+).*", &param1) > 0) {
+    if (matchi_string_equal (&line, "Status: (%d+).*", &param1) > 0) {
       status = atoi (param1.ptr);
       if (master.debug & DEBUG_CGI) printf ("cgi status is %d\n", status);
-    } else if (hin_string_equali (&line, "Content%-Length: (%d+)", &param1) > 0) {
+    } else if (matchi_string_equal (&line, "Content%-Length: (%d+)", &param1) > 0) {
       sz = atoi (param1.ptr);
-    } else if (hin_string_equali (&line, "Content%-Encoding: .*") > 0) {
+    } else if (matchi_string_equal (&line, "Content%-Encoding: .*") > 0) {
       http->disable |= HIN_HTTP_DEFLATE;
-    } else if (hin_string_equali (&line, "Transfer%-Encoding: .*") > 0) {
+    } else if (matchi_string_equal (&line, "Transfer%-Encoding: .*") > 0) {
       http->disable |= HIN_HTTP_CHUNKED;
-    } else if (hin_string_equali (&line, "Cache%-Control: .*") > 0) {
+    } else if (matchi_string_equal (&line, "Cache%-Control: .*") > 0) {
       http->disable |= HIN_HTTP_CACHE;
-    } else if (hin_string_equali (&line, "Date: .*") > 0) {
+    } else if (matchi_string_equal (&line, "Date: .*") > 0) {
       http->disable |= HIN_HTTP_DATE;
     }
   }
@@ -147,9 +147,9 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
   while (1) {
     if (find_line (source, &line) == 0) { hin_buffer_clean (buf); return 0; }
     if (line.len == 0) break;
-    if (hin_string_equali (&line, "Status: .*") > 0) {
-    } else if ((http->peer_flags & HIN_HTTP_CHUNKED) && hin_string_equali (&line, "Content%-Length: .*") > 0) {
-    } else if (HIN_HTTPD_DISABLE_POWERED_BY && hin_string_equali (&line, "X%-Powered%-By: .*") > 0) {
+    if (matchi_string_equal (&line, "Status: .*") > 0) {
+    } else if ((http->peer_flags & HIN_HTTP_CHUNKED) && matchi_string_equal (&line, "Content%-Length: .*") > 0) {
+    } else if (HIN_HTTPD_DISABLE_POWERED_BY && matchi_string_equal (&line, "X%-Powered%-By: .*") > 0) {
     } else {
       header (client, buf, "%.*s\r\n", line.len, line.ptr);
     }

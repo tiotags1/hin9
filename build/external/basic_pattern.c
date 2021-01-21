@@ -16,11 +16,11 @@
 
 #include "basic_pattern.h"
 
-static int match_char (const char * ptr, uint32_t matches, uint32_t ch) {
-  if (matches & PATTERN_CUSTOM 	&& *ptr == ch) return 1;
+static inline int match_char (const char * ptr, uint32_t matches, uint32_t ch) {
+  if (matches & PATTERN_CUSTOM 		&& *ptr == ch) return 1;
   if (matches & PATTERN_SPACE 		&& isspace (*ptr)) return 1;
   if (matches & PATTERN_ALPHANUM 	&& isalnum (*ptr)) return 1;
-  if (matches & PATTERN_LETTER 	&& isalpha (*ptr)) return 1;
+  if (matches & PATTERN_LETTER 		&& isalpha (*ptr)) return 1;
   if (matches & PATTERN_DIGIT 		&& isdigit (*ptr)) return 1;
   if (matches & PATTERN_CONTROL 	&& iscntrl (*ptr)) return 1;
   if (matches & PATTERN_PUNCTUATION	&& ispunct (*ptr)) return 1;
@@ -33,7 +33,7 @@ static int match_char (const char * ptr, uint32_t matches, uint32_t ch) {
   return 0;
 }
 
-static int get_pattern (const char * fmt, uint32_t * matches, uint32_t * character) {
+static inline int get_pattern (const char * fmt, uint32_t * matches, uint32_t * character) {
   switch (*fmt) {
   case '.':
     *matches = PATTERN_ALL;
@@ -82,14 +82,14 @@ static int get_pattern (const char * fmt, uint32_t * matches, uint32_t * charact
   return 1;
 }
 
-static int match_pattern (const string_t *data, const string_t *pattern, int specifier) {
+static inline int match_pattern (const string_t *data, const string_t *pattern, int specifier) {
   // for every pattern try to see it works
   const char * s = data->ptr, * test_s;
   const char * fmt;
   const char * max_s = data->ptr+data->len, * max_f = pattern->ptr+pattern->len;
   int match_anything, negative;
   uint32_t matches, character;
-  if (specifier != '*' && specifier != '-' && specifier != '+') max_s = data->ptr + 1;
+  if (specifier != '*' && specifier != '+') max_s = data->ptr + 1;
   do {
     match_anything = 0;
     for (fmt = pattern->ptr; fmt<max_f; ) {
@@ -104,7 +104,6 @@ static int match_pattern (const string_t *data, const string_t *pattern, int spe
         while (s < max_s && (match_char (s, matches, character) ^ negative)) { s++; }
         break;
       case '*': // as many characters as possible but also nil
-      case '-': // as few as possible to reach the end of the pattern
         while (s < max_s && (match_char (s, matches, character) ^ negative)) { s++; }
         break;
       case '?': // one or nil
@@ -121,14 +120,14 @@ static int match_pattern (const string_t *data, const string_t *pattern, int spe
     }
   } while (match_anything);
   size_t count = s-data->ptr;
-  if (count == 0 && specifier != '*' && specifier != '-' && specifier != '?') {
+  if (count == 0 && specifier != '*' && specifier != '?') {
     return -1;
   }
   return count;
 }
 
-static int get_specifier (int x) {
-  if (x == '+' || x == '*' || x == '?' || x == '-') { return x; }
+static inline int get_specifier (int x) {
+  if (x == '+' || x == '*' || x == '?') { return x; }
   return 0;
 }
 
@@ -154,7 +153,6 @@ int match_string_virtual (string_t *data, uint32_t flags, const char *format, va
       switch (specifier) {
       case '+':
       case '*':
-      case '-':
       case '?':
         fmt++;
       }
@@ -193,7 +191,6 @@ int match_string_virtual (string_t *data, uint32_t flags, const char *format, va
       switch (*(fmt+1)) {
       case '+':
       case '*':
-      case '-':
       case '?':
         fmt++;
         specifier = *fmt;
@@ -263,13 +260,47 @@ int matchi_string (string_t *data, const char *format, ...) {
   return used;
 }
 
+int match_string_equal (string_t * source, const char * format, ...) {
+  va_list argptr;
+  va_start (argptr, format);
+  string_t orig = *source;
+
+  int used = match_string_virtual (source, 0, format, argptr);
+
+  va_end (argptr);
+
+  *source = orig;
+  if (used != orig.len) {
+    return -1;
+  }
+
+  return used;
+}
+
+int matchi_string_equal (string_t * source, const char * format, ...) {
+  va_list argptr;
+  va_start (argptr, format);
+  string_t orig = *source;
+
+  int used = match_string_virtual (source, PATTERN_CASE, format, argptr);
+
+  va_end (argptr);
+
+  *source = orig;
+  if (used != orig.len) {
+    return -1;
+  }
+
+  return used;
+}
+
 char * match_string_to_c (string_t * str) {
   return strndup (str->ptr, str->len);
 }
 
 string_t match_c_to_string (const char * ptr) {
   string_t str;
-  str.ptr = ptr;
+  str.ptr = (char*)ptr;
   str.len = strlen (ptr);
   return str;
 }

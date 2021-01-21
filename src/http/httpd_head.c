@@ -92,9 +92,9 @@ int httpd_parse_headers (httpd_client_t * http, string_t * source) {
   } else {
     http->peer_flags |= HIN_HTTP_KEEPALIVE;
   }
-  if (hin_string_equali (&method, "GET") > 0) {
+  if (matchi_string_equal (&method, "GET") > 0) {
     http->method = HIN_HTTP_GET;
-  } else if (hin_string_equali (&method, "POST") > 0) {
+  } else if (matchi_string_equal (&method, "POST") > 0) {
     http->method = HIN_HTTP_POST;
   } else {
     printf ("httpd 405 error unknown method\n");

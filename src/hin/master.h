@@ -39,6 +39,7 @@ extern hin_master_t master;
 
 void hin_stop ();
 int hin_restart ();
+int hin_check_alive ();
 
 #endif
 
