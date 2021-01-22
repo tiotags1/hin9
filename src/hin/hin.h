@@ -38,11 +38,10 @@ struct hin_buffer_struct {
   int fd;
   uint32_t flags;
   hin_callback_t callback;
-  hin_callback_t error_callback;
   off_t pos;
   int count, sz;
   void * parent;
-  struct hin_buffer_struct * prev, * next;
+  struct hin_buffer_struct * prev, * next, * ssl_buffer;
   char * ptr, * data;
   hin_ssl_t * ssl;
   char buffer[];

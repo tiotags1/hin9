@@ -79,6 +79,7 @@ int ssl_init_read_ready (hin_buffer_t * crypt, int ret) {
 
   if (ret == 0) {
     if (master.debug & DEBUG_SSL) printf ("ssl init detect close\n");
+    plain->ssl_buffer = NULL;
     if (plain->callback (plain, ret))
       hin_buffer_clean (plain);
     return 1;
@@ -165,6 +166,7 @@ int hin_ssl_read (hin_buffer_t * crypt, int ret) {
 
   if (ret == 0) {
     if (master.debug & DEBUG_SSL) printf ("ssl detect close\n");
+    plain->ssl_buffer = NULL;
     if (plain->callback (plain, ret))
       hin_buffer_clean (plain);
     return 1;
@@ -188,6 +190,7 @@ int hin_ssl_read (hin_buffer_t * crypt, int ret) {
     return -1;
   }
 
+  plain->ssl_buffer = NULL;
   if (plain->callback (plain, m))
     hin_buffer_clean (plain);
   return 1;
@@ -203,6 +206,7 @@ static int ssl_write_done (hin_buffer_t * crypt, int ret) {
     return 0;
   }
 
+  plain->ssl_buffer = NULL;
   if (plain->callback (plain, plain->count))
     hin_buffer_clean (plain);
   return 1;

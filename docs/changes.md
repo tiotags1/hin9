@@ -1,4 +1,7 @@
 
+* bugfix memory leak for a ssl buffer closed before opeation finishes
+
+commit 5b3853d48cc8d1139e4140f00e7c53248f9216cf
 * set\_content\_type function
 * bugfixes: add\_header, sanitize\_path
 

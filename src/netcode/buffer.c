@@ -6,6 +6,9 @@
 #include "hin.h"
 
 void hin_buffer_clean (hin_buffer_t * buffer) {
+  if (buffer->ssl_buffer) {
+    hin_buffer_clean (buffer->ssl_buffer);
+  }
   if (buffer->type == HIN_DYN_BUFFER) {
     if (buffer->data) free (buffer->data);
   }

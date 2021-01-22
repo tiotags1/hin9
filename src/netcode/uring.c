@@ -32,6 +32,7 @@ int hin_request_write (hin_buffer_t * buffer) {
     buf->parent = (void*)buffer;
     buf->ssl = buffer->ssl;
     buf->data = (void*)HIN_SSL_WRITE;
+    buffer->ssl_buffer = buf;
     if (hin_ssl_handshake (buffer->ssl, buf)) { return 0; }
     hin_ssl_write (buf);
     buffer = buf;
@@ -61,6 +62,7 @@ int hin_request_read (hin_buffer_t * buffer) {
     buf->callback = hin_ssl_read;
     buf->ssl = buffer->ssl;
     buf->data = (void*)HIN_SSL_READ;
+    buffer->ssl_buffer = buf;
     if (hin_ssl_handshake (buffer->ssl, buf)) { return 0; }
     buffer = buf;
   }
@@ -179,9 +181,6 @@ int hin_event_loop () {
 
     io_uring_cqe_seen (&ring, cqe);
     err = buffer->callback (buffer, cqe->res);
-    if (err < 0) {
-      if (buffer->error_callback && buffer->error_callback (buffer, cqe->res)) {}
-    }
     if (err) {
       if (master.debug & DEBUG_URING) printf ("cleanup%d buffer %p\n", master.id, buffer);
       hin_buffer_clean (buffer);
