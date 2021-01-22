@@ -15,6 +15,7 @@ void httpd_client_clean (httpd_client_t * http) {
   if (http->post_sep) free ((void*)http->post_sep);
   if (http->post_fd) close (http->post_fd); // TODO cgi worker needs to keep this
   if (http->append_headers) free (http->append_headers);
+  if (http->content_type) free (http->content_type);
   //memset (&http->state, 0, sizeof (httpd_client_t) - sizeof (hin_client_t)); // cleans things it shouldn't
 
   http->state = http->peer_flags = http->disable = 0;

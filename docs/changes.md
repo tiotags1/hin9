@@ -1,4 +1,8 @@
 
+* set\_content\_type function
+* bugfixes: add\_header, sanitize\_path
+
+commit 814646024da2cf87f75d9f4055a676257e26f649
 * style changes and probably 0.0001% performance
 
 commit e20418ca053d857a74fae35ba64a4193c3584640

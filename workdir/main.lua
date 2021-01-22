@@ -10,12 +10,9 @@ end
 access = create_log ("build/access.log")
 access ("start server on %s\n", os.date ("%c"))
 
-function GetFileExtension (url)
-  return url:match("^.+%.(.+)$")
-end
-
 to_cache = {ico=true, txt=true, js=true, jpg=true, png=true, css=true}
 undeflate = {ico=true, jpg=true, png=true, bin=true, iso=true}
+content_type = {html="text/html", jpg="image/jpeg", png="image/png", gif="image/gif", css="text/css", ico="image/vnd.microsoft.icon", js="text/javascript"}
 
 local server = create_httpd (function (server, req)
   local path, query, method, version = parse_path (req)
@@ -29,7 +26,6 @@ local server = create_httpd (function (server, req)
   --set_option (req, "status", 403)
   --set_option (req, "cache", -1)
   --add_header (req, "Hello", "from server")
-  local ext = GetFileExtension (path)
   local proxy_path = string.match (path, '^/proxy/(.*)')
   if (path == "/proxy" or proxy_path) then
     return proxy (req, "http://localhost:28005/" .. (proxy_path or ""))
@@ -43,7 +39,7 @@ local server = create_httpd (function (server, req)
     return respond (req, 200, "Hello world")
   end
   local root = "htdocs"
-  local file_path, file_name = sanitize_path (req, root, path)
+  local file_path, file_name, ext = sanitize_path (req, root, path)
   if (undeflate[ext]) then
     set_option (req, "disable", "deflate")
   end
@@ -51,6 +47,9 @@ local server = create_httpd (function (server, req)
     return cgi (req, "/usr/bin/php-cgi", root, file_path)
   elseif (to_cache[ext]) then
     set_option (req, "cache", 604800)
+  end
+  if (content_type[ext]) then
+    set_content_type (req, content_type[ext])
   end
   send_file (req, file_path, 0, -1)
 end)

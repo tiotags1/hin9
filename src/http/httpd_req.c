@@ -42,6 +42,9 @@ int httpd_write_common_headers (hin_client_t * client, hin_buffer_t * buf) {
   } else {
     header (client, buf, "Connection: close\r\n");
   }
+  if (http->content_type) {
+    header (client, buf, "Content-Type: %s\r\n", http->content_type);
+  }
   if (http->append_headers) {
     header (client, buf, "%s", http->append_headers);
   }

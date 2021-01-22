@@ -43,6 +43,7 @@ typedef struct {
   char * post_sep;
 
   char * append_headers;
+  char * content_type;
 
   basic_time_t next_time;
 

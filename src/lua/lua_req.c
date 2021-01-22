@@ -172,7 +172,7 @@ static int l_hin_sanitize_path (lua_State *L) {
   if (raw.ptr == NULL) return 0;
   path = raw;
   while (1) {
-    used = match_string (&path, "/([%w%.]*)", &name);
+    used = match_string (&path, "/([%w%.,_-]*)", &name);
     if (used <= 0) return 0;
     if (*name.ptr == '.') return 0;
     len2 += used;
@@ -195,9 +195,21 @@ static int l_hin_sanitize_path (lua_State *L) {
   }
   lua_pushstring (L, new);
   lua_pushlstring (L, name.ptr, name.len);
+
+  ptr = name.ptr + name.len;
+  char * min = name.ptr;
+  int num = 2;
+  for (;ptr>min; ptr--) {
+    if (*ptr == '.') {
+      ptr++;
+      lua_pushlstring (L, ptr, (name.ptr + name.len)-ptr);
+      num++;
+      break;
+    }
+  }
   free (new);
 
-  return 2;
+  return num;
 }
 
 #include <sys/socket.h>
@@ -236,7 +248,7 @@ static int l_hin_add_header (lua_State *L) {
   httpd_client_t * http = (httpd_client_t*)client;
 
   const char * name = lua_tostring (L, 2);
-  const char * data = lua_tostring (L, 2);
+  const char * data = lua_tostring (L, 3);
 
   char * new = NULL;
   char * old = http->append_headers;
@@ -254,8 +266,20 @@ static int l_hin_shutdown (lua_State *L) {
     return 0;
   }
   httpd_client_t * http = (httpd_client_t*)client;
-  //httpd_client_shutdown (http);
   http->state |= HIN_REQ_END;
+  return 0;
+}
+
+static int l_hin_set_content_type (lua_State *L) {
+  hin_client_t *client = (hin_client_t*)lua_touserdata (L, 1);
+  if (client == NULL || client->magic != HIN_CLIENT_MAGIC) {
+    printf ("lua hin_add_header need a valid client\n");
+    return 0;
+  }
+  httpd_client_t * http = (httpd_client_t*)client;
+  const char * str = lua_tostring (L, 2);
+  if (str == NULL) return 0;
+  http->content_type = strdup (str);
   return 0;
 }
 
@@ -270,6 +294,7 @@ static lua_function_t functs [] = {
 {"remote_address",	l_hin_remote_address },
 {"add_header",		l_hin_add_header },
 {"shutdown",		l_hin_shutdown },
+{"set_content_type",	l_hin_set_content_type },
 {NULL, NULL},
 };
 
