@@ -114,10 +114,10 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
   pipe->in.pos = 0;
   pipe->out.fd = client->sockfd;
   pipe->out.flags = HIN_SOCKET | (client->flags & HIN_SSL);
+  pipe->out.ssl = &client->ssl;
   pipe->out.pos = 0;
   pipe->parent = client;
   pipe->parent1 = worker;
-  pipe->ssl = &client->ssl;
   pipe->finish_callback = hin_pipe_cgi_server_finish_callback;
   if (sz > 0) {
     pipe->count = pipe->sz = sz - len;

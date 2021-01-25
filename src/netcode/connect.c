@@ -27,7 +27,7 @@ static int complete (hin_buffer_t * buffer, int fd) {
   }
 
   client->sockfd = fd;
-  if (master.debug & DEBUG_SOCKET) printf ("connect complete %d %s:%s\n", client->sockfd, hbuf, sbuf);
+  if (master.debug & DEBUG_SOCKET) printf ("connect%s complete %d %s:%s\n", client->flags & HIN_SSL ? "(s)" : "", client->sockfd, hbuf, sbuf);
 
   competion_callback_t * callback = (competion_callback_t*)buffer->prev;
   int ret = callback (client, fd);
@@ -51,7 +51,7 @@ static int fail (hin_buffer_t * buffer, int err) {
   competion_callback_t * callback = (competion_callback_t*)buffer->prev;
   int ret = callback (client, err);
 
-  printf ("connect failed %d %s:%s '%s'\n", client->sockfd, hbuf, sbuf, strerror (-err));
+  printf ("connect%s failed %d %s:%s '%s'\n", client->flags & HIN_SSL ? "(s)" : "", client->sockfd, hbuf, sbuf, strerror (-err));
   freeaddrinfo ((struct addrinfo *)buffer->data);
   if (ret) free (client);
   return 1;
@@ -99,7 +99,7 @@ static int hin_connect_recheck (hin_buffer_t * buffer, int ret) {
 }
 
 int hin_connect (hin_client_t * client, const char * host, const char * port, int (*callback) (hin_client_t * client, int ret)) {
-  if (master.debug & DEBUG_SOCKET) printf ("connect start %s:%s\n", host, port);
+  if (master.debug & DEBUG_SOCKET) printf ("connect%s start %s:%s\n", client->flags & HIN_SSL ? "(s)" : "", host, port);
   struct addrinfo hints;
   struct addrinfo *result, *rp;
   int sfd, s, j;

@@ -26,16 +26,6 @@ int httpd_parse_headers_line (httpd_client_t * http, string_t * line) {
       }
       if (match_string (line, "%s*,%s*") <= 0) break;
     }
-  } else if (match_string (line, "Range:%s*") > 0) {
-    if (match_string (line, "bytes=(%d+)-(%d*)", &param1, &param2) > 0) {
-      http->pos = atoi (param1.ptr);
-      if (param2.len > 0) {
-        http->count = atoi (param2.ptr);
-      } else {
-        http->count = -1;
-      }
-      if (master.debug & DEBUG_PROTO) printf (" range requested is %ld-%ld\n", http->pos, http->count);
-    }
   } else if (match_string (line, "If%-Modified%-Since:%s*") > 0) {
     time_t tm = hin_date_str_to_time (line);
     http->modified_since = tm;
@@ -50,6 +40,16 @@ int httpd_parse_headers_line (httpd_client_t * http, string_t * line) {
       if (master.debug) printf ("connection requested keepalive\n");
       http->peer_flags |= HIN_HTTP_KEEPALIVE;
     }
+  } else if (match_string (line, "Range:%s*") > 0) {
+    if (match_string (line, "bytes=(%d+)-(%d*)", &param1, &param2) > 0) {
+      http->pos = atoi (param1.ptr);
+      if (param2.len > 0) {
+        http->count = atoi (param2.ptr);
+      } else {
+        http->count = -1;
+      }
+      if (master.debug & DEBUG_PROTO) printf (" range requested is %ld-%ld\n", http->pos, http->count);
+    }
   } else if (http->method == HIN_HTTP_POST) {
     if (match_string (line, "Content%-Length: (%d+)", &param) > 0) {
       http->post_sz = atoi (param.ptr);
@@ -62,6 +62,9 @@ int httpd_parse_headers_line (httpd_client_t * http, string_t * line) {
       new[param.len + 2] = '\0';
       http->post_sep = new;
       if (master.debug & DEBUG_POST) printf ("Content type multipart/form-data boundry is '%s'\n", new);
+    } else if (match_string (line, "Transfer%-Encoding:%s*") > 0) {
+      printf ("httpd don't accept post with transfer encoding\n");
+      return -1;
     }
   }
   return 1;

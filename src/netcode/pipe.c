@@ -22,7 +22,6 @@ hin_buffer_t * hin_pipe_buffer_get (hin_pipe_t * pipe) {
   buf->flags = 0;
   buf->ptr = buf->buffer;
   buf->count = buf->sz = READ_SZ;
-  buf->ssl = pipe->ssl;
   return buf;
 }
 
@@ -33,7 +32,7 @@ int hin_pipe_write (hin_pipe_t * pipe, hin_buffer_t * buffer) {
 static int hin_pipe_read_next (hin_buffer_t * buffer) {
   hin_pipe_t * pipe = (hin_pipe_t*)buffer->parent;
   buffer->fd = pipe->in.fd;
-  buffer->ssl = pipe->ssl;
+  buffer->ssl = pipe->in.ssl;
   buffer->flags = pipe->in.flags & (HIN_SOCKET | HIN_SSL);
   buffer->callback = hin_pipe_read_callback;
 
@@ -47,7 +46,7 @@ static int hin_pipe_read_next (hin_buffer_t * buffer) {
 static int hin_pipe_write_next (hin_buffer_t * buffer) {
   hin_pipe_t * pipe = (hin_pipe_t*)buffer->parent;
   buffer->fd = pipe->out.fd;
-  buffer->ssl = pipe->ssl;
+  buffer->ssl = pipe->out.ssl;
   buffer->flags = pipe->out.flags & (HIN_SOCKET | HIN_SSL);
   buffer->callback = hin_pipe_write_callback;
 

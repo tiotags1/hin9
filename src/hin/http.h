@@ -7,7 +7,7 @@
 #include "uri.h"
 #include <basic_timer.h>
 
-enum { HIN_REQ_HEADERS = 0x1, HIN_REQ_DATA = 0x2, HIN_REQ_POST = 0x4, HIN_REQ_WAIT = 0x8, HIN_REQ_END = 0x10 };
+enum { HIN_REQ_HEADERS = 0x1, HIN_REQ_DATA = 0x2, HIN_REQ_POST = 0x4, HIN_REQ_WAIT = 0x8, HIN_REQ_PROXY = 0x10, HIN_REQ_END = 0x20 };
 
 enum { HIN_HTTP_GET = 1, HIN_HTTP_POST };
 
@@ -61,7 +61,7 @@ typedef struct {
   off_t sz;
 } http_client_t;
 
-#define HIN_HTTP_PATH_ACCEPT "[%w_/%.%+%%&#$?=]+"
+#define HIN_HTTP_PATH_ACCEPT "[%w_%-/%.%+%%&#$?=]+"
 
 #include <basic_pattern.h>
 

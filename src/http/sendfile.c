@@ -81,7 +81,7 @@ int hin_pipe_copy_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, in
   buf->ptr = buf->buffer;
   buf->count = 0;
   buf->sz = num + 50;
-  buf->ssl = pipe->ssl;
+  buf->ssl = pipe->out.ssl;
 
   //buffer->count = num;
   if (num > 0) {
@@ -111,10 +111,10 @@ hin_pipe_t * send_file (hin_client_t * client, int filefd, off_t pos, off_t coun
   pipe->in.pos = pos;
   pipe->out.fd = client->sockfd;
   pipe->out.flags = HIN_DONE | HIN_SOCKET | (client->flags & HIN_SSL);
+  pipe->out.ssl = &client->ssl;
   pipe->out.pos = 0;
   pipe->parent = client;
   pipe->count = count;
-  pipe->ssl = &client->ssl;
   pipe->read_callback = NULL;
   pipe->finish_callback = done_file;
   pipe->extra_callback = extra;
@@ -163,10 +163,10 @@ hin_pipe_t * receive_file (hin_client_t * client, int filefd, off_t pos, off_t c
   pipe->in.pos = 0;
   pipe->out.fd = filefd;
   pipe->out.flags = HIN_DONE | HIN_OFFSETS | (client->flags & HIN_SSL);
+  pipe->out.ssl = &client->ssl;
   pipe->out.pos = pos;
   pipe->parent = client;
   pipe->count = pipe->sz = count;
-  pipe->ssl = &client->ssl;
   pipe->read_callback = NULL;
   pipe->finish_callback = done_receive_file;
   pipe->extra_callback = extra;

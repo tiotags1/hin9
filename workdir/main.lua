@@ -11,7 +11,7 @@ access = create_log ("build/access.log")
 access ("start server on %s\n", os.date ("%c"))
 
 to_cache = {ico=true, txt=true, js=true, jpg=true, png=true, css=true}
-undeflate = {ico=true, jpg=true, png=true, bin=true, iso=true}
+to_deflate = {html=true, css=true, js=true, txt=true}
 content_type = {html="text/html", jpg="image/jpeg", png="image/png", gif="image/gif", css="text/css", ico="image/vnd.microsoft.icon", js="text/javascript"}
 
 local server = create_httpd (function (server, req)
@@ -40,7 +40,8 @@ local server = create_httpd (function (server, req)
   end
   local root = "htdocs"
   local file_path, file_name, ext = sanitize_path (req, root, path)
-  if (undeflate[ext]) then
+  if (to_deflate[ext]) then
+  else
     set_option (req, "disable", "deflate")
   end
   if (ext == "php") then

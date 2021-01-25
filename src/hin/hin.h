@@ -50,6 +50,7 @@ struct hin_buffer_struct {
 typedef struct {
   int fd;
   uint32_t flags;  // flags deal with if recv or read
+  hin_ssl_t * ssl;
   off_t pos;
 } hin_pipe_dir_t;
 
@@ -59,7 +60,6 @@ struct hin_pipe_struct {
   off_t count, sz;
   void * parent, * parent1;
   hin_buffer_t * write;
-  hin_ssl_t * ssl;
   int (*read_callback) (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush);
   int (*finish_callback) (hin_pipe_t * pipe);
   int (*extra_callback) (hin_pipe_t * pipe);

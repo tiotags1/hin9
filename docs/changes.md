@@ -1,5 +1,10 @@
 
-* bugfix memory leak for a ssl buffer closed before opeation finishes
+* proxy POST requests
+* proxy backend ssl connections
+* bugfix: missing '-' in request path parsing
+
+commit bb3f09200bd4dd947324faee02204e9d2503fae7
+* bugfix memory leak for a ssl buffer closed before operation finishes
 
 commit 5b3853d48cc8d1139e4140f00e7c53248f9216cf
 * set\_content\_type function

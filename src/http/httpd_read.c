@@ -61,7 +61,10 @@ int httpd_client_read_callback (hin_buffer_t * buffer) {
 
   int used = httpd_parse_req (http, source);
   if (used <= 0) return used;
-  if (http->post_sz > 0) {
+  if (http->post_sz > 0 && http->state & HIN_REQ_PROXY) {
+    int consume = source->len > http->post_sz ? http->post_sz : source->len;
+    used += consume;
+  } else if (http->post_sz > 0) {
     int consume = source->len > http->post_sz ? http->post_sz : source->len;
     off_t left = http->post_sz - consume;
     used += consume;

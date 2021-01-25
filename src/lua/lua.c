@@ -45,6 +45,7 @@ void hin_lua_clean () {
   }
   master.servers = NULL;
 
+printf ("lua cleanup\n");
   lua_close (internal_lua);
   internal_lua = NULL;
 }

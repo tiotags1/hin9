@@ -10,6 +10,7 @@
 static int httpd_proxy_close (http_client_t * http) {
   if (master.debug & DEBUG_PROXY) printf ("proxy close\n");
   httpd_client_t * parent = (httpd_client_t*)http->c.parent;
+  parent->state &= ~HIN_REQ_PROXY;
   if (HIN_HTTPD_PROXY_CONNECTION_REUSE) {
     hin_client_list_add (&master.connection_list, &http->c);
   } else {
@@ -22,6 +23,12 @@ static int httpd_proxy_pipe_close (hin_pipe_t * pipe) {
   if (master.debug & DEBUG_PROXY) printf ("proxy pipe close\n");
   http_client_t * http = pipe->parent1;
   httpd_proxy_close (http);
+}
+
+static int httpd_proxy_pipe_close1 (hin_pipe_t * pipe) {
+  if (master.debug & DEBUG_PROXY) printf ("proxy pipe close post data\n");
+  //http_client_t * http = pipe->parent1;
+  //httpd_proxy_close (http);
 }
 
 static int httpd_proxy_pipe_in_error (hin_pipe_t * pipe) {
@@ -79,6 +86,10 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer) {
       sz = atoi (param1.ptr);
       if (master.debug & DEBUG_PROXY)
       printf ("proxy:   size is %ld\n", sz);
+    } else if (matchi_string_equal (&line, "Transfer%-Encoding: .*") > 0) {
+      printf ("proxy: requested chunked encoding but not supported yet\n");
+      httpd_respond_error (http, 502, NULL);
+      httpd_client_shutdown (http);
     }
   }
 
@@ -87,14 +98,15 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer) {
 
   hin_pipe_t * pipe = calloc (1, sizeof (*pipe));
   pipe->in.fd = client1->sockfd;
-  pipe->in.flags = HIN_SOCKET | (client->flags & HIN_SSL);
+  pipe->in.flags = HIN_SOCKET | (client1->flags & HIN_SSL);
+  pipe->in.ssl = &client1->ssl;
   pipe->in.pos = 0;
   pipe->out.fd = client->sockfd;
-  pipe->out.flags = HIN_SOCKET;
+  pipe->out.flags = HIN_SOCKET | (client->flags & HIN_SSL);
+  pipe->in.ssl = &client->ssl;
   pipe->out.pos = 0;
   pipe->parent = client;
   pipe->parent1 = client1;
-  pipe->ssl = &client->ssl;
   pipe->finish_callback = httpd_proxy_pipe_close;
   pipe->in_error_callback = httpd_proxy_pipe_in_error;
   pipe->out_error_callback = httpd_proxy_pipe_out_error;
@@ -168,11 +180,51 @@ static int http_client_sent_callback (hin_buffer_t * buffer, int ret) {
   lines->close_callback = httpd_proxy_buffer_close;
   lines->eat_callback = httpd_proxy_headers_eat;
   hin_request_read (buf);
+
+  http_client_t * proxy = buffer->parent;
+  httpd_client_t * http = proxy->c.parent;
+
+  if (http->method != HIN_HTTP_POST) return 1;
+
+  string_t source = http->headers, line, param1, param2;
+  if (find_line (&source, &line) == 0) { return -1; }
+
+  while (1) {
+    if (find_line (&source, &line) == 0) { return -1; }
+    if (line.len == 0) break;
+  }
+
+  if (master.debug & DEBUG_PROXY) printf ("proxy post %d>%d sz is %ld\n", http->c.sockfd, proxy->c.sockfd, http->post_sz);
+
+  off_t sz = http->post_sz;
+  int len = source.len;
+  if (sz && sz < len) len = sz;
+
+  hin_pipe_t * pipe = calloc (1, sizeof (*pipe));
+  pipe->in.fd = http->c.sockfd;
+  pipe->in.flags = HIN_SOCKET | (http->c.flags & HIN_SSL);
+  pipe->in.ssl = &http->c.ssl;
+  pipe->in.pos = 0;
+  pipe->out.fd = proxy->c.sockfd;
+  pipe->out.flags = HIN_DONE | HIN_SOCKET | (proxy->c.flags & HIN_SSL);
+  pipe->out.ssl = &proxy->c.ssl;
+  pipe->out.pos = 0;
+  pipe->parent = proxy;
+  pipe->parent1 = http;
+  pipe->finish_callback = httpd_proxy_pipe_close1;
+  //pipe->out_error_callback = httpd_proxy_pipe_in_error;
+  //pipe->in_error_callback = httpd_proxy_pipe_out_error;
+  if (sz > 0) {
+    pipe->count = pipe->sz = sz - len;
+    if (pipe->count == 0) pipe->flags |= HIN_DONE;
+  }
+  hin_pipe_advance (pipe);
   return 1;
 }
 
-int http_client_start_request1 (hin_client_t * client, int ret) {
-  http_client_t * http = (http_client_t*)client;
+int http_proxy_start_request (http_client_t * http, int ret) {
+  hin_client_t * client = &http->c;
+  httpd_client_t * parent = (httpd_client_t*)http->c.parent;
   if (master.debug & DEBUG_PROTO) printf ("proxy request begin on socket %d\n", ret);
 
   hin_buffer_t * buf = malloc (sizeof (*buf) + READ_SZ);
@@ -183,7 +235,7 @@ int http_client_start_request1 (hin_client_t * client, int ret) {
   buf->count = 0;
   buf->sz = READ_SZ;
   buf->ptr = buf->buffer;
-  buf->parent = client;
+  buf->parent = http;
   buf->ssl = &client->ssl;
 
   char * path = http->uri.path.ptr;
@@ -192,7 +244,18 @@ int http_client_start_request1 (hin_client_t * client, int ret) {
     path_max = http->uri.query.ptr + http->uri.query.len;
   }
 
-  header (client, buf, "GET %.*s HTTP/1.0\r\n", path_max - path, path);
+  string_t source = parent->headers, line, param1, param2;
+  if (find_line (&source, &line) == 0) { return -1; }
+
+  while (1) {
+    if (find_line (&source, &line) == 0) { return 0; }
+    if (line.len == 0) break;
+  }
+
+  const char * method = "GET";
+  if (parent->method == HIN_HTTP_POST) method = "POST";
+
+  header (client, buf, "%s %.*s HTTP/1.0\r\n", method, path_max - path, path);
   if (http->uri.port.len > 0) {
     header (client, buf, "Host: %.*s:%.*s\r\n", http->uri.host.len, http->uri.host.ptr, http->uri.port.len, http->uri.port.ptr);
   } else {
@@ -203,27 +266,38 @@ int http_client_start_request1 (hin_client_t * client, int ret) {
   } else {
     header (client, buf, "Connection: close\r\n");
   }
+  if (parent->post_sz > 0) {
+    header (client, buf, "Content-Length: %ld\r\n", parent->post_sz);
+    header (client, buf, "Content-Type: multipart/form-data; boundary=%s\r\n", parent->post_sep+2);
+  }
   header (client, buf, "\r\n");
+  if (parent->post_sz) {
+    int len = source.len;
+    if (len > parent->post_sz) len = parent->post_sz;
+    header_raw (client, buf, source.ptr, len);
+  }
+  if (master.debug & DEBUG_RW) printf ("proxy request is '\n%.*s'\n", buf->count, buf->ptr);
   hin_request_write (buf);
+  return 0;
 }
 
 static int connected (hin_client_t * client, int ret) {
+  http_client_t * http = (http_client_t*)client;
   if (ret < 0) {
     printf ("proxy connection failed\n");
     httpd_client_t * parent = (httpd_client_t*)client->parent;
     httpd_respond_error (parent, 502, NULL);
-    http_client_t * http = (http_client_t*)client;
     void http_client_clean (http_client_t * http);
     http_client_clean (http);
     return 0;
   }
-  http_client_start_request1 (client, ret);
+  http_proxy_start_request (http, ret);
   return 0;
 }
 
 http_client_t * hin_proxy (hin_client_t * parent_c, const char * url1) {
   httpd_client_t * parent = (httpd_client_t*)parent_c;
-  parent->state |= HIN_REQ_DATA;
+  parent->state |= HIN_REQ_DATA | HIN_REQ_PROXY;
 
   hin_uri_t info;
   char * url = strdup (url1);
@@ -250,6 +324,7 @@ http_client_t * hin_proxy (hin_client_t * parent_c, const char * url1) {
   } else {
     http->port = strdup ("80");
   }
+  if (info.https) { http->c.flags |= HIN_SSL; }
   http->c.parent = parent;
   http->uri = info;
 

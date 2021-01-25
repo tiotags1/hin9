@@ -45,7 +45,7 @@ int hin_request_write (hin_buffer_t * buffer) {
     io_uring_prep_write (sqe, buffer->fd, buffer->ptr, buffer->count, buffer->pos);
   }
   io_uring_sqe_set_data (sqe, buffer);
-  if (master.debug & DEBUG_URING) printf ("req%d %s buf %p cb %p\n", master.id, buffer->flags & HIN_SOCKET ? "send" : "writ", buffer, buffer->callback);
+  if (master.debug & DEBUG_URING) printf ("req%d %s buf %p cb %p fd %d\n", master.id, buffer->flags & HIN_SOCKET ? "send" : "writ", buffer, buffer->callback, buffer->fd);
   return 0;
 }
 
@@ -74,7 +74,7 @@ int hin_request_read (hin_buffer_t * buffer) {
     io_uring_prep_read (sqe, buffer->fd, buffer->ptr, buffer->count, buffer->pos);
   }
   io_uring_sqe_set_data (sqe, buffer);
-  if (master.debug & DEBUG_URING) printf ("req%d %s buf %p cb %p\n", master.id, buffer->flags & HIN_SOCKET ? "recv" : "read", buffer, buffer->callback);
+  if (master.debug & DEBUG_URING) printf ("req%d %s buf %p cb %p fd %d\n", master.id, buffer->flags & HIN_SOCKET ? "recv" : "read", buffer, buffer->callback, buffer->fd);
   return 0;
 }
 
@@ -105,7 +105,7 @@ int hin_request_close (hin_buffer_t * buffer) {
   struct io_uring_sqe *sqe = io_uring_get_sqe (&ring);
   io_uring_prep_close (sqe, buffer->fd);
   io_uring_sqe_set_data (sqe, buffer);
-  if (master.debug & DEBUG_URING) printf ("req%d close buf %p cb %p\n", master.id, buffer, buffer->callback);
+  if (master.debug & DEBUG_URING) printf ("req%d close buf %p cb %p fd %d\n", master.id, buffer, buffer->callback, buffer->fd);
   return 0;
 }
 

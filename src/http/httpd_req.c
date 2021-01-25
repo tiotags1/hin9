@@ -209,10 +209,10 @@ static int httpd_statx_callback (hin_buffer_t * buf, int ret) {
   pipe->in.pos = http->pos;
   pipe->out.fd = client->sockfd;
   pipe->out.flags = HIN_SOCKET | (client->flags & HIN_SSL);
+  pipe->out.ssl = &client->ssl;
   pipe->out.pos = 0;
   pipe->parent = client;
   pipe->count = pipe->sz = http->count;
-  pipe->ssl = &client->ssl;
   pipe->finish_callback = done_file;
   pipe->out_error_callback = httpd_pipe_error_callback;
 

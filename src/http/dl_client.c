@@ -126,6 +126,7 @@ http_client_t * http_download (const char * url1, const char * save_path, int (*
   } else {
     http->port = strdup ("80");
   }
+  if (info.https) { http->c.flags |= HIN_SSL; }
   http->c.parent = NULL;
   http->uri = info;
   http->save_path = strdup (save_path);

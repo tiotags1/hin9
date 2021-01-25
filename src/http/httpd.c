@@ -29,7 +29,7 @@ void httpd_client_clean (httpd_client_t * http) {
 
 int httpd_client_start_request (httpd_client_t * http) {
   if (master.debug & DEBUG_PROTO) printf ("httpd request begin\n");
-  http->state |= HIN_REQ_HEADERS;
+  http->state = HIN_REQ_HEADERS;
 
   hin_client_t * server = (hin_client_t*)http->c.parent;
   hin_server_data_t * data = (hin_server_data_t*)server->parent;
