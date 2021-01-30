@@ -8,9 +8,15 @@
 
 int http_parse_headers_line (http_client_t * http, string_t * line) {
   string_t param, param1, param2;
-  if (match_string (line, "Content%-Length: (%d+)", &param) > 0) {
+  if (matchi_string_equal (line, "Content-Length: (%d+)", &param) > 0) {
     http->sz = atoi (param.ptr);
     printf ("Content length is %ld\n", http->sz);
+  } else if (matchi_string_equal (line, "Transfer-Encoding:%s*chunked") > 0) {
+    printf ("transfer encoding is chunked\n");
+    http->flags |= HIN_HTTP_CHUNKED;
+  } else if (matchi_string (line, "Transfer-Encoding: ") > 0) {
+    printf ("transport encoding '%.*s' not supported\n", (int)line->len, line->ptr);
+    return -1;
   }
   return 1;
 }
@@ -29,7 +35,7 @@ int http_parse_headers (hin_client_t * client, string_t * source) {
   http_client_t * http = (http_client_t*)client;
 
   if (find_line (source, &line) == 0 || match_string (&line, "HTTP/1.%d ([%w%/]+) %w+", &param1) <= 0) {
-    printf ("httpd parsing error\n");
+    printf ("http parsing error\n");
     // close connection return error
     return -1;
   }

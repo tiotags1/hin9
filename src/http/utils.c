@@ -66,6 +66,7 @@ int hin_parse_uri (const char * url, int len, hin_uri_t * info) {
 
   c.ptr = (char*)url;
   c.len = len;
+  int err = 0;
 
   if (match_string (&c, "(https)://", &info->scheme) > 0) {
     info->https = 1;
@@ -79,7 +80,7 @@ int hin_parse_uri (const char * url, int len, hin_uri_t * info) {
     memset (&info->host, 0, sizeof (string_t));
   }
   if (match_string (&c, ":(%d+)", &info->port) > 0) {}
-  if (match_string (&c, "([%w%.=/;-_~!$&'%(%)%*%+,:@%%]+)", &info->path) < 0) {
+  if ((err = match_string (&c, "([%w%.=/;-_~!$&'%(%)%*%+,:@%%]+)", &info->path)) < 0) {
     printf ("error no path\n");
     return -1;
   }

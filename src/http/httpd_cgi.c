@@ -14,6 +14,7 @@
 #include "uri.h"
 #include "worker.h"
 #include "conf.h"
+#include "lua.h"
 
 typedef struct {
   int pos;
@@ -47,11 +48,12 @@ static int var (env_list_t * env, const char * fmt, ...) {
 
 static int hin_pipe_cgi_server_finish_callback (hin_pipe_t * pipe) {
   if (master.debug & DEBUG_PIPE) printf ("cgi transfer finished infd %d outfd %d\n", pipe->in.fd, pipe->out.fd);
-  if (pipe->extra_callback) pipe->extra_callback (pipe);
   hin_worker_t * worker = (hin_worker_t *)pipe->parent1;
   httpd_client_t * http = (httpd_client_t*)worker->data;
 
-  #if 0
+  close (pipe->in.fd);
+
+  #if HIN_HTTPD_WORKER_PREFORKED
   hin_worker_reset (worker);
   #endif
   free (worker);
@@ -109,6 +111,7 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
   if (sz && sz < len) len = sz;
 
   hin_pipe_t * pipe = calloc (1, sizeof (*pipe));
+  hin_pipe_init (pipe);
   pipe->in.fd = buffer->fd;
   pipe->in.flags = 0;
   pipe->in.pos = 0;
@@ -119,13 +122,14 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
   pipe->parent = client;
   pipe->parent1 = worker;
   pipe->finish_callback = hin_pipe_cgi_server_finish_callback;
-  if (sz > 0) {
-    pipe->count = pipe->sz = sz - len;
-    if (pipe->count == 0) pipe->flags |= HIN_DONE;
-  }
 
   int httpd_pipe_set_chunked (httpd_client_t * http, hin_pipe_t * pipe);
   httpd_pipe_set_chunked (http, pipe);
+
+  if ((http->peer_flags & HIN_HTTP_CHUNKED) == 0 && sz > 0) {
+    pipe->in.flags |= HIN_COUNT;
+    pipe->count = pipe->sz = sz;
+  }
 
   int sz1 = source->len + 512;
   hin_buffer_t * buf = malloc (sizeof (*buf) + sz1);
@@ -159,16 +163,11 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
   hin_pipe_write (pipe, buf);
 
   if (len > 0) {
-    hin_buffer_t * buf1 = malloc (sizeof (*buf) + len);
-    memset (buf1, 0, sizeof (*buf));
-    buf1->count = buf1->sz = len;
-    buf1->ptr = buf1->buffer;
-    buf1->parent = pipe;
-    memcpy (buf1->ptr, source->ptr, len);
+    hin_buffer_t * buf1 = hin_buffer_create_from_data (pipe, source->ptr, len);
     hin_pipe_append (pipe, buf1);
   }
 
-  hin_pipe_advance (pipe);
+  hin_pipe_start (pipe);
 
   return -1;
 }
@@ -229,7 +228,8 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
     exit (1);
   }
   if (http->post_sz > 0) {
-    fprintf (stderr, "cgi stdin set to %d\n", http->post_fd);
+    if (master.debug & DEBUG_CGI)
+      fprintf (stderr, "cgi stdin set to %d\n", http->post_fd);
 
     lseek (http->post_fd, 0, SEEK_SET);
     if (dup2 (http->post_fd, STDIN_FILENO) < 0) {
@@ -238,7 +238,7 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
     }
   } else {
     if (master.debug & DEBUG_CGI)
-    fprintf (stderr, "cgi no stdin\n");
+      fprintf (stderr, "cgi no stdin\n");
     close (STDIN_FILENO);
   }
   env_list_t env;
@@ -311,7 +311,10 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
     }
   }
 
-  if (hostname.ptr) {
+  hin_server_data_t * server_data = (hin_server_data_t*)server->parent;
+  if (server_data->hostname) {
+    var (&env, "SERVER_NAME=%s", server_data->hostname);
+  } else if (hostname.ptr) {
     var (&env, "SERVER_NAME=%.*s", hostname.len, hostname.ptr);
   } else {
     var (&env, "SERVER_NAME=unknown");

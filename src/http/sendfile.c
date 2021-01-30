@@ -8,12 +8,50 @@
 #include "hin.h"
 #include "http.h"
 
-static int done_file (hin_pipe_t * pipe) {
-  if (master.debug & DEBUG_PIPE) printf ("pipe file transfer finished infd %d outfd %d\n", pipe->in.fd, pipe->out.fd);
-  if (pipe->extra_callback) pipe->extra_callback (pipe);
-  if (close (pipe->in.fd)) perror ("close in");
-
-  httpd_client_finish_request (pipe->parent);
+int hin_pipe_decode_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush) {
+  string_t source, orig, param1, param2;
+  orig.ptr = buffer->ptr;
+  orig.len = num;
+  source = orig;
+  while (1) {
+    if (master.debug & DEBUG_CHUNK) printf ("chunk sz left %ld\n", pipe->extra_sz);
+    if (pipe->extra_sz > 0) {
+      int consume = pipe->extra_sz;
+      if (consume > source.len) consume = source.len;
+      if (master.debug & DEBUG_CHUNK) printf ("chunk consume %d\n", consume);
+      hin_buffer_t * buf = hin_pipe_get_buffer (pipe, consume);
+      memcpy (buf->ptr, source.ptr, consume);
+      if (pipe->read_callback (pipe, buf, consume, 0))
+        hin_buffer_clean (buf);
+      if (pipe->extra_sz > consume) {
+        // want more;
+        pipe->extra_sz -= consume;
+        return 1;
+      }
+      source.ptr += consume;
+      source.len -= consume;
+      pipe->extra_sz -= consume;
+      if (match_string (&source, "\r\n") < 0) {
+        printf ("chunk format error\n");
+        return -1;
+      }
+    }
+    int err = 0;
+    if ((err = match_string (&source, "(%x+)\r\n", &param1)) <= 0) {
+      // save stuff
+      if (source.len < 10) return 1;
+      printf ("chunk couldn't find in '%.*s'\n", (int)(source.len > 20 ? 20 : source.len), source.ptr);
+      return -1;
+    }
+    pipe->extra_sz = strtol (param1.ptr, NULL, 16);
+    if (master.debug & DEBUG_CHUNK) printf ("chunk of size %ld found\n", pipe->extra_sz);
+    if (pipe->extra_sz == 0 && param1.len > 0) {
+      int ret = pipe->read_callback (pipe, buffer, 0, 1);
+      pipe->in.flags |= HIN_DONE;
+      return 1;
+    }
+  }
+  return 0;
 }
 
 int hin_pipe_copy_deflate (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush) {
@@ -29,7 +67,7 @@ int hin_pipe_copy_deflate (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, in
   char numbuf[10]; // size of max nr (7 bytes) + crlf + \0
 
   do {
-    hin_buffer_t * new = hin_pipe_buffer_get (pipe);
+    hin_buffer_t * new = hin_pipe_get_buffer (pipe, READ_SZ);
     new->count = 0;
     if (http->peer_flags & HIN_HTTP_CHUNKED) {
       new->sz -= (sizeof (numbuf) + 8); // crlf + 0+crlfcrlf + \0
@@ -59,7 +97,7 @@ int hin_pipe_copy_deflate (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, in
         new->ptr = ptr;
         new->count -= offset;
       }
-      if (master.debug & DEBUG_DEFLATE) printf ("deflate write to pipe %d bytes %d total flush %d\n", have, new->count, flush);
+      if (master.debug & DEBUG_DEFLATE) printf ("deflate write to pipe write %d total %d%s\n", have, new->count, flush ? " flush" : "");
       hin_pipe_write (pipe, new);
     } else {
       hin_buffer_clean (new);
@@ -72,7 +110,7 @@ int hin_pipe_copy_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, in
   hin_client_t * client = (hin_client_t*)pipe->parent;
   httpd_client_t * http = (httpd_client_t*)client;
 
-  //if (num <= 0) return 0; // chunked requires it
+  if (master.debug & DEBUG_RW) printf ("chunked num %d flush %d\n", num, flush);
 
   hin_buffer_t * buf = malloc (sizeof *buf + num + 50);
   memset (buf, 0, sizeof (*buf));
@@ -102,77 +140,16 @@ int hin_pipe_copy_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, in
   return 1;
 }
 
-hin_pipe_t * send_file (hin_client_t * client, int filefd, off_t pos, off_t count, uint32_t flags, int (*extra) (hin_pipe_t *)) {
-  httpd_client_t * http = (httpd_client_t*)client;
-
-  hin_pipe_t * pipe = calloc (1, sizeof (*pipe));
-  pipe->in.fd = filefd;
-  pipe->in.flags = HIN_OFFSETS;
-  pipe->in.pos = pos;
-  pipe->out.fd = client->sockfd;
-  pipe->out.flags = HIN_DONE | HIN_SOCKET | (client->flags & HIN_SSL);
-  pipe->out.ssl = &client->ssl;
-  pipe->out.pos = 0;
-  pipe->parent = client;
-  pipe->count = count;
-  pipe->read_callback = NULL;
-  pipe->finish_callback = done_file;
-  pipe->extra_callback = extra;
-
-  int httpd_request_chunked (httpd_client_t * http);
-  if (http->peer_flags & HIN_HTTP_CHUNKED) {
-    if (httpd_request_chunked (http)) {
-      pipe->read_callback = hin_pipe_copy_chunked;
-    }
-  }
-  if (http->peer_flags & HIN_HTTP_DEFLATE) {
-    httpd_request_chunked (http);
-    pipe->read_callback = hin_pipe_copy_deflate;
-  }
-
-  hin_pipe_advance (pipe);
-
-  return pipe;
-}
-
 int httpd_request_chunked (httpd_client_t * http);
 
 int httpd_pipe_set_chunked (httpd_client_t * http, hin_pipe_t * pipe) {
   if (http->peer_flags & HIN_HTTP_DEFLATE) {
     httpd_request_chunked (http);
     pipe->read_callback = hin_pipe_copy_deflate;
-  } else if (http->peer_flags & HIN_HTTP_CHUNKED) {
+  } else if ((http->peer_flags & HIN_HTTP_CHUNKED) || (http->count == 0)) {
     if (httpd_request_chunked (http)) {
       pipe->read_callback = hin_pipe_copy_chunked;
     }
   }
-}
-
-static int done_receive_file (hin_pipe_t * pipe) {
-  if (master.debug & DEBUG_PIPE) printf ("download file transfer finished infd %d outfd %d\n", pipe->in.fd, pipe->out.fd);
-  if (pipe->extra_callback) pipe->extra_callback (pipe);
-  if (close (pipe->out.fd)) perror ("close in");
-}
-
-hin_pipe_t * receive_file (hin_client_t * client, int filefd, off_t pos, off_t count, uint32_t flags, int (*extra) (hin_pipe_t *)) {
-  http_client_t * http = (http_client_t*)client;
-
-  hin_pipe_t * pipe = calloc (1, sizeof (*pipe));
-  pipe->in.fd = client->sockfd;
-  pipe->in.flags = HIN_SOCKET;
-  pipe->in.pos = 0;
-  pipe->out.fd = filefd;
-  pipe->out.flags = HIN_DONE | HIN_OFFSETS | (client->flags & HIN_SSL);
-  pipe->out.ssl = &client->ssl;
-  pipe->out.pos = pos;
-  pipe->parent = client;
-  pipe->count = pipe->sz = count;
-  pipe->read_callback = NULL;
-  pipe->finish_callback = done_receive_file;
-  pipe->extra_callback = extra;
-
-  hin_pipe_advance (pipe);
-
-  return pipe;
 }
 

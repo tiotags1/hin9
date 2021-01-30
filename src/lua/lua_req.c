@@ -279,6 +279,7 @@ static int l_hin_set_content_type (lua_State *L) {
   httpd_client_t * http = (httpd_client_t*)client;
   const char * str = lua_tostring (L, 2);
   if (str == NULL) return 0;
+  if (http->content_type) free (http->content_type);
   http->content_type = strdup (str);
   return 0;
 }

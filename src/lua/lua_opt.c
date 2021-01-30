@@ -75,6 +75,12 @@ static int l_hin_set_server_option (lua_State *L) {
     client->timeout = timeout;
     if (master.debug & DEBUG_CONFIG) printf ("lua server timeout set to %d\n", timeout);
     return 0;
+  } else if (strcmp (name, "hostname") == 0) {
+    const char * name = lua_tostring (L, 3);
+    if (client->hostname) free (client->hostname);
+    client->hostname = strdup (name);
+    if (master.debug & DEBUG_CONFIG) printf ("lua server hostname set to %s\n", name);
+    return 0;
   } else {
     printf ("set_otion unknown option '%s'\n", name);
     return 0;

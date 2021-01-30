@@ -20,5 +20,4 @@ roadmap
 * caching reverse proxy
 * fastcgi
 * better daemon support
-* improve perfomance by removing syscalls (yes that includes calls to io\_uring\_submit)
 

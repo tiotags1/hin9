@@ -13,7 +13,6 @@ typedef struct {
   SSL *ssl;
   BIO *rbio;	// SSL reads from, we write to
   BIO *wbio;	// SSL writes to, we read from
-  //SSL_CTX *ctx;
 } hin_ssl_t;
 
 int hin_connect_ssl_init (hin_client_t * client);

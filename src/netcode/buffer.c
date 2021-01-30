@@ -15,6 +15,16 @@ void hin_buffer_clean (hin_buffer_t * buffer) {
   free (buffer);
 }
 
+hin_buffer_t * hin_buffer_create_from_data (void * parent, const char * ptr, int sz) {
+  hin_buffer_t * buf = calloc (1, sizeof *buf + sz);
+  memset (buf, 0, sizeof (*buf));
+  buf->count = buf->sz = sz;
+  buf->ptr = buf->buffer;
+  buf->parent = parent;
+  memcpy (buf->ptr, ptr, sz);
+  return buf;
+}
+
 void hin_buffer_list_remove (hin_buffer_t ** list, hin_buffer_t * new) {
   if (*list == new) {
     *list = new->next;
@@ -73,38 +83,39 @@ int hin_lines_request (hin_buffer_t * buffer) {
   hin_request_read (buffer);
 }
 
+int hin_lines_default_eat (hin_buffer_t * buffer, int num) {
+  if (num > 0) {
+    hin_buffer_eat (buffer, num);
+  } else if (num == 0) {
+    hin_lines_request (buffer);
+  } else {
+    hin_lines_t * lines = (hin_lines_t*)&buffer->buffer;
+    if (lines->close_callback) {
+      return lines->close_callback (buffer);
+    } else {
+      printf ("lines client error\n");
+    }
+    return -1;
+  }
+  return 0;
+}
+
 static int hin_lines_read_callback (hin_buffer_t * buffer, int ret) {
   hin_lines_t * lines = (hin_lines_t*)&buffer->buffer;
-  int err = 0;
 
   if (ret <= 0) {
     if (lines->close_callback)
-      err = lines->close_callback (buffer);
-    return err;
+      return lines->close_callback (buffer);
+    return -1;
   }
 
   buffer->ptr += ret;
   buffer->count -= ret;
 
   int num = lines->read_callback (buffer);
-  if (num < 0) {
-    if (lines->close_callback) {
-      err = lines->close_callback (buffer);
-    } else {
-      printf ("lines client error\n");
-    }
-    return err;
-  }
-  if (lines->eat_callback) {
-    if (lines->eat_callback (buffer, num))
-      hin_buffer_clean (buffer);
-  } else {
-    if (num > 0) {
-      hin_buffer_eat (buffer, num);
-    }
-    if (num == 0)
-      hin_lines_request (buffer);
-  }
+
+  if (lines->eat_callback (buffer, num))
+    hin_buffer_clean (buffer);
 
   return 0;
 }
@@ -118,6 +129,9 @@ hin_buffer_t * hin_lines_create_raw () {
   buf->data = malloc (buf->sz);
   buf->ptr = buf->data;
   buf->callback = hin_lines_read_callback;
+
+  hin_lines_t * lines = (hin_lines_t*)&buf->buffer;
+  lines->eat_callback = hin_lines_default_eat;
   return buf;
 }
 

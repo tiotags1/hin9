@@ -84,6 +84,8 @@ static inline int get_pattern (const char * fmt, uint32_t * matches, uint32_t * 
 
 static inline int match_pattern (const string_t *data, const string_t *pattern, int specifier) {
   // for every pattern try to see it works
+  if (data->len == 0) return 0;
+
   const char * s = data->ptr, * test_s;
   const char * fmt;
   const char * max_s = data->ptr+data->len, * max_f = pattern->ptr+pattern->len;
@@ -134,111 +136,88 @@ static inline int get_specifier (int x) {
 int match_string_virtual (string_t *data, uint32_t flags, const char *format, va_list argptr) {
   size_t count = 0;
   int specifier;
-  const char * s;
-  const char * fmt, * old_fmt;
+  const char * ptr, * fmt, * old_fmt;
   const char * max = data->ptr + data->len;
   const char * start_data = NULL, * end_data = NULL;
   const char * start_pattern = NULL, * end_pattern = NULL;
   string_t string = *data;
-  string_t pattern;
-  for (s=data->ptr, fmt = format; s<=max && *fmt; fmt++) {
+  string_t pattern, * str;
+  ptr = data->ptr;
+  fmt = format;
+  int used;
+  while (1) {
     old_fmt = fmt;
     switch (*fmt) {
-
-    case '[': {
+    case '[':
       start_pattern = fmt+1;
       while (*fmt && *fmt != ']') fmt++;
       end_pattern = fmt;
-      int specifier = *(fmt+1);
-      switch (specifier) {
-      case '+':
-      case '*':
-      case '?':
-        fmt++;
-      }
+      int specifier = get_specifier (*(fmt+1));
+      if (specifier) fmt++;
       pattern.ptr = (char*)start_pattern;
       pattern.len = end_pattern-start_pattern;
-      string.ptr = (char*)s;
-      string.len = max - s;
-      int used = match_pattern (&string, &pattern, specifier);
-      //printf ("pattern used %d %.*s\n",used,pattern.len,pattern.ptr);
-      s += used;
-      break;
-    }
-
+      string.ptr = (char*)ptr;
+      string.len = max - ptr;
+      used = match_pattern (&string, &pattern, specifier);
+      if (used > 0) {
+        ptr += used;
+      } else if (used == 0 && specifier != '+' && specifier != 0) {
+        ptr += used;
+      } else {
+        return -1;
+      }
+    break;
+    case '%':
+      fmt++;
+      specifier = 0;
+      pattern.ptr = (char*)old_fmt;
+      pattern.len = fmt-old_fmt+1;
+      specifier = get_specifier (*(fmt+1));
+      if (specifier) fmt++;
+      string.ptr = (char*)ptr;
+      string.len = max - ptr;
+      used = match_pattern (&string, &pattern, specifier);
+      if (used > 0) {
+        ptr += used;
+      } else if (used == 0 && specifier != '+' && specifier != 0) {
+        ptr += used;
+      } else {
+        return -1;
+      }
+    break;
     case '(':
-      start_data = s;
-      break;
-
-    case ')': {
-      string_t * str = va_arg (argptr, string_t*);
+      start_data = ptr;
+    break;
+    case ')':
+      str = va_arg (argptr, string_t*);
       if (start_data == NULL) {
         //basic_error ("TODO why does this start without a matching (");
         str->ptr = NULL;
         str->len = 0;
       } else {
         str->ptr = (char*)start_data;
-        str->len = s-start_data;
+        str->len = ptr-start_data;
       }
-      break;
-    }
-
-    case '%': fmt++;
-    case '.': {
-      specifier = 0;
-      pattern.ptr = (char*)old_fmt;
-      pattern.len = fmt-old_fmt+1;
-      switch (*(fmt+1)) {
-      case '+':
-      case '*':
-      case '?':
-        fmt++;
-        specifier = *fmt;
-        break;
-      }
-      string.ptr = (char*)s;
-      string.len = max - s;
-      int used = match_pattern (&string, &pattern, specifier);
-      //printf ("searching str %.*s for '%.*s' fmt_len %d used %d\n",string.len,string.ptr,pattern.len,pattern.ptr,pattern.len,used);
-      if (used >= 0) {
-        s += used;
-      } else return -1;
-      break;
-    }
-
-    default: {
-      if (get_specifier (*(fmt+1)) == 0) {
-        if (*fmt == 0) return -1;
-        if (flags & PATTERN_CASE) {
-          if (toupper (*fmt) != toupper(*s)) return -1;
-        } else {
-          if (*fmt != *s) return -1;
-        }
-        s++;
+    break;
+    default:
+      if (ptr >= max) { return -1; }
+      if (flags & PATTERN_CASE) {
+        if (toupper (*fmt) != toupper (*ptr)) { return -1; }
       } else {
-        specifier = *(fmt+1);
-        pattern.ptr = (char*)fmt;
-        pattern.len = 1;
-        string.ptr = (char*)s;
-        string.len = max-s;
-        fmt ++;
-        int used = match_pattern (&string, &pattern, specifier);
-        if (used >= 0) {
-          s += used;
-        } else return -1;
+        if (*fmt != *ptr) { return -1; }
       }
+      ptr++;
     }
-  }
+    fmt++;
+    if (*fmt == '\0') break;
   }
 
-  //if (*fmt != '\0') return -1;
-  intptr_t used = s - data->ptr;
+  used = ptr - data->ptr;
   if (used < 0) return -1;
   data->ptr += used;
   data->len -= used;
   return used;
 }
-
 
 int match_string (string_t *data, const char *format, ...) {
   va_list argptr;

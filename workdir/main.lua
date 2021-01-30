@@ -68,7 +68,10 @@ listen (server, "localhost", "8080", "ipv4")
 --listen (server, nil, "8080", "ipv4")
 --listen (server, nil, "8080", "any")
 
+init_ssl ("workdir/cert.pem", "workdir/key.pem")
+
 set_server_option (server, "timeout", 15)
+set_server_option (server, "hostname", "local")
 --set_server_option (server, "disable", "keepalive")
 --set_server_option (server, "disable", "deflate")
 

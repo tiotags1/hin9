@@ -16,18 +16,19 @@ struct io_uring ring;
 
 int hin_ssl_read (hin_buffer_t * crypt, int ret);
 int hin_ssl_write (hin_buffer_t * crypt);
+int hin_ssl_read_ahead (hin_buffer_t * plain);
 
 int hin_ssl_handshake (hin_ssl_t * ssl, hin_buffer_t * buf);
 
 int hin_request_write (hin_buffer_t * buffer) {
   if (buffer->flags & HIN_SSL) {
-    int extra = 100;
-    hin_buffer_t * buf = malloc (sizeof (*buf) + buffer->count + extra);
+    int sz = buffer->count + 100;
+    if (sz < READ_SZ) sz = READ_SZ;
+    hin_buffer_t * buf = malloc (sizeof (*buf) + sz);
     memset (buf, 0, sizeof (hin_buffer_t));
     buf->flags = buffer->flags & (~HIN_SSL);
     buf->fd = buffer->fd;
-    buf->count = buffer->count + extra;
-    buf->sz = buf->count + extra;
+    buf->count = buf->sz = sz;
     buf->ptr = buf->buffer;
     buf->parent = (void*)buffer;
     buf->ssl = buffer->ssl;
@@ -51,12 +52,16 @@ int hin_request_write (hin_buffer_t * buffer) {
 
 int hin_request_read (hin_buffer_t * buffer) {
   if (buffer->flags & HIN_SSL) {
-    hin_buffer_t * buf = malloc (sizeof (*buf) + buffer->count);
+    if (hin_ssl_read_ahead (buffer)) {
+      return 0;
+    }
+    int sz = buffer->count + 100;
+    if (sz < READ_SZ) sz = READ_SZ;
+    hin_buffer_t * buf = malloc (sizeof (*buf) + sz);
     memset (buf, 0, sizeof (hin_buffer_t));
     buf->flags = buffer->flags & (~HIN_SSL);
     buf->fd = buffer->fd;
-    buf->count = buffer->count;
-    buf->sz = buffer->count;
+    buf->count = buf->sz = sz;
     buf->ptr = buf->buffer;
     buf->parent = (void*)buffer;
     buf->callback = hin_ssl_read;

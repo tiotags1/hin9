@@ -37,13 +37,52 @@ int httpd_client_reread (httpd_client_t * http) {
 #include <sys/stat.h>
 #include <fcntl.h>
 int httpd_client_finish (hin_client_t * client);
-int post_done (hin_pipe_t * pipe) {
-  printf ("post done %d\n", pipe->out.fd);
+static int post_done (hin_pipe_t * pipe) {
+  if (master.debug & DEBUG_POST)
+    printf ("cgi post done %d\n", pipe->out.fd);
   //close (pipe->out);
   httpd_client_t * http = (httpd_client_t*)pipe->parent;
   http->state &= ~HIN_REQ_POST;
+  if (!HIN_HTTPD_WORKER_PREFORKED)
+    close (http->post_fd);
   if (http->state & HIN_REQ_DATA) return 0;
   return httpd_client_finish_request (http);
+}
+
+static int httpd_client_handle_post (httpd_client_t * http, string_t * source) {
+  int consume = source->len;
+  if (http->post_sz && consume > http->post_sz) consume = http->post_sz;
+  off_t sz = http->post_sz;
+  // send post data in buffer to post handler
+  http->post_fd = openat (AT_FDCWD, HIN_HTTPD_POST_DIRECTORY, O_RDWR | O_TMPFILE, 0600);
+  if (http->post_fd < 0) { printf ("openat tmpfile failed %s\n", strerror (errno)); return -1; }
+
+  hin_pipe_t * pipe = calloc (1, sizeof (*pipe));
+  hin_pipe_init (pipe);
+  pipe->in.fd = http->c.sockfd;
+  pipe->in.flags = HIN_SOCKET | (http->c.flags & HIN_SSL);
+  pipe->in.ssl = &http->c.ssl;
+  pipe->in.pos = 0;
+  pipe->out.fd = http->post_fd;
+  pipe->out.flags = HIN_OFFSETS;
+  pipe->out.pos = 0;
+  pipe->parent = http;
+  pipe->finish_callback = post_done;
+
+  if (sz) {
+    pipe->in.flags |= HIN_COUNT;
+    pipe->count = pipe->sz = sz;
+  }
+  if (consume) {
+    hin_buffer_t * buf1 = hin_buffer_create_from_data (pipe, source->ptr, consume);
+    hin_pipe_append (pipe, buf1);
+  }
+
+  hin_pipe_start (pipe);
+
+  http->state |= HIN_REQ_POST;
+
+  return consume;
 }
 
 int httpd_client_read_callback (hin_buffer_t * buffer) {
@@ -65,23 +104,9 @@ int httpd_client_read_callback (hin_buffer_t * buffer) {
     int consume = source->len > http->post_sz ? http->post_sz : source->len;
     used += consume;
   } else if (http->post_sz > 0) {
-    int consume = source->len > http->post_sz ? http->post_sz : source->len;
-    off_t left = http->post_sz - consume;
+    int consume = httpd_client_handle_post (http, source);
+    if (consume < 0) {  }
     used += consume;
-    // send post data in buffer to post handler
-    http->post_fd =  openat (AT_FDCWD, HIN_HTTPD_POST_DIRECTORY, O_RDWR | O_TMPFILE, 0600);
-    if (http->post_fd < 0) { printf ("openat tmpfile failed %s\n", strerror (errno)); }
-    printf ("post initial %ld %ld fd %d '%.*s'\n", http->post_sz, source->len, http->post_fd, consume, source->ptr);
-    if (write (http->post_fd, source->ptr, consume) < 0)
-      perror ("write");
-    if (left > 0) {
-      http->state |= HIN_REQ_POST;
-      // request more post
-      receive_file (client, http->post_fd, consume, left, 0, post_done);
-      //return used;
-    } else {
-      //close (http->post_fd);
-    }
   }
   http->status = 200;
 

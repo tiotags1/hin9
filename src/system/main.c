@@ -4,9 +4,12 @@
 #include <string.h>
 #include <signal.h>
 
+#include <unistd.h>
+
 #include <basic_pattern.h>
 
 #include "hin.h"
+#include "http.h"
 
 hin_master_t master;
 
@@ -22,8 +25,12 @@ void hin_clean () {
   int hin_event_clean ();
   hin_event_clean ();
 
+  //close (0); close (1); close (2);
+  close (master.sharefd);
+
   printf ("hin close ...\n");
   #ifdef BASIC_USE_MALLOC_DEBUG
+  printf ("num fds open %d\n", print_fds ());
   print_unfree ();
   #endif
 }
@@ -55,7 +62,7 @@ int main (int argc, const char * argv[]) {
   master.debug = 0;
   //master.debug |= DEBUG_SOCKET;
   //master.debug &= ~(DEBUG_URING);
-  #if 0
+  #if HIN_HTTPD_WORKER_PREFORKED
   int hin_worker_init ();
   hin_worker_init ();
   #endif
@@ -76,6 +83,11 @@ int main (int argc, const char * argv[]) {
 
   printf ("hin serve ...\n");
   master.share->done = 1;
+
+  //http_download ("http://localhost:28005/cgi-bin/test.php", "/tmp/dl.txt", NULL);
+  //http_download ("https://localhost:28006/cgi-bin/test.php", "/tmp/dl.txt", NULL);
+  //http_download ("http://localhost:28005/", "/tmp/dl.txt", NULL);
+  //http_download ("https://localhost:28006/", "/tmp/dl.txt", NULL);
 
   void hin_event_loop ();
   hin_event_loop ();

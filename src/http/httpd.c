@@ -13,6 +13,7 @@ int httpd_client_reread (httpd_client_t * http);
 void httpd_client_clean (httpd_client_t * http) {
   if (http->file_path) free ((void*)http->file_path);
   if (http->post_sep) free ((void*)http->post_sep);
+  if (http->file_fd) close (http->file_fd);
   if (http->post_fd) close (http->post_fd); // TODO cgi worker needs to keep this
   if (http->append_headers) free (http->append_headers);
   if (http->content_type) free (http->content_type);
@@ -20,11 +21,11 @@ void httpd_client_clean (httpd_client_t * http) {
 
   http->state = http->peer_flags = http->disable = 0;
   http->status = http->method = 0;
-  http->filefd = http->pos = http->count = 0;
+  http->file_fd = http->pos = http->count = 0;
   http->cache = http->modified_since = 0;
   http->etag = http->post_sz = 0;
   http->post_fd = 0;
-  http->post_sep = http->file_path = http->append_headers = NULL;
+  http->post_sep = http->file_path = http->append_headers = http->content_type = NULL;
 }
 
 int httpd_client_start_request (httpd_client_t * http) {
@@ -64,9 +65,11 @@ static int httpd_client_close_callback (hin_buffer_t * buffer, int ret) {
     printf ("httpd client close callback error: %s\n", strerror (-ret));
     return -1;
   }
-  if (master.debug & DEBUG_PROTO) printf ("httpd close client %d\n", http->c.sockfd);
-  if (http->read_buffer && http->read_buffer != buffer)
+  if (master.debug & DEBUG_PROTO) printf ("httpd close %d\n", http->c.sockfd);
+  if (http->read_buffer && http->read_buffer != buffer) {
     hin_buffer_clean (http->read_buffer);
+    http->read_buffer = NULL;
+  }
   hin_buffer_clean (buffer);
   hin_client_unlink (&http->c);
   return 0;
@@ -74,14 +77,15 @@ static int httpd_client_close_callback (hin_buffer_t * buffer, int ret) {
 
 int httpd_client_buffer_shutdown (hin_buffer_t * buffer) {
   httpd_client_t * http = (httpd_client_t*)buffer->parent;
-  if (master.debug & DEBUG_PROTO) printf ("httpd shutdown client %d\n", http->c.sockfd);
-  buffer->callback = httpd_client_close_callback;
-  hin_request_close (buffer);
+  if (master.debug & DEBUG_PROTO) printf ("httpd shutdown buffer %d\n", http->c.sockfd);
+  httpd_client_shutdown (http);
   return 0;
 }
 
 int httpd_client_shutdown (httpd_client_t * http) {
-  if (master.debug & DEBUG_SOCKET) printf ("socket shutdown %d\n", http->c.sockfd);
+  if (http->state & HIN_REQ_ENDING) return -1;
+  http->state |= HIN_REQ_ENDING;
+  if (master.debug & DEBUG_SOCKET) printf ("httpd shutdown %d\n", http->c.sockfd);
   hin_buffer_t * buf = malloc (sizeof *buf);
   memset (buf, 0, sizeof (*buf));
   buf->flags = HIN_SOCKET | (http->c.flags & HIN_SSL);
@@ -90,6 +94,7 @@ int httpd_client_shutdown (httpd_client_t * http) {
   buf->parent = (hin_client_t*)http;
   buf->ssl = &http->c.ssl;
   hin_request_close (buf);
+  return 0;
 }
 
 int httpd_client_accept (hin_client_t * client) {

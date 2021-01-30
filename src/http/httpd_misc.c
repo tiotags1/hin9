@@ -3,6 +3,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include <sys/socket.h>
+
 #include "hin.h"
 #include "http.h"
 #include "lua.h"
@@ -19,9 +21,11 @@ static void httpd_client_timer (httpd_client_t * http, basic_time_t * now) {
     int do_close = 0;
     if (http->state & (HIN_REQ_HEADERS | HIN_REQ_POST | HIN_REQ_END)) do_close = 1;
     if (master.debug & DEBUG_TIMER)
-      printf ("httpd timer shutdown %d %s%.6f\n", http->c.sockfd, do_close ? "close " : "", dt);
-    if (do_close)
+      printf ("httpd timer shutdown %d state %x %s%.6f\n", http->c.sockfd, http->state, do_close ? "close " : "", dt);
+    if (do_close) {
+      shutdown (http->c.sockfd, SHUT_RD);
       httpd_client_shutdown (http);
+    }
   } else {
     if (master.debug & DEBUG_TIMER)
       printf ("httpd timer %d %.6f\n", http->c.sockfd, dt);

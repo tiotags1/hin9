@@ -33,6 +33,7 @@ void lua_server_clean (hin_server_data_t * server) {
   lua_State * L = server->L;
   luaL_unref (L, LUA_REGISTRYINDEX, server->callback);
 
+  if (server->hostname) free (server->hostname);
   free (server);
 }
 
@@ -45,7 +46,8 @@ void hin_lua_clean () {
   }
   master.servers = NULL;
 
-printf ("lua cleanup\n");
+  if (master.debug & DEBUG_OTHER)
+    printf ("lua cleanup\n");
   lua_close (internal_lua);
   internal_lua = NULL;
 }

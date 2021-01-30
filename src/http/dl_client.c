@@ -5,6 +5,9 @@
 
 #include "hin.h"
 #include "http.h"
+#include "conf.h"
+
+int http_client_headers_read_callback (hin_buffer_t * buffer);
 
 void http_client_clean (http_client_t * http) {
   hin_client_list_remove (&master.connection_list, (hin_client_t*)http);
@@ -12,6 +15,10 @@ void http_client_clean (http_client_t * http) {
   if (http->uri.all.ptr) free ((void*)http->uri.all.ptr);
   if (http->host) free (http->host);
   if (http->port) free (http->port);
+  if (http->save_fd) close (http->save_fd);
+  if (http->read_buffer) {
+    hin_buffer_clean (http->read_buffer);
+  }
   free (http);
   master.num_connection--;
   hin_check_alive ();
@@ -23,14 +30,14 @@ static int http_client_close_callback (hin_buffer_t * buffer, int ret) {
     printf ("http client close callback error: %s\n", strerror (-ret));
     return -1;
   }
-  if (master.debug & DEBUG_PROTO) printf ("http close client %d\n", http->c.sockfd);
+  if (master.debug & DEBUG_PROTO) printf ("http close %d\n", http->c.sockfd);
   hin_buffer_clean (buffer);
   http_client_clean (http);
   return 0;
 }
 
 int http_client_shutdown (http_client_t * http) {
-  if (master.debug & DEBUG_SOCKET) printf ("socket shutdown %d\n", http->c.sockfd);
+  if (master.debug & DEBUG_SOCKET) printf ("http shutdown %d\n", http->c.sockfd);
   hin_buffer_t * buf = malloc (sizeof *buf);
   memset (buf, 0, sizeof (*buf));
   buf->flags = HIN_SOCKET | (http->c.flags & HIN_SSL);
@@ -39,6 +46,12 @@ int http_client_shutdown (http_client_t * http) {
   buf->parent = &http->c;
   buf->ssl = &http->c.ssl;
   hin_request_close (buf);
+  hin_client_list_remove (&master.connection_list, &http->c);
+}
+
+int http_client_buffer_close (hin_buffer_t * buf) {
+  printf ("http buffer close %d\n", buf->fd);
+  http_client_shutdown (buf->parent);
 }
 
 int match_string_equal1 (string_t * source, const char * str) {
@@ -79,25 +92,59 @@ int http_client_start_request (hin_client_t * client, int ret) {
     printf ("can't connect '%s'\n", strerror (-ret));
     return -1;
   }
-  if (master.debug & DEBUG_PROTO) printf ("http request begin on socket %d\n", ret);
-  //
+  if (master.debug & DEBUG_PROTO) printf ("http request begin on fd %d\n", ret);
+
+  hin_lines_t * lines = (hin_lines_t*)&http->read_buffer->buffer;
+  lines->read_callback = http_client_headers_read_callback;
+  lines->close_callback = http_client_buffer_close;
+
   int http_send_request (hin_client_t * client);
   http_send_request (client);
 }
 
 int http_client_finish_request (http_client_t * http) {
-  if (master.debug & DEBUG_PROTO) printf ("http request done\n");
-  http_client_shutdown (http);
+  if (master.debug & DEBUG_PROTO) printf ("http request done on fd %d\n", http->c.sockfd);
+  if (HIN_HTTPD_PROXY_CONNECTION_REUSE) {
+    hin_client_list_add (&master.connection_list, &http->c);
+    http->c.parent = NULL;
+    hin_request_read (http->read_buffer);
+  } else {
+    http_client_shutdown (http);
+  }
+}
+
+hin_buffer_t * hin_http_init_connection (http_client_t * http) {
+  if (http->uri.https) {
+    hin_connect_ssl_init (&http->c);
+  }
+
+  hin_buffer_t * buf = hin_lines_create_raw ();
+  buf->flags = HIN_SOCKET | (http->c.flags & HIN_SSL);
+  buf->fd = http->c.sockfd;
+  buf->parent = http;
+  buf->ssl = &http->c.ssl;
+
+  http->read_buffer = buf;
+
+  return buf;
 }
 
 static int connected (hin_client_t * client, int ret) {
   http_client_t * http = (http_client_t*)client;
   if (ret < 0) {
-    return -1;
+    printf ("couldn't connect\n");
+    http_client_clean (http);
+    return 0;
   }
-  if (http->uri.https) {
-    hin_connect_ssl_init (client);
-  }
+
+  hin_buffer_t * buf = hin_http_init_connection (http);
+
+  hin_lines_t * lines = (hin_lines_t*)&buf->buffer;
+  lines->read_callback = http_client_headers_read_callback;
+  lines->close_callback = http_client_buffer_close;
+
+  hin_request_read (buf);
+
   http_client_start_request (client, ret);
 }
 
@@ -126,13 +173,14 @@ http_client_t * http_download (const char * url1, const char * save_path, int (*
   } else {
     http->port = strdup ("80");
   }
-  if (info.https) { http->c.flags |= HIN_SSL; }
+
   http->c.parent = NULL;
   http->uri = info;
   http->save_path = strdup (save_path);
 
   int ret = hin_connect (&http->c, http->host, http->port, &connected);
   if (ret < 0) { printf ("can't create connection\n"); return NULL; }
+
   master.num_connection++;
 
   return http;

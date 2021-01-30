@@ -75,9 +75,9 @@ int httpd_parse_headers (httpd_client_t * http, string_t * source) {
   string_t orig = *source;
 
   while (1) {
+    if (source->len <= 0) return 0;
     if (find_line (source, &line) == 0) return 0;
     if (line.len == 0) break;
-    if (source->len <= 0) return 0;
   }
 
   *source = orig;
@@ -85,7 +85,7 @@ int httpd_parse_headers (httpd_client_t * http, string_t * source) {
 
   line.len = 0;
   if (find_line (source, &line) == 0 || match_string (&line, "(%a+) ("HIN_HTTP_PATH_ACCEPT") HTTP/1.([01])", &method, &path, &param) <= 0) {
-    printf ("httpd 400 error parsing request line '%.*s'\n", (int)line.len, line.ptr);
+    printf ("httpd 400 error parsing request line '%.*s' whole '%.*s'\n", (int)line.len, line.ptr, (int)source->len, source->ptr);
     httpd_respond_error (http, 400, NULL);
     httpd_client_shutdown (http);
     return -1;

@@ -1,6 +1,19 @@
 
+* proxy support for http/1.1 chunked encodings
+* backend ssl connections
+* backend connection reuse
+* config: deflate max size, worker prefork
+* config: proper serverwide hostname
+* refactored: pipe code, can now use 0 to signify EOF
+* refactored: client connection code
+* refactored: match_string
+* bugfix: ssl renegotiation
+* bugfix: shutdown only once
+* bugfix: reuse backend connection not removing closed connections
+* bug: ssl is broken, use is undefined
+
+commit 6b2066a4d372bd5bc566572c9c04eae73e151a19
 * proxy POST requests
-* proxy backend ssl connections
 * bugfix: missing '-' in request path parsing
 
 commit bb3f09200bd4dd947324faee02204e9d2503fae7

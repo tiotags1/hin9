@@ -83,16 +83,19 @@ static void sig_child_handler (int signo) {
         printf ("child %d terminated due to another signal\n", pid);
       }
     }
-    if (master.restart_pid == pid) {
-      printf ("restart to %d failed status %d\n", pid, status);
-      master.restart_pid = 0;
-    }
-    #if 0
+    #if HIN_HTTPD_WORKER_PREFORKED
     int hin_worker_closed (int pid);
     if (hin_worker_closed (pid) <= 0) {
       printf ("child %d died\n", pid);
     }
     #endif
+    if (master.restart_pid == pid) {
+      printf ("restart to %d failed status %d\n", pid, status);
+      master.restart_pid = 0;
+    } else {
+      if (master.debug & DEBUG_CHILD)
+        printf ("child %d terminated status %d\n", pid, status);
+    }
   }
 }
 
@@ -144,5 +147,4 @@ int hin_init_sharedmem () {
     hin_use_sharedmem (master.sharefd);
   }
 }
-
 

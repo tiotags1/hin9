@@ -97,7 +97,7 @@ static int httpd_close_filefd_callback (hin_buffer_t * buffer, int ret) {
 }
 
 static int httpd_close_filefd (hin_buffer_t * buffer, httpd_client_t * http) {
-  close (http->filefd);
+  close (http->file_fd);
   return 0;
 }
 
@@ -108,9 +108,6 @@ static int httpd_pipe_error_callback (hin_pipe_t * pipe) {
 
 static int done_file (hin_pipe_t * pipe) {
   if (master.debug & DEBUG_PIPE) printf ("pipe file transfer finished infd %d outfd %d\n", pipe->in.fd, pipe->out.fd);
-  if (pipe->extra_callback) pipe->extra_callback (pipe);
-  if (close (pipe->in.fd)) perror ("close in");
-
   httpd_client_finish_request (pipe->parent);
 }
 
@@ -147,7 +144,7 @@ static int httpd_statx_callback (hin_buffer_t * buf, int ret) {
 
   if (master.debug & DEBUG_PIPE) {
     printf ("fstat %s size %ld\n", http->file_path, sz);
-    printf ("sending file %s to sockfd %d filefd %d\n", http->file_path, client->sockfd, http->filefd);
+    printf ("sending file %s to sockfd %d filefd %d\n", http->file_path, client->sockfd, http->file_fd);
   }
 
   uint64_t etag = 0;
@@ -178,6 +175,9 @@ static int httpd_statx_callback (hin_buffer_t * buf, int ret) {
   if (http->disable & HIN_HTTP_CHUNKED) {
     http->peer_flags &= ~HIN_HTTP_KEEPALIVE;
   }
+  if (HIN_HTTPD_MAX_DEFLATE_SIZE && sz > HIN_HTTPD_MAX_DEFLATE_SIZE) {
+    http->disable |= HIN_HTTP_DEFLATE;
+  }
   http->peer_flags &= ~http->disable;
 
   header (client, buf, "HTTP/1.%d %d %s\r\n", http->peer_flags & HIN_HTTP_VER0 ? 0 : 1, http->status, http_status_name (http->status));
@@ -204,7 +204,8 @@ static int httpd_statx_callback (hin_buffer_t * buf, int ret) {
   if (master.debug & DEBUG_RW) printf ("responding '\n%.*s'\n", buf->count, buf->ptr);
 
   hin_pipe_t * pipe = calloc (1, sizeof (*pipe));
-  pipe->in.fd = http->filefd;
+  hin_pipe_init (pipe);
+  pipe->in.fd = http->file_fd;
   pipe->in.flags = HIN_OFFSETS;
   pipe->in.pos = http->pos;
   pipe->out.fd = client->sockfd;
@@ -212,23 +213,26 @@ static int httpd_statx_callback (hin_buffer_t * buf, int ret) {
   pipe->out.ssl = &client->ssl;
   pipe->out.pos = 0;
   pipe->parent = client;
-  pipe->count = pipe->sz = http->count;
   pipe->finish_callback = done_file;
   pipe->out_error_callback = httpd_pipe_error_callback;
 
   int httpd_pipe_set_chunked (httpd_client_t * http, hin_pipe_t * pipe);
   httpd_pipe_set_chunked (http, pipe);
 
+  if ((http->peer_flags & HIN_HTTP_CHUNKED) == 0 && http->count > 0) {
+    pipe->in.flags |= HIN_COUNT;
+    pipe->count = pipe->sz = http->count;
+  }
+
   buf->parent = pipe;
   hin_pipe_write (pipe, buf);
 
   if (http->status == 304) {
     pipe->count = 0;
-    pipe->flags |= HIN_DONE;
-    pipe->in.flags |= HIN_DONE;
+    pipe->in.flags |= HIN_COUNT;
   }
 
-  hin_pipe_advance (pipe);
+  hin_pipe_start (pipe);
 
   return 0;
 }
@@ -241,7 +245,7 @@ static int httpd_open_filefd_callback (hin_buffer_t * buf, int ret) {
     httpd_respond_error (http, 404, NULL);
     return -1;
   }
-  http->filefd = ret;
+  http->file_fd = ret;
   memset (buf->ptr, 0, sizeof (struct statx));
 
   if (HIN_HTTPD_ASYNC_STATX) {

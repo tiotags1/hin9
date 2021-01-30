@@ -22,14 +22,15 @@ typedef struct hin_pipe_struct hin_pipe_t;
 #define HIN_CLIENT_MAGIC 0xfeabc111
 #define HIN_SERVER_MAGIC 0xfcadc123
 
-enum { HIN_DONE = 0x1, HIN_SOCKET = 0x2, HIN_OFFSETS = 0x4, HIN_SSL = 0x8 };
+enum { HIN_DONE = 0x1, HIN_SOCKET = 0x2, HIN_FILE = 0x4, HIN_OFFSETS = 0x8,
+       HIN_SSL = 0x10, HIN_COUNT = 0x20 };
 
 enum { HIN_CLIENT = 1, HIN_DYN_BUFFER, HIN_SERVER, HIN_DOWNLOAD };
 
 enum { DEBUG_OTHER = 0x1, DEBUG_PIPE = 0x2, DEBUG_HEADERS = 0x4, DEBUG_RW = 0x8,
   DEBUG_SSL = 0x10, DEBUG_PROTO = 0x20, DEBUG_URING = 0x40, DEBUG_SOCKET = 0x80,
   DEBUG_CGI = 0x100, DEBUG_POST = 0x200, DEBUG_CONFIG = 0x400, DEBUG_TIMER = 0x800,
-  DEBUG_PROXY = 0x1000, DEBUG_DEFLATE = 0x2000 };
+  DEBUG_PROXY = 0x1000, DEBUG_DEFLATE = 0x2000, DEBUG_CHILD = 0x4000, DEBUG_CHUNK = 0x8000 };
 
 typedef int (*hin_callback_t) (hin_buffer_t * buffer, int ret);
 
@@ -56,16 +57,18 @@ typedef struct {
 
 struct hin_pipe_struct {
   hin_pipe_dir_t in, out;
-  uint32_t flags;
   off_t count, sz;
   void * parent, * parent1;
   hin_buffer_t * write;
+  int num_write, num_read;
+  int (*decode_callback) (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush);
   int (*read_callback) (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush);
   int (*finish_callback) (hin_pipe_t * pipe);
-  int (*extra_callback) (hin_pipe_t * pipe);
   int (*out_error_callback) (hin_pipe_t * pipe);
   int (*in_error_callback) (hin_pipe_t * pipe);
-  hin_buffer_t * (*buffer_callback) (hin_pipe_t * pipe);
+  hin_buffer_t * (*buffer_callback) (hin_pipe_t * pipe, int sz);
+
+  off_t extra_sz;
 };
 
 struct hin_client_struct {
@@ -118,11 +121,14 @@ int hin_request_openat (hin_buffer_t * buffer, int dfd, const char * path, int f
 int hin_request_statx (hin_buffer_t * buffer, int dfd, const char * path, int flags, int mask);
 int hin_request_timeout (hin_buffer_t * buffer, struct timespec * ts, int count, int flags);
 
-hin_buffer_t * hin_pipe_buffer_get (hin_pipe_t * pipe);
+hin_buffer_t * hin_pipe_get_buffer (hin_pipe_t * pipe, int sz);
+int hin_pipe_init (hin_pipe_t * pipe);
+int hin_pipe_start (hin_pipe_t * pipe);
 int hin_pipe_advance (hin_pipe_t * pipe);
 int hin_pipe_finish (hin_pipe_t * pipe);
 int hin_pipe_append (hin_pipe_t * pipe, hin_buffer_t * buffer);
 
+hin_buffer_t * hin_buffer_create_from_data (void * parent, const char * ptr, int sz);
 void hin_buffer_clean (hin_buffer_t * buffer);
 
 void hin_buffer_list_remove (hin_buffer_t ** list, hin_buffer_t * new);
