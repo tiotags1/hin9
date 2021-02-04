@@ -23,13 +23,17 @@ static int httpd_proxy_close (http_client_t * http) {
 static int httpd_proxy_pipe_close (hin_pipe_t * pipe) {
   if (master.debug & DEBUG_PROXY) printf ("proxy pipe close\n");
   http_client_t * http = pipe->parent1;
+  http->io_state &= ~HIN_REQ_DATA;
+  if (http->io_state & HIN_REQ_POST) return 0;
   httpd_proxy_close (http);
 }
 
 static int httpd_proxy_pipe_post_close (hin_pipe_t * pipe) {
   if (master.debug & DEBUG_PROXY) printf ("proxy pipe close post data\n");
-  //http_client_t * http = pipe->parent1;
-  //httpd_proxy_close (http);
+  http_client_t * http = pipe->parent1;
+  http->io_state &= ~HIN_REQ_POST;
+  if (http->io_state & HIN_REQ_DATA) return 0;
+  httpd_proxy_close (http);
 }
 
 static int httpd_proxy_pipe_in_error (hin_pipe_t * pipe) {
@@ -107,6 +111,8 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer) {
 
   int len = source.len;
   if (sz && sz < len) len = sz;
+
+  http1->io_state |= ~HIN_REQ_DATA;
 
   hin_pipe_t * pipe = calloc (1, sizeof (*pipe));
   hin_pipe_init (pipe);
@@ -191,6 +197,8 @@ static int http_client_sent_callback (hin_buffer_t * buffer, int ret) {
   off_t sz = http->post_sz;
   int len = source.len;
   if (sz && sz < len) len = sz;
+
+  proxy->io_state |= ~HIN_REQ_POST;
 
   hin_pipe_t * pipe = calloc (1, sizeof (*pipe));
   hin_pipe_init (pipe);

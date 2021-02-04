@@ -57,6 +57,7 @@ typedef struct {
 typedef struct {
   hin_client_t c;
   uint32_t flags;
+  uint32_t io_state;
   hin_uri_t uri;
   char * host, * port;
 

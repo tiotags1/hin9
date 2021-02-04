@@ -239,9 +239,6 @@ static int hin_ssl_handshake (hin_ssl_t * ssl, hin_buffer_t * buf) {
     n = hin_ssl_check_data (ssl, crypt);
     if (n) return n;
   }
-
-  printf ("ssl shouldn't happen fell off\n");
-  hin_buffer_clean (crypt);
   return -1;
 }
 
