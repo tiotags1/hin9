@@ -281,30 +281,7 @@ int http_proxy_start_request (http_client_t * http, int ret) {
   return 0;
 }
 
-hin_buffer_t * hin_http_init_connection (http_client_t * http);
-
-static int connected (hin_client_t * client, int ret) {
-  http_client_t * http = (http_client_t*)client;
-  if (ret < 0) {
-    printf ("proxy connection failed\n");
-    httpd_client_t * parent = (httpd_client_t*)client->parent;
-    httpd_respond_error (parent, 502, NULL);
-    void http_client_clean (http_client_t * http);
-    http_client_clean (http);
-    return 0;
-  }
-
-  hin_buffer_t * buf = hin_http_init_connection (http);
-
-  hin_lines_t * lines = (hin_lines_t*)&buf->buffer;
-  lines->read_callback = httpd_proxy_headers_read_callback;
-  lines->close_callback = httpd_proxy_buffer_close;
-
-  hin_request_read (buf);
-
-  http_proxy_start_request (http, ret);
-  return 0;
-}
+http_client_t * hin_http_connect (http_client_t * http1, string_t * host, string_t * port, int (*finish_callback) (http_client_t * http, int ret));
 
 http_client_t * hin_proxy (hin_client_t * parent_c, const char * url1) {
   httpd_client_t * parent = (httpd_client_t*)parent_c;
@@ -318,17 +295,10 @@ http_client_t * hin_proxy (hin_client_t * parent_c, const char * url1) {
     return NULL;
   }
 
-  http_client_t * httpd_proxy_connection_get (string_t * host, string_t * port);
-  http_client_t * http = httpd_proxy_connection_get (&info.host, &info.port);
-  if (http) {
-    if (http->uri.all.ptr) free ((void*)http->uri.all.ptr);
-    http->c.parent = parent;
-    http->uri = info;
-    http_proxy_start_request (http, http->c.sockfd);
-    return http;
-  }
+  http_client_t * http = calloc (1, sizeof (*http));
+  http->c.parent = parent;
+  http->uri = info;
 
-  http = calloc (1, sizeof (http_client_t));
   http->host = strndup (info.host.ptr, info.host.len);
   if (info.port.len > 0) {
     http->port = strndup (info.port.ptr, info.port.len);
@@ -336,13 +306,7 @@ http_client_t * hin_proxy (hin_client_t * parent_c, const char * url1) {
     http->port = strdup ("80");
   }
 
-  http->c.parent = parent;
-  http->uri = info;
-
-  int ret = hin_connect (&http->c, http->host, http->port, &connected);
-  if (ret < 0) { printf ("can't create connection\n"); return NULL; }
-  master.num_connection++;
-
+  http = hin_http_connect (http, &info.host, &info.port, http_proxy_start_request);
   return http;
 }
 

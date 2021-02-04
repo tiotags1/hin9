@@ -148,3 +148,8 @@ int hin_init_sharedmem () {
   }
 }
 
+void hin_sharedmem_clean () {
+  if (munmap (master.share, 4096) < 0) perror ("munmap");
+  if (close (master.sharefd) < 0) perror ("share close");
+}
+

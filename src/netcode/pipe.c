@@ -93,6 +93,7 @@ static int hin_pipe_write_next (hin_buffer_t * buffer) {
   buffer->ssl = pipe->out.ssl;
   buffer->flags = pipe->out.flags;
   buffer->callback = hin_pipe_write_callback;
+  buffer->next = buffer->prev = NULL;
 
   buffer->pos = pipe->out.pos;
 
@@ -104,8 +105,6 @@ static int hin_pipe_write_next (hin_buffer_t * buffer) {
 }
 
 int hin_pipe_advance (hin_pipe_t * pipe) {
-  if (master.debug & DEBUG_PIPE) printf ("pipe %d>%d advance\n", pipe->in.fd, pipe->out.fd);
-
   if ((pipe->in.flags & HIN_COUNT) && pipe->count <= 0) pipe->in.flags |= HIN_DONE;
 
   if (pipe->write == NULL && (pipe->in.flags & HIN_DONE)) {
@@ -122,8 +121,8 @@ int hin_pipe_advance (hin_pipe_t * pipe) {
 
   if (pipe->write) {
     hin_buffer_t * buffer = pipe->write;
-    hin_pipe_write_next (buffer);
     hin_buffer_list_remove (&pipe->write, buffer);
+    hin_pipe_write_next (buffer);
   }
 }
 
@@ -136,7 +135,6 @@ int hin_pipe_write_callback (hin_buffer_t * buffer, int ret) {
     hin_pipe_close (pipe);
     return -1;
   }
-  pipe->num_write--;
   if (master.debug & DEBUG_PIPE) printf ("pipe %d>%d write %d/%d pos %ld left %ld\n", pipe->in.fd, pipe->out.fd, ret, buffer->count, pipe->out.pos, pipe->count);
   if (ret < buffer->count) {
     printf ("pipe %d>%d write incomplete %d/%d\n", pipe->in.fd, pipe->out.fd, ret, buffer->count);
@@ -147,10 +145,11 @@ int hin_pipe_write_callback (hin_buffer_t * buffer, int ret) {
     hin_request_write (buffer);
     return 0;
   }
+  pipe->num_write--;
   if (pipe->write) {
     hin_buffer_t * buffer = pipe->write;
-    hin_pipe_write_next (buffer);
     hin_buffer_list_remove (&pipe->write, buffer);
+    hin_pipe_write_next (buffer);
   } else {
     hin_pipe_advance (pipe);
   }

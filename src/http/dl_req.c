@@ -93,7 +93,7 @@ static int http_client_sent_callback (hin_buffer_t * buffer, int ret) {
     return 1;
   }
   printf ("sent done\n");
-  return 0;
+  return 1;
 }
 
 int http_send_request (hin_client_t * client) {

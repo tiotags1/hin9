@@ -24,9 +24,10 @@ void hin_clean () {
   hin_console_clean ();
   int hin_event_clean ();
   hin_event_clean ();
+  void hin_sharedmem_clean ();
+  hin_sharedmem_clean ();
 
   //close (0); close (1); close (2);
-  close (master.sharefd);
 
   printf ("hin close ...\n");
   #ifdef BASIC_USE_MALLOC_DEBUG

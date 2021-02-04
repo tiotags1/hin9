@@ -1,4 +1,5 @@
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -75,7 +76,7 @@ void hin_console_init () {
 void hin_timer_init () {
   hin_buffer_t * buf = malloc (sizeof (*buf) + sizeof (struct timespec));
   memset (buf, 0, sizeof (*buf));
-  buf->flags = 0;
+  buf->flags = HIN_HIDE;
   buf->fd = 0;
   buf->callback = hin_timer_callback;
   buf->count = buf->sz = sizeof (struct timespec);

@@ -12,18 +12,19 @@ typedef struct hin_buffer_struct hin_buffer_t;
 typedef struct hin_client_struct hin_client_t;
 typedef struct hin_pipe_struct hin_pipe_t;
 
-#include "ssl.h"
-#include "master.h"
-
+#define HIN_USE_OPENSSL 1
 #define READ_SZ                 4096
 //65536
+
+#include "ssl.h"
+#include "master.h"
 
 #define HIN_CONNECT_MAGIC 0xfeabc321
 #define HIN_CLIENT_MAGIC 0xfeabc111
 #define HIN_SERVER_MAGIC 0xfcadc123
 
 enum { HIN_DONE = 0x1, HIN_SOCKET = 0x2, HIN_FILE = 0x4, HIN_OFFSETS = 0x8,
-       HIN_SSL = 0x10, HIN_COUNT = 0x20 };
+       HIN_SSL = 0x10, HIN_COUNT = 0x20, HIN_HIDE = 0x40 };
 
 enum { HIN_CLIENT = 1, HIN_DYN_BUFFER, HIN_SERVER, HIN_DOWNLOAD };
 
@@ -133,6 +134,7 @@ void hin_buffer_clean (hin_buffer_t * buffer);
 
 void hin_buffer_list_remove (hin_buffer_t ** list, hin_buffer_t * new);
 void hin_buffer_list_append (hin_buffer_t ** list, hin_buffer_t * new);
+void hin_buffer_list_add (hin_buffer_t ** list, hin_buffer_t * new);
 int hin_pipe_write (hin_pipe_t * client, hin_buffer_t * buffer);
 
 void hin_client_list_remove (hin_client_t ** list, hin_client_t * new);

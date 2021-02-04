@@ -37,7 +37,18 @@ void hin_buffer_list_remove (hin_buffer_t ** list, hin_buffer_t * new) {
   new->next = new->prev = NULL;
 }
 
+void hin_buffer_list_add (hin_buffer_t ** list, hin_buffer_t * new) {
+  new->next = new->prev = NULL;
+  if (*list == NULL) {
+    *list = new;
+  } else {
+    new->next = *list;
+    *list = new;
+  }
+}
+
 void hin_buffer_list_append (hin_buffer_t ** list, hin_buffer_t * new) {
+  new->next = new->prev = NULL;
   if (*list == NULL) {
     *list = new;
   } else {
@@ -114,8 +125,9 @@ static int hin_lines_read_callback (hin_buffer_t * buffer, int ret) {
 
   int num = lines->read_callback (buffer);
 
-  if (lines->eat_callback (buffer, num))
+  if (lines->eat_callback (buffer, num)) {
     hin_buffer_clean (buffer);
+  }
 
   return 0;
 }

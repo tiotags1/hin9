@@ -14,29 +14,14 @@
 
 struct io_uring ring;
 
-int hin_ssl_read (hin_buffer_t * crypt, int ret);
-int hin_ssl_write (hin_buffer_t * crypt);
-int hin_ssl_read_ahead (hin_buffer_t * plain);
-
-int hin_ssl_handshake (hin_ssl_t * ssl, hin_buffer_t * buf);
+int hin_ssl_request_write (hin_buffer_t * buffer);
+int hin_ssl_request_read (hin_buffer_t * buffer);
 
 int hin_request_write (hin_buffer_t * buffer) {
   if (buffer->flags & HIN_SSL) {
-    int sz = buffer->count + 100;
-    if (sz < READ_SZ) sz = READ_SZ;
-    hin_buffer_t * buf = malloc (sizeof (*buf) + sz);
-    memset (buf, 0, sizeof (hin_buffer_t));
-    buf->flags = buffer->flags & (~HIN_SSL);
-    buf->fd = buffer->fd;
-    buf->count = buf->sz = sz;
-    buf->ptr = buf->buffer;
-    buf->parent = (void*)buffer;
-    buf->ssl = buffer->ssl;
-    buf->data = (void*)HIN_SSL_WRITE;
-    buffer->ssl_buffer = buf;
-    if (hin_ssl_handshake (buffer->ssl, buf)) { return 0; }
-    hin_ssl_write (buf);
-    buffer = buf;
+    if (master.debug & DEBUG_URING) printf ("req%d %s buf %p cb %p fd %d\n", master.id, buffer->flags & HIN_SOCKET ? "sends" : "writs", buffer, buffer->callback, buffer->fd);
+    hin_ssl_request_write (buffer);
+    return 0;
   }
 
   struct io_uring_sqe *sqe = io_uring_get_sqe (&ring);
@@ -52,24 +37,9 @@ int hin_request_write (hin_buffer_t * buffer) {
 
 int hin_request_read (hin_buffer_t * buffer) {
   if (buffer->flags & HIN_SSL) {
-    if (hin_ssl_read_ahead (buffer)) {
-      return 0;
-    }
-    int sz = buffer->count + 100;
-    if (sz < READ_SZ) sz = READ_SZ;
-    hin_buffer_t * buf = malloc (sizeof (*buf) + sz);
-    memset (buf, 0, sizeof (hin_buffer_t));
-    buf->flags = buffer->flags & (~HIN_SSL);
-    buf->fd = buffer->fd;
-    buf->count = buf->sz = sz;
-    buf->ptr = buf->buffer;
-    buf->parent = (void*)buffer;
-    buf->callback = hin_ssl_read;
-    buf->ssl = buffer->ssl;
-    buf->data = (void*)HIN_SSL_READ;
-    buffer->ssl_buffer = buf;
-    if (hin_ssl_handshake (buffer->ssl, buf)) { return 0; }
-    buffer = buf;
+    if (master.debug & DEBUG_URING) printf ("req%d %s buf %p cb %p fd %d\n", master.id, buffer->flags & HIN_SOCKET ? "recvs" : "reads", buffer, buffer->callback, buffer->fd);
+    hin_ssl_request_read (buffer);
+    return 0;
   }
 
   struct io_uring_sqe *sqe = io_uring_get_sqe (&ring);
@@ -126,7 +96,7 @@ int hin_request_timeout (hin_buffer_t * buffer, struct timespec * ts, int count,
   struct io_uring_sqe *sqe = io_uring_get_sqe (&ring);
   io_uring_prep_timeout (sqe, ts, count, flags);
   io_uring_sqe_set_data (sqe, buffer);
-  if (master.debug & DEBUG_URING) printf ("req%d time buf %p cb %p\n", master.id, buffer, buffer->callback);
+  if (master.debug & DEBUG_URING && (buffer->flags & HIN_HIDE) == 0) printf ("req%d time buf %p cb %p\n", master.id, buffer, buffer->callback);
   return 0;
 }
 
@@ -182,7 +152,7 @@ int hin_event_loop () {
     }
 
     hin_buffer_t * buffer = (hin_buffer_t *)cqe->user_data;
-    if (master.debug & DEBUG_URING) printf ("req%d done buf %p cb %p\n", master.id, buffer, buffer->callback);
+    if (master.debug & DEBUG_URING && (buffer->flags & HIN_HIDE) == 0) printf ("req%d done buf %p cb %p\n", master.id, buffer, buffer->callback);
 
     io_uring_cqe_seen (&ring, cqe);
     err = buffer->callback (buffer, cqe->res);

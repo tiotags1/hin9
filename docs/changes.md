@@ -1,4 +1,13 @@
 
+* 50% chance ssl is fixed, it might buffer what it needs or it might buffer something else
+* ui conditional openssl compilation, you can now remove openssl as a dependency !
+* ui hide timer callbacks in debug
+* ui no longer needs to initialize a client openssl context
+* refactor unified connection reuse for proxy and downloads
+* bugfix ssl initialization errors didn't abort http connection
+* bugfix deflating of large files was broken due to order of operations
+
+commit 88b63c6b4bb8e02454461759cd6dbaeb859e7823
 * proxy support for http/1.1 chunked encodings
 * backend ssl connections
 * backend connection reuse

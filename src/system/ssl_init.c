@@ -13,10 +13,35 @@
 
 #include "hin.h"
 
+#ifdef HIN_USE_OPENSSL
+
 // Global SSL context
 SSL_CTX * default_ctx = NULL;
 
-int hin_accept_ssl_init (hin_client_t * client) {
+SSL_CTX * hin_ssl_default_init () {
+  SSL_CTX * ctx = NULL;
+
+  SSL_library_init ();
+  OpenSSL_add_all_algorithms ();
+  SSL_load_error_strings ();
+  ERR_load_BIO_strings ();
+  ERR_load_crypto_strings ();
+
+  const SSL_METHOD *method = TLS_method ();
+
+  ctx = SSL_CTX_new (method);
+
+  if (ctx == NULL) {
+    perror ("Unable to create SSL context");
+    return NULL;
+  }
+
+  SSL_CTX_set_ecdh_auto (ctx, 1);
+
+  return ctx;
+}
+
+int hin_ssl_accept_init (hin_client_t * client) {
   hin_ssl_t * ssl = &client->ssl;
   hin_client_t * server = (hin_client_t*)client->parent;
   hin_server_blueprint_t * bp = (hin_server_blueprint_t*)server;
@@ -31,13 +56,18 @@ int hin_accept_ssl_init (hin_client_t * client) {
 
   client->flags |= HIN_SSL;
   if (master.debug & DEBUG_SSL) printf ("ssl init accept sockfd %d\n", client->sockfd);
+  return 1;
 }
 
-int hin_connect_ssl_init (hin_client_t * client) {
+int hin_ssl_connect_init (hin_client_t * client) {
   hin_ssl_t * ssl = &client->ssl;
 
   ssl->rbio = BIO_new (BIO_s_mem ());
   ssl->wbio = BIO_new (BIO_s_mem ());
+
+  if (default_ctx == NULL) {
+    default_ctx = hin_ssl_default_init ();
+  }
 
   ssl->ssl = SSL_new (default_ctx);
 
@@ -46,13 +76,12 @@ int hin_connect_ssl_init (hin_client_t * client) {
 
   client->flags |= HIN_SSL;
   if (master.debug & DEBUG_SSL) printf ("ssl init connect sockfd %d\n", client->sockfd);
+  return 1;
 }
 
 void hin_client_ssl_cleanup (hin_client_t * client) {
   hin_ssl_t * ssl = &client->ssl;
   SSL_free (ssl->ssl);   // free the SSL object and its BIO's
-  //free (http->write_buf);
-  //free (http->encrypt_buf);
 }
 
 SSL_CTX * hin_ssl_init (const char * cert, const char * key) {
@@ -112,5 +141,27 @@ SSL_CTX * hin_ssl_init (const char * cert, const char * key) {
   return ctx;
 }
 
+#else
 
+int hin_ssl_accept_init (hin_client_t * client) {
+  printf ("openssl disabled\n");
+  return -1;
+}
+
+int hin_ssl_connect_init (hin_client_t * client) {
+  printf ("openssl disabled\n");
+  return -1;
+}
+
+void hin_client_ssl_cleanup (hin_client_t * client) {}
+
+void * hin_ssl_init (const char * cert, const char * key) {
+  printf ("openssl disabled\n");
+  return NULL;
+}
+
+int hin_ssl_request_write (hin_buffer_t * buffer) {}
+int hin_ssl_request_read (hin_buffer_t * buffer) {}
+
+#endif
 

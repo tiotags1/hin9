@@ -61,7 +61,7 @@ int handle_client (hin_client_t * client) {
   hin_server_blueprint_t * bp = (hin_server_blueprint_t*)server;
 
   if (bp->ssl_ctx) {
-    hin_accept_ssl_init (client);
+    hin_ssl_accept_init (client);
   }
 
   if (bp->client_handle) {
