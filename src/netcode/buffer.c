@@ -43,6 +43,7 @@ void hin_buffer_list_add (hin_buffer_t ** list, hin_buffer_t * new) {
     *list = new;
   } else {
     new->next = *list;
+    (*list)->prev = new;
     *list = new;
   }
 }
@@ -55,6 +56,7 @@ void hin_buffer_list_append (hin_buffer_t ** list, hin_buffer_t * new) {
     hin_buffer_t * last;
     for (last = *list; last->next; last = last->next) {}
     last->next = new;
+    new->prev = last;
   }
 }
 

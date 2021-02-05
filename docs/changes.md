@@ -1,4 +1,5 @@
 
+* removed limit size to response header size
 * bugfix: improved and fixed error handling
 * bugfix: restricted post on file handler
 * bugfix: segfault for post error handling

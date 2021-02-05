@@ -27,8 +27,12 @@ hin_buffer_t * hin_pipe_get_buffer (hin_pipe_t * pipe, int sz) {
 }
 
 int hin_pipe_write (hin_pipe_t * pipe, hin_buffer_t * buffer) {
-  hin_buffer_list_append (&pipe->write, buffer);
-  pipe->num_write++;
+  hin_buffer_t * next = buffer->next;
+  for (hin_buffer_t * buf = buffer; buf; buf = next) {
+    next = buf->next;
+    hin_buffer_list_append (&pipe->write, buf);
+    pipe->num_write++;
+  }
 }
 
 int hin_pipe_append (hin_pipe_t * pipe, hin_buffer_t * buffer) {

@@ -191,6 +191,34 @@ static int httpd_statx_callback (hin_buffer_t * buf, int ret) {
   }
   http->peer_flags &= ~http->disable;
 
+  hin_pipe_t * pipe = calloc (1, sizeof (*pipe));
+  hin_pipe_init (pipe);
+  pipe->in.fd = http->file_fd;
+  pipe->in.flags = HIN_OFFSETS;
+  pipe->in.pos = http->pos;
+  pipe->out.fd = client->sockfd;
+  pipe->out.flags = HIN_SOCKET | (client->flags & HIN_SSL);
+  pipe->out.ssl = &client->ssl;
+  pipe->out.pos = 0;
+  pipe->parent = client;
+  pipe->finish_callback = done_file;
+  pipe->out_error_callback = httpd_pipe_error_callback;
+
+  int httpd_pipe_set_chunked (httpd_client_t * http, hin_pipe_t * pipe);
+  httpd_pipe_set_chunked (http, pipe);
+
+  if ((http->peer_flags & HIN_HTTP_CHUNKED) == 0 && http->count > 0) {
+    pipe->in.flags |= HIN_COUNT;
+    pipe->count = pipe->sz = http->count;
+  }
+
+  buf->parent = pipe;
+
+  if (http->status == 304) {
+    pipe->count = 0;
+    pipe->in.flags |= HIN_COUNT;
+  }
+
   header (client, buf, "HTTP/1.%d %d %s\r\n", http->peer_flags & HIN_HTTP_VER0 ? 0 : 1, http->status, http_status_name (http->status));
   httpd_write_common_headers (client, buf);
 
@@ -214,35 +242,7 @@ static int httpd_statx_callback (hin_buffer_t * buf, int ret) {
 
   if (master.debug & DEBUG_RW) printf ("responding '\n%.*s'\n", buf->count, buf->ptr);
 
-  hin_pipe_t * pipe = calloc (1, sizeof (*pipe));
-  hin_pipe_init (pipe);
-  pipe->in.fd = http->file_fd;
-  pipe->in.flags = HIN_OFFSETS;
-  pipe->in.pos = http->pos;
-  pipe->out.fd = client->sockfd;
-  pipe->out.flags = HIN_SOCKET | (client->flags & HIN_SSL);
-  pipe->out.ssl = &client->ssl;
-  pipe->out.pos = 0;
-  pipe->parent = client;
-  pipe->finish_callback = done_file;
-  pipe->out_error_callback = httpd_pipe_error_callback;
-
-  int httpd_pipe_set_chunked (httpd_client_t * http, hin_pipe_t * pipe);
-  httpd_pipe_set_chunked (http, pipe);
-
-  if ((http->peer_flags & HIN_HTTP_CHUNKED) == 0 && http->count > 0) {
-    pipe->in.flags |= HIN_COUNT;
-    pipe->count = pipe->sz = http->count;
-  }
-
-  buf->parent = pipe;
   hin_pipe_write (pipe, buf);
-
-  if (http->status == 304) {
-    pipe->count = 0;
-    pipe->in.flags |= HIN_COUNT;
-  }
-
   hin_pipe_start (pipe);
 
   return 0;
