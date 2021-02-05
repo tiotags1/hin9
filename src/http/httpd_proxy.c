@@ -16,8 +16,10 @@ static int httpd_proxy_close (http_client_t * http) {
     httpd_client_finish_request (parent);
   }
 
-  int http_client_finish_request (http_client_t * http);
-  http_client_finish_request (http);
+  if (http->c.sockfd >= 0) {
+    int http_client_finish_request (http_client_t * http);
+    http_client_finish_request (http);
+  }
 }
 
 static int httpd_proxy_pipe_close (hin_pipe_t * pipe) {
@@ -79,8 +81,7 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer) {
   int status = 200;
   if (find_line (&source, &line) == 0 || match_string (&line, "HTTP/1.([01]) (%d+) %w+", &param1, &param2) <= 0) {
     printf ("proxy: error parsing header line '%.*s'\n", (int)line.len, line.ptr);
-    httpd_respond_error (http, 502, NULL);
-    httpd_client_shutdown (http);
+    httpd_respond_fatal (http, 502, NULL);
     return 0;
   }
 
@@ -102,8 +103,7 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer) {
         http1->flags |= HIN_HTTP_CHUNKED;
       } else {
         printf ("proxy: encoding type not supported '%.*s'\n", (int)param1.len, param1.ptr);
-        httpd_respond_error (http, 502, NULL);
-        httpd_client_shutdown (http);
+        httpd_respond_fatal (http, 502, NULL);
         return 0;
       }
     }
@@ -112,7 +112,7 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer) {
   int len = source.len;
   if (sz && sz < len) len = sz;
 
-  http1->io_state |= ~HIN_REQ_DATA;
+  http1->io_state &= ~HIN_REQ_DATA;
 
   hin_pipe_t * pipe = calloc (1, sizeof (*pipe));
   hin_pipe_init (pipe);
@@ -154,7 +154,7 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer) {
     header (client, buf, "Content-Length: %ld\r\n", sz);
   header (client, buf, "\r\n");
 
-  if (master.debug & DEBUG_RW) printf ("proxy response '%.*s'\n", buf->count, buf->ptr);
+  if (master.debug & DEBUG_RW) printf ("proxy response '\n%.*s'\n", buf->count, buf->ptr);
 
   hin_pipe_write (pipe, buf);
 
@@ -198,7 +198,7 @@ static int http_client_sent_callback (hin_buffer_t * buffer, int ret) {
   int len = source.len;
   if (sz && sz < len) len = sz;
 
-  proxy->io_state |= ~HIN_REQ_POST;
+  proxy->io_state &= ~HIN_REQ_POST;
 
   hin_pipe_t * pipe = calloc (1, sizeof (*pipe));
   hin_pipe_init (pipe);
@@ -230,6 +230,13 @@ int http_proxy_start_request (http_client_t * http, int ret) {
   hin_client_t * client = &http->c;
   httpd_client_t * parent = (httpd_client_t*)http->c.parent;
   if (master.debug & DEBUG_PROTO) printf ("proxy request begin on socket %d\n", ret);
+
+  if (ret < 0) {
+    printf ("proxy connection failed\n");
+    httpd_respond_fatal (parent, 502, NULL);
+    httpd_proxy_close (http);
+    return -1;
+  }
 
   hin_lines_t * lines = (hin_lines_t*)&http->read_buffer->buffer;
   lines->read_callback = httpd_proxy_headers_read_callback;

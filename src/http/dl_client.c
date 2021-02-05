@@ -103,7 +103,7 @@ int http_client_start_request (http_client_t * http, int ret) {
 
 int http_client_finish_request (http_client_t * http) {
   if (master.debug & DEBUG_PROTO) printf ("http request done on fd %d\n", http->c.sockfd);
-  if (HIN_HTTPD_PROXY_CONNECTION_REUSE) {
+  if (HIN_HTTPD_PROXY_CONNECTION_REUSE && http->read_buffer) {
     hin_client_list_add (&master.connection_list, (hin_client_t*)http);
     http->c.parent = NULL;
     hin_request_read (http->read_buffer);
@@ -114,8 +114,14 @@ int http_client_finish_request (http_client_t * http) {
 
 static int connected (hin_client_t * client, int ret) {
   http_client_t * http = (http_client_t*)client;
+
+  master.num_connection++;
+  int (*finish_callback) (http_client_t * http, int ret) = (void*)http->read_buffer;
+  http->read_buffer = NULL;
+
   if (ret < 0) {
     printf ("couldn't connect\n");
+    finish_callback (http, -1);
     http_client_clean (http);
     return 0;
   }
@@ -123,6 +129,7 @@ static int connected (hin_client_t * client, int ret) {
   if (http->uri.https) {
     if (hin_ssl_connect_init (&http->c) < 0) {
       printf ("couldn't initialize connection\n");
+      finish_callback (http, -1);
       http_client_clean (http);
       return -1;
     }
@@ -133,10 +140,6 @@ static int connected (hin_client_t * client, int ret) {
   buf->fd = http->c.sockfd;
   buf->parent = http;
   buf->ssl = &http->c.ssl;
-
-  int (*finish_callback) (http_client_t * http, int ret) = (void*)http->read_buffer;
-
-  master.num_connection++;
 
   http->read_buffer = buf;
   hin_request_read (buf);

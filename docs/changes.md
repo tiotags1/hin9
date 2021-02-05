@@ -1,4 +1,11 @@
 
+* bugfix: improved and fixed error handling
+* bugfix: restricted post on file handler
+* bugfix: segfault for post error handling
+
+* proxy post fixes
+
+commit ac66658427e2b8861f43be271f68dfb9149f3b18
 * 50% chance ssl is fixed, it might buffer what it needs or it might buffer something else
 * ui conditional openssl compilation, you can now remove openssl as a dependency !
 * ui hide timer callbacks in debug

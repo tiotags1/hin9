@@ -16,21 +16,21 @@ int httpd_client_read_callback (hin_buffer_t * buffer);
 int httpd_client_reread (httpd_client_t * http) {
   hin_buffer_t * buffer = http->read_buffer;
 
-  string_t source;
-  source.ptr = buffer->data;
-  source.len = buffer->ptr - buffer->data;
-  int num = 0;
-  if (source.len > 0)
+  if (http->status & HIN_REQ_ENDING) return 0;
+
+  int len = buffer->ptr - buffer->data;
+  int num = -1;
+  if (len > 0)
     num = httpd_client_read_callback (buffer);
-  if (num < 0) {
+  if (num > 0) {
+    hin_buffer_eat (buffer, num);
+  } else if (num == 0) {
+    buffer->count = buffer->sz;
+    hin_lines_request (buffer);
+  } else {
     printf ("client error\n");
     httpd_client_shutdown (http);
     return -1;
-  } else if (num > 0) {
-    hin_buffer_eat (buffer, num);
-  } else {
-    buffer->count = buffer->sz;
-    hin_lines_request (buffer);
   }
   return 0;
 }
@@ -95,12 +95,13 @@ int httpd_client_read_callback (hin_buffer_t * buffer) {
   httpd_client_t * http = (httpd_client_t*)client;
 
   if (source->len >= HIN_HTTPD_MAX_HEADER_SIZE) {
-    httpd_respond_error (http, 413, NULL);
+    httpd_respond_fatal (http, 413, NULL);
     return -1;
   }
 
   int used = httpd_parse_req (http, source);
   if (used <= 0) return used;
+
   if (http->post_sz > 0 && http->state & HIN_REQ_PROXY) {
     int consume = source->len > http->post_sz ? http->post_sz : source->len;
     used += consume;
@@ -109,9 +110,9 @@ int httpd_client_read_callback (hin_buffer_t * buffer) {
     if (consume < 0) {  }
     used += consume;
   }
-  http->status = 200;
 
   // run lua processing
+  http->status = 200;
   int hin_server_callback (hin_client_t * client);
   hin_server_callback (client);
 
@@ -133,7 +134,5 @@ int httpd_client_read_callback (hin_buffer_t * buffer) {
 
   return used;
 }
-
-
 
 

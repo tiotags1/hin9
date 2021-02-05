@@ -86,8 +86,7 @@ int httpd_parse_headers (httpd_client_t * http, string_t * source) {
   line.len = 0;
   if (find_line (source, &line) == 0 || match_string (&line, "(%a+) ("HIN_HTTP_PATH_ACCEPT") HTTP/1.([01])", &method, &path, &param) <= 0) {
     printf ("httpd 400 error parsing request line '%.*s' whole '%.*s'\n", (int)line.len, line.ptr, (int)source->len, source->ptr);
-    httpd_respond_error (http, 400, NULL);
-    httpd_client_shutdown (http);
+    httpd_respond_fatal (http, 400, NULL);
     return -1;
   }
   if (*param.ptr != '1') {
@@ -101,8 +100,7 @@ int httpd_parse_headers (httpd_client_t * http, string_t * source) {
     http->method = HIN_HTTP_POST;
   } else {
     printf ("httpd 405 error unknown method\n");
-    httpd_respond_error (http, 405, NULL);
-    httpd_client_shutdown (http);
+    httpd_respond_fatal (http, 405, NULL);
     return -1;
   }
 
@@ -123,15 +121,32 @@ int httpd_parse_headers (httpd_client_t * http, string_t * source) {
 
   if (http->method == HIN_HTTP_POST && http->post_sz <= 0) {
     printf ("httpd post missing size\n");
-    httpd_respond_error (http, 411, NULL);
-    httpd_client_shutdown (http);
+    httpd_respond_fatal (http, 411, NULL);
+    return -1;
   } else if (http->post_sz >= HIN_HTTPD_MAX_POST_SIZE) {
     printf ("httpd post size %ld >= %ld\n", http->post_sz, (long)HIN_HTTPD_MAX_POST_SIZE);
-    httpd_respond_error (http, 413, NULL);
-    httpd_client_shutdown (http);
+    httpd_respond_fatal (http, 413, NULL);
+    return -1;
   }
 
   return (uintptr_t)source->ptr - (uintptr_t)orig.ptr;
+}
+
+int httpd_parse_req (httpd_client_t * http, string_t * source) {
+  string_t orig = *source;
+
+  int used = httpd_parse_headers (http, source);
+  if (used <= 0) return used;
+
+  http->headers = orig;
+  if (http->headers.len > used + http->post_sz) http->headers.len = used + http->post_sz;
+
+  if (http->disable & HIN_HTTP_KEEPALIVE) {
+    http->peer_flags &= ~HIN_HTTP_KEEPALIVE;
+  }
+  http->state &= ~HIN_REQ_HEADERS;
+
+  return used;
 }
 
 

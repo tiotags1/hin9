@@ -125,7 +125,7 @@ static int l_hin_cgi (lua_State *L) {
 
   int hin_cgi (hin_client_t * client, const char * exe_path, const char * root, const char * path);
   if (hin_cgi (client, exe_path, root_path, script_path) < 0) {
-    httpd_respond_error (http, 500, NULL);
+    httpd_respond_fatal (http, 500, NULL);
     return 0;
   }
   return 0;
@@ -141,7 +141,7 @@ static int l_hin_respond (lua_State *L) {
   const char * body = lua_tostring (L, 3);
   httpd_client_t * http = (httpd_client_t*)client;
 
-  httpd_respond_error (http, status, body);
+  httpd_respond_text (http, status, body);
   return 0;
 }
 

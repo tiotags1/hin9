@@ -54,12 +54,13 @@ int httpd_write_common_headers (hin_client_t * client, hin_buffer_t * buf) {
 
 static int http_error_write_callback (hin_buffer_t * buffer, int ret) {
   httpd_client_t * http = (httpd_client_t*)buffer->parent;
-  if (ret != buffer->count) printf ("error http_error_write_callback not sent all of it %d/%d\n", ret, buffer->count);
+  if (ret < 0) { printf ("httpd sending error %s\n", strerror (-ret)); }
+  else if (ret != buffer->count) printf ("httpd http_error_write_callback not sent all of it %d/%d\n", ret, buffer->count);
   httpd_client_finish_request (http);
   return 1;
 }
 
-int httpd_respond_error (httpd_client_t * http, int status, const char * body) {
+int httpd_respond_text (httpd_client_t * http, int status, const char * body) {
   hin_client_t * client = &http->c;
 
   hin_buffer_t * buf = malloc (sizeof (*buf) + READ_SZ);
@@ -90,6 +91,15 @@ int httpd_respond_error (httpd_client_t * http, int status, const char * body) {
   hin_request_write (buf);
 
   http->state |= HIN_REQ_DATA;
+}
+
+int httpd_respond_error (httpd_client_t * http, int status, const char * body) {
+  return httpd_respond_text (http, status, body);
+}
+
+int httpd_respond_fatal (httpd_client_t * http, int status, const char * body) {
+  httpd_respond_text (http, status, body);
+  httpd_client_shutdown (http);
 }
 
 static int httpd_close_filefd_callback (hin_buffer_t * buffer, int ret) {
@@ -263,6 +273,12 @@ static int httpd_open_filefd_callback (hin_buffer_t * buf, int ret) {
 int httpd_handle_file_request (hin_client_t * client, const char * path, off_t pos, off_t count, uintptr_t param) {
   httpd_client_t * http = (httpd_client_t*)client;
 
+  if (http->method != HIN_HTTP_GET) {
+    printf ("httpd 405 post on a file resource\n");
+    httpd_respond_fatal (http, 405, NULL);
+    return 0;
+  }
+
   http->file_path = strdup (path);
   http->pos = pos;
   http->count = count;
@@ -287,25 +303,6 @@ int httpd_handle_file_request (hin_client_t * client, const char * path, off_t p
     if (ret1 < 0) ret1 = -errno;
     return httpd_open_filefd_callback (buf, ret1);
   }
-}
-
-int httpd_parse_req (httpd_client_t * http, string_t * source) {
-  hin_client_t * client = &http->c;
-  string_t orig = *source;
-
-  int httpd_parse_headers (hin_client_t * client, string_t * source);
-  int used = httpd_parse_headers (client, source);
-  if (used <= 0) return used;
-
-  http->headers = orig;
-  if (http->headers.len > used + http->post_sz) http->headers.len = used + http->post_sz;
-
-  if (http->disable & HIN_HTTP_KEEPALIVE) {
-    http->peer_flags &= ~HIN_HTTP_KEEPALIVE;
-  }
-  http->state &= ~HIN_REQ_HEADERS;
-
-  return used;
 }
 
 

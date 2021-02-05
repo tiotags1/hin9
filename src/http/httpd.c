@@ -19,7 +19,7 @@ void httpd_client_clean (httpd_client_t * http) {
   if (http->content_type) free (http->content_type);
   //memset (&http->state, 0, sizeof (httpd_client_t) - sizeof (hin_client_t)); // cleans things it shouldn't
 
-  http->state = http->peer_flags = http->disable = 0;
+  http->peer_flags = http->disable = 0;
   http->status = http->method = 0;
   http->file_fd = http->pos = http->count = 0;
   http->cache = http->modified_since = 0;
@@ -30,7 +30,7 @@ void httpd_client_clean (httpd_client_t * http) {
 
 int httpd_client_start_request (httpd_client_t * http) {
   if (master.debug & DEBUG_PROTO) printf ("httpd request begin\n");
-  http->state = HIN_REQ_HEADERS;
+  http->state = HIN_REQ_HEADERS | (http->state & HIN_REQ_ENDING);
 
   hin_client_t * server = (hin_client_t*)http->c.parent;
   hin_server_data_t * data = (hin_server_data_t*)server->parent;
@@ -47,7 +47,7 @@ int httpd_client_finish_request (httpd_client_t * http) {
   if (http->state & HIN_REQ_POST) return 0;
   http->state &= ~HIN_REQ_DATA;
 
-  if ((http->peer_flags & HIN_HTTP_KEEPALIVE)) {
+  if ((http->peer_flags & HIN_HTTP_KEEPALIVE) && (http->state & HIN_REQ_ENDING == 0)) {
     httpd_client_clean (http);
     httpd_client_start_request (http);
     httpd_client_reread (http);
@@ -97,6 +97,17 @@ int httpd_client_shutdown (httpd_client_t * http) {
   return 0;
 }
 
+static int httpd_client_eat_callback (hin_buffer_t * buffer, int num) {
+  if (num > 0) {
+    hin_buffer_eat (buffer, num);
+  } else if (num == 0) {
+    hin_lines_request (buffer);
+  } else {
+    printf ("httpd eat callback error\n");
+  }
+  return 0;
+}
+
 int httpd_client_accept (hin_client_t * client) {
   httpd_client_t * http = (httpd_client_t*)client;
   httpd_client_start_request (http);
@@ -110,6 +121,7 @@ int httpd_client_accept (hin_client_t * client) {
   int httpd_client_read_callback (hin_buffer_t * buffer);
   lines->read_callback = httpd_client_read_callback;
   lines->close_callback = httpd_client_buffer_shutdown;
+  lines->eat_callback = httpd_client_eat_callback;
   hin_request_read (buf);
   http->read_buffer = buf;
 }
