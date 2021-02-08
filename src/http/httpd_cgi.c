@@ -51,6 +51,7 @@ static int hin_pipe_cgi_server_finish_callback (hin_pipe_t * pipe) {
   hin_worker_t * worker = (hin_worker_t *)pipe->parent1;
   httpd_client_t * http = (httpd_client_t*)worker->data;
 
+  if (master.debug & DEBUG_SYSCALL) printf ("  cgi read done, close %d\n", pipe->in.fd);
   close (pipe->in.fd);
 
   #if HIN_HTTPD_WORKER_PREFORKED
@@ -89,8 +90,6 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
   while (1) {
     if (find_line (source, &line) == 0) { return 0; }
     if (line.len == 0) break;
-    if (master.debug & DEBUG_CGI)
-      fprintf (stderr, "cgi header is '%.*s'\n", (int)line.len, line.ptr);
     if (matchi_string_equal (&line, "Status: (%d+).*", &param1) > 0) {
       status = atoi (param1.ptr);
       if (master.debug & DEBUG_CGI) printf ("cgi status is %d\n", status);
@@ -151,6 +150,8 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
   while (1) {
     if (find_line (source, &line) == 0) { hin_buffer_clean (buf); return 0; }
     if (line.len == 0) break;
+    if (master.debug & DEBUG_CGI)
+      fprintf (stderr, "cgi header is '%.*s'\n", (int)line.len, line.ptr);
     if (matchi_string_equal (&line, "Status: .*") > 0) {
     } else if ((http->peer_flags & HIN_HTTP_CHUNKED) && matchi_string_equal (&line, "Content%-Length: .*") > 0) {
     } else if (HIN_HTTPD_DISABLE_POWERED_BY && matchi_string_equal (&line, "X%-Powered%-By: .*") > 0) {
@@ -199,7 +200,7 @@ int httpd_request_chunked (httpd_client_t * http);
 int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_path, const char * script_path) {
   hin_client_t * client = &http->c;
   httpd_request_chunked (http);
-  http->state |= HIN_REQ_DATA;
+  http->state |= (HIN_REQ_DATA | HIN_REQ_CGI);
 
   hin_worker_t * worker = calloc (1, sizeof (*worker));
   worker->data = (void*)client;
@@ -212,7 +213,7 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
   int pid = fork ();
   if (pid != 0) {
     // this is root
-    if (master.debug & DEBUG_CGI) printf ("cgi pipe fd %d %d pid %d\n", out_pipe[0], out_pipe[1], pid);
+    if (master.debug & DEBUG_CGI) printf ("cgi %d pipe read %d write %d pid %d\n", http->c.sockfd, out_pipe[0], out_pipe[1], pid);
     hin_cgi_send (http, worker, out_pipe[0]);
     close (out_pipe[1]);
     return out_pipe[0];
@@ -227,7 +228,7 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
     perror ("dup2");
     exit (1);
   }
-  if (http->post_sz > 0) {
+  if (http->method == HIN_HTTP_POST) {
     if (master.debug & DEBUG_CGI)
       fprintf (stderr, "cgi stdin set to %d\n", http->post_fd);
 

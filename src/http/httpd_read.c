@@ -37,15 +37,20 @@ int httpd_client_reread (httpd_client_t * http) {
 
 #include <sys/stat.h>
 #include <fcntl.h>
-int httpd_client_finish (hin_client_t * client);
+
 static int post_done (hin_pipe_t * pipe) {
   if (master.debug & DEBUG_POST)
     printf ("cgi post done %d\n", pipe->out.fd);
-  //close (pipe->out);
+
   httpd_client_t * http = (httpd_client_t*)pipe->parent;
-  http->state &= ~HIN_REQ_POST;
-  if (!HIN_HTTPD_WORKER_PREFORKED)
+
+  if (!HIN_HTTPD_WORKER_PREFORKED) {
+    if (master.debug & DEBUG_SYSCALL) printf ("  close post_fd %d\n", http->post_fd);
     close (http->post_fd);
+    http->post_fd = 0;
+  }
+
+  http->state &= ~HIN_REQ_POST;
   if (http->state & HIN_REQ_DATA) return 0;
   return httpd_client_finish_request (http);
 }

@@ -52,7 +52,7 @@ int httpd_write_common_headers (hin_client_t * client, hin_buffer_t * buf) {
   return 0;
 }
 
-static int http_error_write_callback (hin_buffer_t * buffer, int ret) {
+static int http_raw_response_callback (hin_buffer_t * buffer, int ret) {
   httpd_client_t * http = (httpd_client_t*)buffer->parent;
   if (ret < 0) { printf ("httpd sending error %s\n", strerror (-ret)); }
   else if (ret != buffer->count) printf ("httpd http_error_write_callback not sent all of it %d/%d\n", ret, buffer->count);
@@ -67,7 +67,7 @@ int httpd_respond_text (httpd_client_t * http, int status, const char * body) {
   memset (buf, 0, sizeof (*buf));
   buf->flags = HIN_SOCKET | (client->flags & HIN_SSL);
   buf->fd = client->sockfd;
-  buf->callback = http_error_write_callback;
+  buf->callback = http_raw_response_callback;
   buf->count = 0;
   buf->sz = READ_SZ;
   buf->ptr = buf->buffer;
@@ -102,13 +102,11 @@ int httpd_respond_fatal (httpd_client_t * http, int status, const char * body) {
   httpd_client_shutdown (http);
 }
 
-static int httpd_close_filefd_callback (hin_buffer_t * buffer, int ret) {
-  if (ret < 0) printf ("encountered close in fd %d: %s\n", buffer->fd, strerror (-ret));
-  return 1;
-}
-
 static int httpd_close_filefd (hin_buffer_t * buffer, httpd_client_t * http) {
+  if (http->file_fd <= 0) return 0;
+  if (master.debug & DEBUG_SYSCALL) printf ("close filefd %d\n", http->file_fd);
   close (http->file_fd);
+  http->file_fd = 0;
   return 0;
 }
 

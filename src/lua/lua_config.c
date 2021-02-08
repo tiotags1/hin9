@@ -92,10 +92,27 @@ static int l_hin_create_log (lua_State *L) {
   return 1;
 }
 
+static int l_hin_redirect_log (lua_State *L) {
+  const char * path = lua_tostring (L, 1);
+  FILE * fp = NULL;
+
+  fp = freopen (path, "w", stdout);
+  if (fp == NULL) { printf ("can't open '%s'\n", path); return 0; }
+  fp = freopen (path, "w", stderr);
+  if (fp == NULL) { printf ("can't open '%s'\n", path); return 0; }
+
+  dup2 (fileno(stderr), fileno(stdout));
+  setvbuf (stdout, NULL, _IOLBF, 2024);
+  setvbuf (stderr, NULL, _IOLBF, 2024);
+
+  return 1;
+}
+
 static lua_function_t functs [] = {
 {"create_httpd",	l_hin_create_httpd },
 {"listen",		l_hin_listen },
 {"create_log",		l_hin_create_log },
+{"redirect_log",	l_hin_redirect_log },
 {NULL, NULL},
 };
 

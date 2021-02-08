@@ -63,8 +63,7 @@ void httpd_close_socket () {
 
 static hin_buffer_t * new_buffer (hin_buffer_t * buffer) {
   printf ("header needed to make new buffer\n");
-  hin_buffer_t * buf = malloc (sizeof (hin_buffer_t) + READ_SZ);
-  memset (buf, 0, sizeof *buf);
+  hin_buffer_t * buf = calloc (1, sizeof (hin_buffer_t) + READ_SZ);
   buf->sz = READ_SZ;
   buf->fd = buffer->fd;
   buf->flags = buffer->flags;
@@ -89,7 +88,8 @@ static int vheader (hin_client_t * client, hin_buffer_t * buffer, const char * f
       va_end (ap);
       return 0;
     }
-    return vheader (client, new_buffer (buffer), fmt, ap);
+    hin_buffer_t * buf = new_buffer (buffer);
+    return vheader (client, buf, fmt, ap);
   }
   buffer->count += len;
   return len;
@@ -116,7 +116,8 @@ int header_raw (hin_client_t * client, hin_buffer_t * buffer, const char * data,
       printf ("'header_raw' failed to write more\n");
       return 0;
     }
-    return header_raw (client, new_buffer (buffer), data, len);
+    hin_buffer_t * buf = new_buffer (buffer);
+    return header_raw (client, buf, data, len);
   }
 
   memcpy (buffer->ptr + pos, data, len);

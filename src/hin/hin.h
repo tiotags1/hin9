@@ -13,7 +13,7 @@ typedef struct hin_client_struct hin_client_t;
 typedef struct hin_pipe_struct hin_pipe_t;
 
 #define HIN_USE_OPENSSL 1
-#define READ_SZ                 4096
+#define READ_SZ 4096
 //65536
 
 #include "ssl.h"
@@ -31,7 +31,8 @@ enum { HIN_CLIENT = 1, HIN_DYN_BUFFER, HIN_SERVER, HIN_DOWNLOAD };
 enum { DEBUG_OTHER = 0x1, DEBUG_PIPE = 0x2, DEBUG_HEADERS = 0x4, DEBUG_RW = 0x8,
   DEBUG_SSL = 0x10, DEBUG_PROTO = 0x20, DEBUG_URING = 0x40, DEBUG_SOCKET = 0x80,
   DEBUG_CGI = 0x100, DEBUG_POST = 0x200, DEBUG_CONFIG = 0x400, DEBUG_TIMER = 0x800,
-  DEBUG_PROXY = 0x1000, DEBUG_DEFLATE = 0x2000, DEBUG_CHILD = 0x4000, DEBUG_CHUNK = 0x8000 };
+  DEBUG_PROXY = 0x1000, DEBUG_DEFLATE = 0x2000, DEBUG_CHILD = 0x4000, DEBUG_CHUNK = 0x8000,
+  DEBUG_SYSCALL = 0x10000 };
 
 typedef int (*hin_callback_t) (hin_buffer_t * buffer, int ret);
 

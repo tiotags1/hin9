@@ -119,7 +119,7 @@ int httpd_parse_headers (httpd_client_t * http, string_t * source) {
     }
   }
 
-  if (http->method == HIN_HTTP_POST && http->post_sz <= 0) {
+  if (http->method == HIN_HTTP_POST && http->post_sz < 0) {
     printf ("httpd post missing size\n");
     httpd_respond_fatal (http, 411, NULL);
     return -1;

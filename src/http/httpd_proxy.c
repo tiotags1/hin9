@@ -12,7 +12,7 @@ static int httpd_proxy_close (http_client_t * http) {
 
   httpd_client_t * parent = (httpd_client_t*)http->c.parent;
   if (parent) {
-    parent->state &= ~HIN_REQ_PROXY;
+    parent->state &= ~(HIN_REQ_PROXY | HIN_REQ_DATA);
     httpd_client_finish_request (parent);
   }
 

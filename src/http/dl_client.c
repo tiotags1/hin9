@@ -10,12 +10,17 @@
 int http_client_headers_read_callback (hin_buffer_t * buffer);
 
 void http_client_clean (http_client_t * http) {
+  if (master.debug & DEBUG_PROTO) printf ("http clean %d\n", http->c.sockfd);
   hin_client_list_remove (&master.connection_list, (hin_client_t*)http);
   if (http->save_path) free ((void*)http->save_path);
   if (http->uri.all.ptr) free ((void*)http->uri.all.ptr);
   if (http->host) free (http->host);
   if (http->port) free (http->port);
-  if (http->save_fd) close (http->save_fd);
+  if (http->save_fd) {
+    if (master.debug & DEBUG_SYSCALL) printf ("  close save_fd %d\n", http->save_fd);
+    close (http->save_fd);
+    http->save_fd = 0;
+  }
   if (http->read_buffer) {
     hin_buffer_clean (http->read_buffer);
   }
@@ -30,7 +35,6 @@ static int http_client_close_callback (hin_buffer_t * buffer, int ret) {
     printf ("http client close callback error: %s\n", strerror (-ret));
     return -1;
   }
-  if (master.debug & DEBUG_PROTO) printf ("http close %d\n", http->c.sockfd);
   hin_buffer_clean (buffer);
   http_client_clean (http);
   return 0;

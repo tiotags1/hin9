@@ -1,4 +1,6 @@
 
+--redirect_log ("/tmp/log1.txt")
+
 function create_log (path)
   local fp = io.open (path, "w")
   return function (...)
@@ -12,7 +14,7 @@ access ("start server on %s\n", os.date ("%c"))
 
 to_cache = {ico=true, txt=true, js=true, jpg=true, png=true, css=true}
 to_deflate = {html=true, css=true, js=true, txt=true}
-content_type = {html="text/html", jpg="image/jpeg", png="image/png", gif="image/gif", css="text/css", ico="image/vnd.microsoft.icon", js="text/javascript"}
+content_type = {html="text/html", jpg="image/jpeg", png="image/png", gif="image/gif", txt="text/plain", css="text/css", ico="image/vnd.microsoft.icon", js="text/javascript"}
 
 local server = create_httpd (function (server, req)
   local path, query, method, version = parse_path (req)
@@ -26,9 +28,11 @@ local server = create_httpd (function (server, req)
   --set_option (req, "status", 403)
   --set_option (req, "cache", -1)
   --add_header (req, "Hello", "from server")
-  local proxy_path = string.match (path, '^/proxy/(.*)')
-  if (path == "/proxy" or proxy_path) then
-    return proxy (req, "http://localhost:28005/" .. (proxy_path or ""))
+  local root = "htdocs"
+  local app_path, sub_path = string.match (path, '^/(%w+)/?(.*)')
+  print ("app path ", app_path, "sub", sub_path)
+  if (app_path == "proxy") then
+    return proxy (req, "http://localhost:28005/" .. (sub_path or ""))
   elseif (path == "/test.test") then
     return cgi (req, "/usr/local/bin/fcgi_test", nil)
   elseif (path == "/test1.test") then
@@ -38,13 +42,17 @@ local server = create_httpd (function (server, req)
   elseif (path == "/hello") then
     return respond (req, 200, "Hello world")
   end
-  local root = "htdocs"
   local file_path, file_name, ext = sanitize_path (req, root, path)
   if (to_deflate[ext]) then
   else
     set_option (req, "disable", "deflate")
   end
-  if (ext == "php") then
+  if (app_path == "wordpress") then
+    print ("wordpress ", file_name, ext, content_type[ext], (file_name ~= "index.html"), (content_type[ext] == nil))
+    if ((file_name == "index.html") or (content_type[ext] == nil)) then
+      return cgi (req, "/usr/bin/php-cgi", root, root.."/wordpress/index.php")
+    end
+  elseif (ext == "php") then
     return cgi (req, "/usr/bin/php-cgi", root, file_path)
   elseif (to_cache[ext]) then
     set_option (req, "cache", 604800)

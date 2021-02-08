@@ -1,4 +1,9 @@
 
+* fixes to make wordpress and phpmyadmin work
+* added redirect output to logfile function
+* bugfix some of the broken pipe errors
+
+commit b8fd799c8bd8e007db7253d4a3d20d24c59bdcc4
 * removed limit size to response header size
 * bugfix: improved and fixed error handling
 * bugfix: restricted post on file handler

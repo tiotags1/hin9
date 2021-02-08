@@ -8,7 +8,7 @@
 #include <basic_timer.h>
 
 enum { HIN_REQ_HEADERS = 0x1, HIN_REQ_DATA = 0x2, HIN_REQ_POST = 0x4, HIN_REQ_WAIT = 0x8,
-         HIN_REQ_PROXY = 0x10, HIN_REQ_END = 0x20, HIN_REQ_ENDING = 0x40 };
+         HIN_REQ_PROXY = 0x10, HIN_REQ_CGI = 0x20, HIN_REQ_END = 0x40, HIN_REQ_ENDING = 0x80 };
 
 enum { HIN_HTTP_GET = 1, HIN_HTTP_POST };
 
