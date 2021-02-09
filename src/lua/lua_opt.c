@@ -102,8 +102,14 @@ static int l_hin_get_option (lua_State *L) {
     if (http->disable & HIN_HTTP_KEEPALIVE) lua_pushboolean (L, 1);
     else lua_pushboolean (L, 0);
     return 1;
+  } else if (strcmp (name, "id") == 0) {
+    lua_pushnumber (L, http->c.sockfd);
+    return 1;
+  } else if (strcmp (name, "status") == 0) {
+    lua_pushnumber (L, http->status);
+    return 1;
   } else {
-    printf ("get_otion unknown option '%s'\n", name);
+    printf ("get_option unknown option '%s'\n", name);
     return 0;
   }
   return 0;

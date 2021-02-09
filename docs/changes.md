@@ -1,4 +1,11 @@
 
+* lua callback for request finish, good for fancy logging (use of function involving headers and sending new requests are undefined, will likely crash)
+* added lua get_option for http status and request id
+* added http/1.1 continuous upload, removed restriction to only content-length uploads (not tested, don't have anything that does that)
+* added timeout callback, good for cron jobs ?
+* bugfix: POST http method forbidden on error messages
+
+commit eae3c284c332bd5f7ca553cb4369d6741e83043c
 * sanitize_path you can set the index file to something different than index.html
 * bugfix: path parsing was missing ,;
 * bugfix: cgi http status was broken at one point

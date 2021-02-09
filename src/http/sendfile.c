@@ -153,3 +153,10 @@ int httpd_pipe_set_chunked (httpd_client_t * http, hin_pipe_t * pipe) {
   }
 }
 
+int httpd_pipe_upload_chunked (httpd_client_t * http, hin_pipe_t * pipe) {
+  if (http->peer_flags & HIN_HTTP_CHUNKUP) {
+    pipe->decode_callback = hin_pipe_decode_chunked;
+    pipe->read_callback = hin_pipe_copy_chunked;
+  }
+}
+

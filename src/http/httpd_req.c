@@ -63,6 +63,14 @@ static int http_raw_response_callback (hin_buffer_t * buffer, int ret) {
 int httpd_respond_text (httpd_client_t * http, int status, const char * body) {
   hin_client_t * client = &http->c;
 
+  if (http->method != HIN_HTTP_GET) {
+    printf ("httpd 405 post on a raw resource\n");
+    http->method = HIN_HTTP_GET;
+    httpd_respond_fatal (http, 405, NULL);
+    return 0;
+  }
+  http->status = status;
+
   hin_buffer_t * buf = malloc (sizeof (*buf) + READ_SZ);
   memset (buf, 0, sizeof (*buf));
   buf->flags = HIN_SOCKET | (client->flags & HIN_SSL);

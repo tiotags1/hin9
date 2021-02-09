@@ -78,7 +78,7 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer) {
 
   off_t sz = 0;
   uint32_t flags = 0;
-  int status = 200;
+  http->status = 200;
   if (find_line (&source, &line) == 0 || match_string (&line, "HTTP/1.([01]) (%d+) %w+", &param1, &param2) <= 0) {
     printf ("proxy: error parsing header line '%.*s'\n", (int)line.len, line.ptr);
     httpd_respond_fatal (http, 502, NULL);
@@ -86,8 +86,8 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer) {
   }
 
   if (*param1.ptr == '0') flags |= HIN_HTTP_VER0;
-  status = atoi (param2.ptr);
-  if (master.debug & DEBUG_PROXY) printf ("proxy: status %d\n", status);
+  http->status = atoi (param2.ptr);
+  if (master.debug & DEBUG_PROXY) printf ("proxy: status %d\n", http->status);
 
   while (1) {
     if (find_line (&source, &line) == 0) { return 0; }
@@ -148,7 +148,7 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer) {
   buf->ptr = buf->buffer;
   buf->parent = pipe;
 
-  header (client, buf, "HTTP/1.%d %d %s\r\n", http->peer_flags & HIN_HTTP_VER0 ? 0 : 1, status, http_status_name (status));
+  header (client, buf, "HTTP/1.%d %d %s\r\n", http->peer_flags & HIN_HTTP_VER0 ? 0 : 1, http->status, http_status_name (http->status));
   httpd_write_common_headers (client, buf);
   if (sz && (http->peer_flags & HIN_HTTP_CHUNKED) == 0)
     header (client, buf, "Content-Length: %ld\r\n", sz);
@@ -186,7 +186,6 @@ static int http_client_sent_callback (hin_buffer_t * buffer, int ret) {
   string_t source = http->headers, line, param1, param2;
   if (find_line (&source, &line) == 0) { return -1; }
 
-  int has_post_chunked = 0;
   while (1) {
     if (find_line (&source, &line) == 0) { return -1; }
     if (line.len == 0) break;
@@ -215,9 +214,9 @@ static int http_client_sent_callback (hin_buffer_t * buffer, int ret) {
   pipe->finish_callback = httpd_proxy_pipe_post_close;
   //pipe->out_error_callback = httpd_proxy_pipe_in_error;
   //pipe->in_error_callback = httpd_proxy_pipe_out_error;
-  if (has_post_chunked) {
-    int hin_pipe_decode_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush);
-    pipe->decode_callback = hin_pipe_decode_chunked;
+  if (http->peer_flags & HIN_HTTP_CHUNKUP) {
+    int httpd_pipe_upload_chunked (httpd_client_t * http, hin_pipe_t * pipe);
+    httpd_pipe_upload_chunked (http, pipe);
   } else if (sz > 0) {
     pipe->in.flags |= HIN_COUNT;
     pipe->count = pipe->sz = sz;

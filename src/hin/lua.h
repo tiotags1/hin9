@@ -11,7 +11,8 @@ typedef struct { const char * name; int (*ptr) (lua_State *); } lua_function_t;
 typedef struct hin_server_data_struct {
   // callback
   int refcount;
-  int callback;
+  int request_callback;
+  int finish_callback;
   uint32_t magic;
   uint32_t disable;
   int timeout;

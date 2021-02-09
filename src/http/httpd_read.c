@@ -69,7 +69,10 @@ static int httpd_client_handle_post (httpd_client_t * http, string_t * source) {
   pipe->parent = http;
   pipe->finish_callback = post_done;
 
-  if (sz) {
+  if (http->peer_flags & HIN_HTTP_CHUNKUP) {
+    int httpd_pipe_upload_chunked (httpd_client_t * http, hin_pipe_t * pipe);
+    httpd_pipe_upload_chunked (http, pipe);
+  } else if (sz) {
     pipe->in.flags |= HIN_COUNT;
     pipe->count = pipe->sz = sz;
   }

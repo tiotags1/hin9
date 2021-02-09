@@ -59,6 +59,8 @@ static int hin_timer_callback (hin_buffer_t * buffer, int ret) {
   hin_request_timeout (buffer, ts, 0, 0);
   void httpd_timer ();
   httpd_timer ();
+  int hin_timeout_callback (float dt);
+  hin_timeout_callback (1.0);
   return 0;
 }
 

@@ -9,6 +9,13 @@ function create_log (path)
   end
 end
 
+function printf (...)
+  io.write (string.format (...))
+end
+
+function timeout_callback (dt)
+end
+
 access = create_log ("build/access.log")
 access ("start server on %s\n", os.date ("%c"))
 
@@ -22,7 +29,8 @@ local server = create_httpd (function (server, req)
   --print ("path is ", path, method, query, version)
   --local h = parse_headers (req)
   local ip, port = remote_address (req)
-  access ("%s %s %s %s\n", ip, method, path, query)
+  local id = get_option (req, "id")
+  access ("%x %s %s %s %s\n", id, ip, method, path, query)
   --for i, k in pairs (h) do
   --  print ("header ", i, k)
   --end
@@ -63,6 +71,10 @@ local server = create_httpd (function (server, req)
     set_content_type (req, content_type[ext])
   end
   send_file (req, file_path, 0, -1)
+end, function (server, req)
+  local status = get_option (req, "status")
+  local id = get_option (req, "id")
+  access ("%x    status %d\n", id, status)
 end)
 
 --[[

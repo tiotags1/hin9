@@ -67,7 +67,6 @@ int hin_pipe_cgi_server_read_callback (hin_pipe_t * pipe, hin_buffer_t * buffer,
 
   if (num <= 0 || flush) {
     if (master.debug & DEBUG_CGI) printf ("cgi pipe subprocess closed pipe\n");
-    //hin_pipe_finish (pipe);
     return 1;
   }
 
@@ -85,14 +84,14 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
   source->len = buffer->ptr - buffer->data;
 
   string_t line, orig=*source, param1, param2;
-  int status = 200;
+  http->status = 200;
   off_t sz = 0;
   while (1) {
     if (find_line (source, &line) == 0) { return 0; }
     if (line.len == 0) break;
     if (matchi_string (&line, "Status: (%d+)", &param1) > 0) {
-      status = atoi (param1.ptr);
-      if (master.debug & DEBUG_CGI) printf ("cgi status is %d\n", status);
+      http->status = atoi (param1.ptr);
+      if (master.debug & DEBUG_CGI) printf ("cgi status is %d\n", http->status);
     } else if (matchi_string_equal (&line, "Content%-Length: (%d+)", &param1) > 0) {
       sz = atoi (param1.ptr);
     } else if (matchi_string_equal (&line, "Content%-Encoding: .*") > 0) {
@@ -142,7 +141,7 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
   buf->ssl = &client->ssl;
 
   *source = orig;
-  header (client, buf, "HTTP/1.%d %d %s\r\n", http->peer_flags & HIN_HTTP_VER0 ? 0 : 1, status, http_status_name (status));
+  header (client, buf, "HTTP/1.%d %d %s\r\n", http->peer_flags & HIN_HTTP_VER0 ? 0 : 1, http->status, http_status_name (http->status));
   http->peer_flags = http->peer_flags & (~http->disable);
 
   httpd_write_common_headers (client, buf);

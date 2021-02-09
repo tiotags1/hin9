@@ -62,6 +62,9 @@ int httpd_parse_headers_line (httpd_client_t * http, string_t * line) {
       new[param.len + 2] = '\0';
       http->post_sep = new;
       if (master.debug & DEBUG_POST) printf ("Content type multipart/form-data boundry is '%s'\n", new);
+    } else if (match_string (line, "Transfer%-Encoding:%s*chunked") > 0) {
+      if (master.debug & DEBUG_POST) printf ("Post content encoding is chunked\n");
+      http->peer_flags |= HIN_HTTP_CHUNKUP;
     } else if (match_string (line, "Transfer%-Encoding:%s*") > 0) {
       printf ("httpd don't accept post with transfer encoding\n");
       return -1;
@@ -119,7 +122,7 @@ int httpd_parse_headers (httpd_client_t * http, string_t * source) {
     }
   }
 
-  if (http->method == HIN_HTTP_POST && http->post_sz < 0) {
+  if (http->method == HIN_HTTP_POST && http->post_sz <= 0) {
     printf ("httpd post missing size\n");
     httpd_respond_fatal (http, 411, NULL);
     return -1;

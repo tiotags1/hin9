@@ -57,6 +57,9 @@ int httpd_client_finish_request (httpd_client_t * http) {
   http->state &= ~HIN_REQ_DATA;
   if (http->state & (HIN_REQ_POST)) return 0;
 
+  int hin_server_finish_callback (http_client_t * client);
+  hin_server_finish_callback (http);
+
   if ((http->peer_flags & HIN_HTTP_KEEPALIVE) && ((http->state & HIN_REQ_ENDING) == 0)) {
     httpd_client_clean (http);
     httpd_client_start_request (http);

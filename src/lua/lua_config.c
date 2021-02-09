@@ -11,16 +11,22 @@
 #include "conf.h"
 
 static int l_hin_create_httpd (lua_State *L) {
-  int t = lua_type (L, 1);
-  if (t != LUA_TFUNCTION) {
+  int ref1 = 0, ref2 = 0;
+  if (lua_type (L, 1) != LUA_TFUNCTION) {
     printf ("not provided a callback\n");
     return 0;
   }
   lua_pushvalue (L, 1);
-  int ref = luaL_ref (L, LUA_REGISTRYINDEX);
+  ref1 = luaL_ref (L, LUA_REGISTRYINDEX);
+
+  if (lua_type (L, 1) == LUA_TFUNCTION) {
+    lua_pushvalue (L, 2);
+    ref2 = luaL_ref (L, LUA_REGISTRYINDEX);
+  }
 
   hin_server_data_t * server = calloc (1, sizeof (hin_server_data_t));
-  server->callback = ref;
+  server->request_callback = ref1;
+  server->finish_callback = ref2;
   server->L = L;
   server->magic = HIN_SERVER_MAGIC;
   server->timeout = HIN_HTTPD_TIMEOUT;
