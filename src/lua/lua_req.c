@@ -162,7 +162,6 @@ static int l_hin_sanitize_path (lua_State *L) {
   if (base == NULL) { printf ("base is nil\n"); return 0; }
 
   int len1, len2, len3, used;
-  const char * index_file = "index.html";
   len1 = strlen (base);
   len2 = 0;
   len3 = 1;
@@ -171,6 +170,12 @@ static int l_hin_sanitize_path (lua_State *L) {
   raw.ptr = (char*)lua_tolstring (L, 3, &raw.len);
   if (raw.ptr == NULL) return 0;
   path = raw;
+
+  const char * index_file = "index.html";
+  if (lua_isstring (L, 4)) {
+    index_file = lua_tostring (L, 4);
+  }
+
   while (1) {
     used = match_string (&path, "/([%w%.,_-]*)", &name);
     if (used <= 0) return 0;

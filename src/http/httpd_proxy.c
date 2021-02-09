@@ -281,12 +281,14 @@ int http_proxy_start_request (http_client_t * http, int ret) {
   } else {
     header (client, buf, "Connection: close\r\n");
   }
-  if (parent->post_sz > 0) {
-    header (client, buf, "Content-Length: %ld\r\n", parent->post_sz);
-    header (client, buf, "Content-Type: multipart/form-data; boundary=%s\r\n", parent->post_sep+2);
+  if (parent->method == HIN_HTTP_POST) {
+    if (parent->post_sz > 0)
+      header (client, buf, "Content-Length: %ld\r\n", parent->post_sz);
+    if (parent->post_sep)
+      header (client, buf, "Content-Type: multipart/form-data; boundary=%s\r\n", parent->post_sep+2);
   }
   header (client, buf, "\r\n");
-  if (parent->post_sz) {
+  if (parent->post_sz > 0) {
     int len = source.len;
     if (len > parent->post_sz) len = parent->post_sz;
     header_raw (client, buf, source.ptr, len);

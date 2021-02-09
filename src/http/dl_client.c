@@ -11,16 +11,22 @@ int http_client_headers_read_callback (hin_buffer_t * buffer);
 
 void http_client_clean (http_client_t * http) {
   if (master.debug & DEBUG_PROTO) printf ("http clean %d\n", http->c.sockfd);
-  hin_client_list_remove (&master.connection_list, (hin_client_t*)http);
   if (http->save_path) free ((void*)http->save_path);
   if (http->uri.all.ptr) free ((void*)http->uri.all.ptr);
   if (http->host) free (http->host);
   if (http->port) free (http->port);
+  http->host = http->port = http->save_path = NULL;
   if (http->save_fd) {
     if (master.debug & DEBUG_SYSCALL) printf ("  close save_fd %d\n", http->save_fd);
     close (http->save_fd);
     http->save_fd = 0;
   }
+}
+
+void http_client_unlink (http_client_t * http) {
+  if (master.debug & DEBUG_PROTO) printf ("http unlink %d\n", http->c.sockfd);
+  hin_client_list_remove (&master.connection_list, (hin_client_t*)http);
+  http_client_clean (http);
   if (http->read_buffer) {
     hin_buffer_clean (http->read_buffer);
   }
@@ -36,7 +42,7 @@ static int http_client_close_callback (hin_buffer_t * buffer, int ret) {
     return -1;
   }
   hin_buffer_clean (buffer);
-  http_client_clean (http);
+  http_client_unlink (http);
   return 0;
 }
 
@@ -126,7 +132,7 @@ static int connected (hin_client_t * client, int ret) {
   if (ret < 0) {
     printf ("couldn't connect\n");
     finish_callback (http, -1);
-    http_client_clean (http);
+    http_client_unlink (http);
     return 0;
   }
 
@@ -134,7 +140,7 @@ static int connected (hin_client_t * client, int ret) {
     if (hin_ssl_connect_init (&http->c) < 0) {
       printf ("couldn't initialize connection\n");
       finish_callback (http, -1);
-      http_client_clean (http);
+      http_client_unlink (http);
       return -1;
     }
   }
@@ -154,7 +160,7 @@ static int connected (hin_client_t * client, int ret) {
 http_client_t * hin_http_connect (http_client_t * http1, string_t * host, string_t * port, int (*finish_callback) (http_client_t * http, int ret)) {
   http_client_t * http = httpd_proxy_connection_get (host, port);
   if (http) {
-    if (http->uri.all.ptr) free ((void*)http->uri.all.ptr);
+    http_client_clean (http);
     void * rd = http->read_buffer;
     hin_client_t c = http->c;
     *http = *http1;
@@ -162,6 +168,7 @@ http_client_t * hin_http_connect (http_client_t * http1, string_t * host, string
     http->c = c;
     http->c.parent = http1->c.parent;
     finish_callback (http, 0);
+    free (http1);
     return http;
   }
 

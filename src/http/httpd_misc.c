@@ -81,6 +81,8 @@ static int vheader (hin_client_t * client, hin_buffer_t * buffer, const char * f
   if (buffer->next) return vheader (client, buffer->next, fmt, ap);
   int pos = buffer->count;
   int sz = buffer->sz - buffer->count;
+  va_list prev;
+  va_copy (prev, ap);
   int len = vsnprintf (buffer->ptr + pos, sz, fmt, ap);
   if (len > sz) {
     if (len > READ_SZ) {
@@ -89,7 +91,7 @@ static int vheader (hin_client_t * client, hin_buffer_t * buffer, const char * f
       return 0;
     }
     hin_buffer_t * buf = new_buffer (buffer);
-    return vheader (client, buf, fmt, ap);
+    return vheader (client, buf, fmt, prev);
   }
   buffer->count += len;
   return len;

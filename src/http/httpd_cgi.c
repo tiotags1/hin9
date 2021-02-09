@@ -90,7 +90,7 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
   while (1) {
     if (find_line (source, &line) == 0) { return 0; }
     if (line.len == 0) break;
-    if (matchi_string_equal (&line, "Status: (%d+).*", &param1) > 0) {
+    if (matchi_string (&line, "Status: (%d+)", &param1) > 0) {
       status = atoi (param1.ptr);
       if (master.debug & DEBUG_CGI) printf ("cgi status is %d\n", status);
     } else if (matchi_string_equal (&line, "Content%-Length: (%d+)", &param1) > 0) {
@@ -152,14 +152,22 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
     if (line.len == 0) break;
     if (master.debug & DEBUG_CGI)
       fprintf (stderr, "cgi header is '%.*s'\n", (int)line.len, line.ptr);
-    if (matchi_string_equal (&line, "Status: .*") > 0) {
-    } else if ((http->peer_flags & HIN_HTTP_CHUNKED) && matchi_string_equal (&line, "Content%-Length: .*") > 0) {
-    } else if (HIN_HTTPD_DISABLE_POWERED_BY && matchi_string_equal (&line, "X%-Powered%-By: .*") > 0) {
+    if (matchi_string (&line, "Status:") > 0) {
+    } else if ((http->peer_flags & HIN_HTTP_CHUNKED) && matchi_string (&line, "Content%-Length:") > 0) {
+    } else if (HIN_HTTPD_DISABLE_POWERED_BY && matchi_string (&line, "X%-Powered%-By:") > 0) {
     } else {
       header (client, buf, "%.*s\r\n", line.len, line.ptr);
     }
   }
   header (client, buf, "\r\n");
+
+  if (master.debug & DEBUG_RW) {
+    printf ("cgi response %d is '\n%.*s'\n", http->c.sockfd, buf->count, buf->ptr);
+    for (hin_buffer_t * elem = buf->next; elem; elem=elem->next) {
+      printf ("continue %d '\n%.*s'\n", elem->count, elem->count, elem->ptr);
+    }
+    printf ("left after is %d\n", len);
+  }
 
   hin_pipe_write (pipe, buf);
 
@@ -228,7 +236,7 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
     perror ("dup2");
     exit (1);
   }
-  if (http->method == HIN_HTTP_POST) {
+  if (http->method == HIN_HTTP_POST && http->post_fd) {
     if (master.debug & DEBUG_CGI)
       fprintf (stderr, "cgi stdin set to %d\n", http->post_fd);
 

@@ -1,4 +1,11 @@
 
+* sanitize_path you can set the index file to something different than index.html
+* bugfix: path parsing was missing ,;
+* bugfix: cgi http status was broken at one point
+* bugfix: responses with large headers are no longer broken
+* bugfix: timer callback corrupted the heap after the first second a program was running
+
+commit fe3b92aeb7247ed22da8956bd095778cfba12e5f
 * fixes to make wordpress and phpmyadmin work
 * added redirect output to logfile function
 * bugfix some of the broken pipe errors

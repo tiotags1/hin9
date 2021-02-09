@@ -14,14 +14,15 @@ access ("start server on %s\n", os.date ("%c"))
 
 to_cache = {ico=true, txt=true, js=true, jpg=true, png=true, css=true}
 to_deflate = {html=true, css=true, js=true, txt=true}
-content_type = {html="text/html", jpg="image/jpeg", png="image/png", gif="image/gif", txt="text/plain", css="text/css", ico="image/vnd.microsoft.icon", js="text/javascript"}
+content_type = {html="text/html", jpg="image/jpeg", png="image/png", gif="image/gif", txt="text/plain", css="text/css", ico="image/vnd.microsoft.icon", js="text/javascript",
+svg="image/svg+xml"}
 
 local server = create_httpd (function (server, req)
   local path, query, method, version = parse_path (req)
   --print ("path is ", path, method, query, version)
   --local h = parse_headers (req)
-  --local ip, port = remote_address (req)
-  --access ("%s %s %s %s\n", ip, method, path, query)
+  local ip, port = remote_address (req)
+  access ("%s %s %s %s\n", ip, method, path, query)
   --for i, k in pairs (h) do
   --  print ("header ", i, k)
   --end
@@ -30,7 +31,6 @@ local server = create_httpd (function (server, req)
   --add_header (req, "Hello", "from server")
   local root = "htdocs"
   local app_path, sub_path = string.match (path, '^/(%w+)/?(.*)')
-  print ("app path ", app_path, "sub", sub_path)
   if (app_path == "proxy") then
     return proxy (req, "http://localhost:28005/" .. (sub_path or ""))
   elseif (path == "/test.test") then
@@ -42,15 +42,17 @@ local server = create_httpd (function (server, req)
   elseif (path == "/hello") then
     return respond (req, 200, "Hello world")
   end
-  local file_path, file_name, ext = sanitize_path (req, root, path)
+  local file_path, file_name, ext = sanitize_path (req, root, path, "index.html")
   if (to_deflate[ext]) then
   else
     set_option (req, "disable", "deflate")
   end
   if (app_path == "wordpress") then
-    print ("wordpress ", file_name, ext, content_type[ext], (file_name ~= "index.html"), (content_type[ext] == nil))
-    if ((file_name == "index.html") or (content_type[ext] == nil)) then
+    file_path, file_name, ext = sanitize_path (req, root, path, "index.php")
+    if (((file_name == "index.php") or (content_type[ext] == nil)) and ext ~= "php") then
       return cgi (req, "/usr/bin/php-cgi", root, root.."/wordpress/index.php")
+    elseif (ext == "php") then
+      return cgi (req, "/usr/bin/php-cgi", root, file_path)
     end
   elseif (ext == "php") then
     return cgi (req, "/usr/bin/php-cgi", root, file_path)

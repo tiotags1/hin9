@@ -68,7 +68,7 @@ typedef struct {
   hin_buffer_t * read_buffer;
 } http_client_t;
 
-#define HIN_HTTP_PATH_ACCEPT "[%w_%-/%.%+%%&#$?=]+"
+#define HIN_HTTP_PATH_ACCEPT "[%w_%-/%.%+%%&#$?=,;]+"
 
 #include <basic_pattern.h>
 
