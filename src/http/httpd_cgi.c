@@ -122,7 +122,11 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
   pipe->finish_callback = hin_pipe_cgi_server_finish_callback;
 
   int httpd_pipe_set_chunked (httpd_client_t * http, hin_pipe_t * pipe);
-  httpd_pipe_set_chunked (http, pipe);
+  if (http->method == HIN_HTTP_HEAD) {
+    http->peer_flags &= ~(HIN_HTTP_CHUNKED | HIN_HTTP_DEFLATE);
+  } else {
+    httpd_pipe_set_chunked (http, pipe);
+  }
 
   if ((http->peer_flags & HIN_HTTP_CHUNKED) == 0 && sz > 0) {
     pipe->in.flags |= HIN_COUNT;

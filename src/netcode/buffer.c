@@ -6,6 +6,7 @@
 #include "hin.h"
 
 void hin_buffer_clean (hin_buffer_t * buffer) {
+  if (master.debug & DEBUG_MEMORY) printf ("cleanup buffer %p\n", buffer);
   if (buffer->ssl_buffer) {
     hin_buffer_clean (buffer->ssl_buffer);
   }

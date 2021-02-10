@@ -1,4 +1,8 @@
 
+* http HEAD requests
+* bugfix: proxy errors broke keepalives
+
+commit 56382bc29585826c98fa097d4486725f27028e94
 * lua callback for request finish, good for fancy logging (use of function involving headers and sending new requests are undefined, will likely crash)
 * added lua get_option for http status and request id
 * added http/1.1 continuous upload, removed restriction to only content-length uploads (not tested, don't have anything that does that)

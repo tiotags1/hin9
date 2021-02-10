@@ -19,7 +19,7 @@ int httpd_client_reread (httpd_client_t * http) {
   if (http->status & HIN_REQ_ENDING) return 0;
 
   int len = buffer->ptr - buffer->data;
-  int num = -1;
+  int num = 0;
   if (len > 0)
     num = httpd_client_read_callback (buffer);
   if (num > 0) {

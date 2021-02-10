@@ -101,6 +101,8 @@ int httpd_parse_headers (httpd_client_t * http, string_t * source) {
     http->method = HIN_HTTP_GET;
   } else if (matchi_string_equal (&method, "POST") > 0) {
     http->method = HIN_HTTP_POST;
+  } else if (matchi_string_equal (&method, "HEAD") > 0) {
+    http->method = HIN_HTTP_HEAD;
   } else {
     printf ("httpd 405 error unknown method\n");
     httpd_respond_fatal (http, 405, NULL);

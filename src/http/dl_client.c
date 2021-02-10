@@ -10,7 +10,7 @@
 int http_client_headers_read_callback (hin_buffer_t * buffer);
 
 void http_client_clean (http_client_t * http) {
-  if (master.debug & DEBUG_PROTO) printf ("http clean %d\n", http->c.sockfd);
+  if (master.debug & DEBUG_MEMORY) printf ("http clean %d\n", http->c.sockfd);
   if (http->save_path) free ((void*)http->save_path);
   if (http->uri.all.ptr) free ((void*)http->uri.all.ptr);
   if (http->host) free (http->host);
@@ -130,8 +130,7 @@ static int connected (hin_client_t * client, int ret) {
   http->read_buffer = NULL;
 
   if (ret < 0) {
-    printf ("couldn't connect\n");
-    finish_callback (http, -1);
+    finish_callback (http, ret);
     http_client_unlink (http);
     return 0;
   }
@@ -139,9 +138,9 @@ static int connected (hin_client_t * client, int ret) {
   if (http->uri.https) {
     if (hin_ssl_connect_init (&http->c) < 0) {
       printf ("couldn't initialize connection\n");
-      finish_callback (http, -1);
+      finish_callback (http, -EPROTO);
       http_client_unlink (http);
-      return -1;
+      return 0;
     }
   }
 
@@ -155,6 +154,7 @@ static int connected (hin_client_t * client, int ret) {
   hin_request_read (buf);
 
   finish_callback (http, 0);
+  return 0;
 }
 
 http_client_t * hin_http_connect (http_client_t * http1, string_t * host, string_t * port, int (*finish_callback) (http_client_t * http, int ret)) {

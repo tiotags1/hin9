@@ -48,10 +48,11 @@ static int fail (hin_buffer_t * buffer, int err) {
     printf ("getnameinfo3 err '%s'\n", gai_strerror (err));
   }
 
+  printf ("connect%s failed %d %s:%s '%s'\n", client->flags & HIN_SSL ? "(s)" : "", client->sockfd, hbuf, sbuf, strerror (-err));
+
   competion_callback_t * callback = (competion_callback_t*)buffer->prev;
   int ret = callback (client, err);
 
-  printf ("connect%s failed %d %s:%s '%s'\n", client->flags & HIN_SSL ? "(s)" : "", client->sockfd, hbuf, sbuf, strerror (-err));
   freeaddrinfo ((struct addrinfo *)buffer->data);
   if (ret) free (client);
   return 1;

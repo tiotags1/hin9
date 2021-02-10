@@ -12,7 +12,7 @@ void httpd_client_ping (httpd_client_t * http, int timeout);
 int httpd_client_reread (httpd_client_t * http);
 
 void httpd_client_clean (httpd_client_t * http) {
-  if (master.debug & DEBUG_PROTO) printf ("httpd clean %d\n", http->c.sockfd);
+  if (master.debug & DEBUG_MEMORY) printf ("httpd clean %d\n", http->c.sockfd);
   if (http->file_path) free ((void*)http->file_path);
   if (http->post_sep) free ((void*)http->post_sep);
 
@@ -51,7 +51,8 @@ int httpd_client_start_request (httpd_client_t * http) {
 }
 
 int httpd_client_finish_request (httpd_client_t * http) {
-  if (master.debug & DEBUG_PROTO) printf ("httpd request done %d\n", http->c.sockfd);
+  int keep = (http->peer_flags & HIN_HTTP_KEEPALIVE) && ((http->state & HIN_REQ_ENDING) == 0);
+  if (master.debug & DEBUG_PROTO) printf ("httpd request done %d %s\n", http->c.sockfd, keep ? "keep" : "close");
 
   // it waits for post data to finish
   http->state &= ~HIN_REQ_DATA;
@@ -60,7 +61,7 @@ int httpd_client_finish_request (httpd_client_t * http) {
   int hin_server_finish_callback (http_client_t * client);
   hin_server_finish_callback (http);
 
-  if ((http->peer_flags & HIN_HTTP_KEEPALIVE) && ((http->state & HIN_REQ_ENDING) == 0)) {
+  if (keep) {
     httpd_client_clean (http);
     httpd_client_start_request (http);
     httpd_client_reread (http);

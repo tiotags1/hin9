@@ -8,12 +8,17 @@
 #include "conf.h"
 
 static int httpd_proxy_close (http_client_t * http) {
-  if (master.debug & DEBUG_PROXY) printf ("proxy close\n");
-
   httpd_client_t * parent = (httpd_client_t*)http->c.parent;
+
   if (parent) {
-    parent->state &= ~(HIN_REQ_PROXY | HIN_REQ_DATA);
-    httpd_client_finish_request (parent);
+    if (master.debug & DEBUG_PROXY) printf ("proxy close %d>%d\n", http->c.sockfd, parent->c.sockfd);
+    parent->state &= ~HIN_REQ_PROXY;
+    if ((parent->state & HIN_REQ_RAW) == 0) {
+      parent->state &= ~(HIN_REQ_PROXY | HIN_REQ_DATA);
+      httpd_client_finish_request (parent);
+    }
+  } else {
+    if (master.debug & DEBUG_PROXY) printf ("proxy close %d\n", http->c.sockfd);
   }
 
   if (http->c.sockfd >= 0) {
@@ -228,14 +233,15 @@ static int http_client_sent_callback (hin_buffer_t * buffer, int ret) {
 int http_proxy_start_request (http_client_t * http, int ret) {
   hin_client_t * client = &http->c;
   httpd_client_t * parent = (httpd_client_t*)http->c.parent;
-  if (master.debug & DEBUG_PROTO) printf ("proxy request begin on socket %d\n", ret);
 
   if (ret < 0) {
-    printf ("proxy connection failed\n");
-    httpd_respond_fatal (parent, 502, NULL);
+    printf ("proxy connection failed '%s'\n", strerror (-ret));
+    httpd_respond_error (parent, 502, NULL);
     httpd_proxy_close (http);
     return -1;
   }
+
+  if (master.debug & DEBUG_PROTO) printf ("proxy request begin on socket %d\n", ret);
 
   hin_lines_t * lines = (hin_lines_t*)&http->read_buffer->buffer;
   lines->read_callback = httpd_proxy_headers_read_callback;
@@ -267,7 +273,12 @@ int http_proxy_start_request (http_client_t * http, int ret) {
   }
 
   const char * method = "GET";
-  if (parent->method == HIN_HTTP_POST) method = "POST";
+  switch (parent->method) {
+  case HIN_HTTP_GET: method = "GET"; break;
+  case HIN_HTTP_POST: method = "POST"; break;
+  case HIN_HTTP_HEAD: method = "HEAD"; break;
+  default: printf ("bad method detected\n"); break;
+  }
 
   header (client, buf, "%s %.*s HTTP/1.1\r\n", method, path_max - path, path);
   if (http->uri.port.len > 0) {
