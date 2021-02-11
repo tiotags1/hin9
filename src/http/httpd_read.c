@@ -23,13 +23,11 @@ int httpd_client_reread (httpd_client_t * http) {
   if (len > 0)
     num = httpd_client_read_callback (buffer);
   if (num > 0) {
-    hin_buffer_eat (buffer, num);
   } else if (num == 0) {
     buffer->count = buffer->sz;
     hin_lines_request (buffer);
   } else {
-    printf ("client error\n");
-    httpd_client_shutdown (http);
+    printf ("client reread error\n");
     return -1;
   }
   return 0;
@@ -113,6 +111,9 @@ int httpd_client_read_callback (hin_buffer_t * buffer) {
     used += consume;
   }
 
+  http->headers.ptr = buffer->data;
+  http->headers.len = used;
+
   // run lua processing
   http->status = 200;
   int hin_server_callback (hin_client_t * client);
@@ -123,7 +124,10 @@ int httpd_client_read_callback (hin_buffer_t * buffer) {
   if (http->state & HIN_REQ_END) {
     printf ("httpd issued forced shutdown\n");
     return -1;
-  } if ((http->state & ~(HIN_REQ_HEADERS|HIN_REQ_END)) == 0) {
+  } else if (http->peer_flags & http->disable & HIN_HTTP_CHUNKUP) {
+    printf ("httpd 411 chunked upload disabled\n");
+    httpd_respond_fatal (http, 411, NULL);
+  } else if ((http->state & ~(HIN_REQ_HEADERS|HIN_REQ_END)) == 0) {
     printf ("httpd 500 missing request\n");
     httpd_respond_error (http, 500, NULL);
     return -1;

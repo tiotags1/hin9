@@ -210,8 +210,11 @@ int httpd_request_chunked (httpd_client_t * http);
 
 int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_path, const char * script_path) {
   hin_client_t * client = &http->c;
-  httpd_request_chunked (http);
+
+  if (http->state & HIN_REQ_DATA) return -1;
   http->state |= (HIN_REQ_DATA | HIN_REQ_CGI);
+
+  httpd_request_chunked (http);
 
   hin_worker_t * worker = calloc (1, sizeof (*worker));
   worker->data = (void*)client;
@@ -219,6 +222,7 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
   int out_pipe[2];
   if (pipe (out_pipe) < 0) {
     perror ("pipe");
+    httpd_respond_error (http, 500, NULL);
     return -1;
   }
   int pid = fork ();

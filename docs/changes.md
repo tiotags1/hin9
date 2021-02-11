@@ -1,4 +1,9 @@
 
+* callback handler for 404 errors (only static files atm)
+* option to disable continuous upload
+* bugfix: finish callback shouldn't crash if you access headers or path
+
+commit 6df538b3466abeb2bb6d4645101f7aa7fe3e7e5f
 * http HEAD requests
 * bugfix: proxy errors broke keepalives
 

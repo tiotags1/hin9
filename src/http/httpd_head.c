@@ -143,9 +143,6 @@ int httpd_parse_req (httpd_client_t * http, string_t * source) {
   int used = httpd_parse_headers (http, source);
   if (used <= 0) return used;
 
-  http->headers = orig;
-  if (http->headers.len > used + http->post_sz) http->headers.len = used + http->post_sz;
-
   if (http->disable & HIN_HTTP_KEEPALIVE) {
     http->peer_flags &= ~HIN_HTTP_KEEPALIVE;
   }

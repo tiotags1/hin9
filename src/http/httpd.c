@@ -51,22 +51,23 @@ int httpd_client_start_request (httpd_client_t * http) {
 }
 
 int httpd_client_finish_request (httpd_client_t * http) {
-  int keep = (http->peer_flags & HIN_HTTP_KEEPALIVE) && ((http->state & HIN_REQ_ENDING) == 0);
-  if (master.debug & DEBUG_PROTO) printf ("httpd request done %d %s\n", http->c.sockfd, keep ? "keep" : "close");
-
   // it waits for post data to finish
   http->state &= ~HIN_REQ_DATA;
   if (http->state & (HIN_REQ_POST)) return 0;
 
-  int hin_server_finish_callback (http_client_t * client);
+  int keep = (http->peer_flags & HIN_HTTP_KEEPALIVE) && ((http->state & HIN_REQ_ENDING) == 0);
+  if (master.debug & DEBUG_PROTO) printf ("httpd request done %d %s\n", http->c.sockfd, keep ? "keep" : "close");
+
+  int hin_server_finish_callback (httpd_client_t * client);
   hin_server_finish_callback (http);
 
+  hin_buffer_eat (http->read_buffer, http->headers.len);
+
+  httpd_client_clean (http);
   if (keep) {
-    httpd_client_clean (http);
     httpd_client_start_request (http);
     httpd_client_reread (http);
   } else {
-    httpd_client_clean (http);
     http->state |= HIN_REQ_END;
     httpd_client_shutdown (http);
   }
@@ -89,13 +90,6 @@ static int httpd_client_close_callback (hin_buffer_t * buffer, int ret) {
   return 0;
 }
 
-int httpd_client_buffer_shutdown (hin_buffer_t * buffer) {
-  httpd_client_t * http = (httpd_client_t*)buffer->parent;
-  if (master.debug & DEBUG_PROTO) printf ("httpd shutdown buffer %d\n", http->c.sockfd);
-  httpd_client_shutdown (http);
-  return 0;
-}
-
 int httpd_client_shutdown (httpd_client_t * http) {
   if (http->state & HIN_REQ_ENDING) return -1;
   http->state |= HIN_REQ_ENDING;
@@ -111,9 +105,15 @@ int httpd_client_shutdown (httpd_client_t * http) {
   return 0;
 }
 
-static int httpd_client_eat_callback (hin_buffer_t * buffer, int num) {
+static int httpd_client_buffer_close_callback (hin_buffer_t * buffer) {
+  httpd_client_t * http = (httpd_client_t*)buffer->parent;
+  if (master.debug & DEBUG_PROTO) printf ("httpd shutdown buffer %d\n", http->c.sockfd);
+  httpd_client_shutdown (http);
+  return 0;
+}
+
+static int httpd_client_buffer_eat_callback (hin_buffer_t * buffer, int num) {
   if (num > 0) {
-    hin_buffer_eat (buffer, num);
   } else if (num == 0) {
     hin_lines_request (buffer);
   } else {
@@ -134,8 +134,8 @@ int httpd_client_accept (hin_client_t * client) {
   hin_lines_t * lines = (hin_lines_t*)&buf->buffer;
   int httpd_client_read_callback (hin_buffer_t * buffer);
   lines->read_callback = httpd_client_read_callback;
-  lines->close_callback = httpd_client_buffer_shutdown;
-  lines->eat_callback = httpd_client_eat_callback;
+  lines->close_callback = httpd_client_buffer_close_callback;
+  lines->eat_callback = httpd_client_buffer_eat_callback;
   hin_request_read (buf);
   http->read_buffer = buf;
 }

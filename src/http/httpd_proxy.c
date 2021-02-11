@@ -312,6 +312,8 @@ http_client_t * hin_http_connect (http_client_t * http1, string_t * host, string
 
 http_client_t * hin_proxy (hin_client_t * parent_c, const char * url1) {
   httpd_client_t * parent = (httpd_client_t*)parent_c;
+
+  if (parent->state & HIN_REQ_DATA) return NULL;
   parent->state |= HIN_REQ_DATA | HIN_REQ_PROXY;
 
   hin_uri_t info;

@@ -27,6 +27,39 @@ int hin_server_callback (hin_client_t * client) {
   }
 }
 
+#include "http.h"
+
+int hin_server_error_callback (hin_client_t * client, int error_code, const char * msg) {
+  if (client->parent == NULL) {
+    printf ("no socket parent\n");
+    return -1;
+  }
+  hin_client_t * server_client = (hin_client_t*)client->parent;
+  hin_server_data_t * server = (hin_server_data_t*)server_client->parent;
+
+  lua_State * L = server->L;
+  if (server->error_callback == 0) return 0;
+
+  httpd_client_t * http = (httpd_client_t*)client;
+  if (http->state & HIN_REQ_ERROR_HANDLED) return 0;
+  http->state |= HIN_REQ_ERROR_HANDLED;
+
+  http->state &= ~(HIN_REQ_DATA | HIN_REQ_RAW);
+
+  lua_rawgeti (L, LUA_REGISTRYINDEX, server->error_callback);
+  lua_pushlightuserdata (L, server);
+  lua_pushlightuserdata (L, client);
+  lua_pushnumber (L, error_code);
+  lua_pushstring (L, msg);
+
+  if (lua_pcall (L, 4, LUA_MULTRET, 0) != 0) {
+    printf ("error running error callback '%s'\n", lua_tostring (L, -1));
+    return -1;
+  }
+  if (http->state & HIN_REQ_DATA) return 1;
+  return 0;
+}
+
 int hin_server_finish_callback (hin_client_t * client) {
   if (client->parent == NULL) {
     printf ("no socket parent\n");
@@ -42,7 +75,7 @@ int hin_server_finish_callback (hin_client_t * client) {
   lua_pushlightuserdata (L, client);
 
   if (lua_pcall (L, 2, LUA_MULTRET, 0) != 0) {
-    printf ("error running request callback '%s'\n", lua_tostring (L, -1));
+    printf ("error running finish callback '%s'\n", lua_tostring (L, -1));
     return -1;
   }
   return 0;

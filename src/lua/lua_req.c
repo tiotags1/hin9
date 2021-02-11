@@ -49,7 +49,6 @@ static int l_hin_parse_headers (lua_State *L) {
   string_t temp = http->headers;
   string_t line, param;
   if (find_line (&temp, &line) == 0) {
-    printf ("httpd parsing error 2\n");
     return 0;
   }
 
@@ -125,8 +124,6 @@ static int l_hin_cgi (lua_State *L) {
 
   int hin_cgi (hin_client_t * client, const char * exe_path, const char * root, const char * path);
   if (hin_cgi (client, exe_path, root_path, script_path) < 0) {
-    httpd_respond_fatal (http, 500, NULL);
-    return 0;
   }
   return 0;
 }

@@ -27,6 +27,8 @@ uint32_t get_mask (const char * name) {
     return HIN_HTTP_DEFLATE;
   } else if (strcmp (name, "date") == 0) {
     return HIN_HTTP_DATE;
+  } else if (strcmp (name, "chunked_upload") == 0) {
+    return HIN_HTTP_CHUNKUP;
   } else if (strcmp (name, "all") == 0) {
     return 0xffffffff;
   } else {

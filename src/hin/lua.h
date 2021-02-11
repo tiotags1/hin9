@@ -12,6 +12,7 @@ typedef struct hin_server_data_struct {
   // callback
   int refcount;
   int request_callback;
+  int error_callback;
   int finish_callback;
   uint32_t magic;
   uint32_t disable;

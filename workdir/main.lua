@@ -31,9 +31,6 @@ local server = create_httpd (function (server, req)
   local ip, port = remote_address (req)
   local id = get_option (req, "id")
   access ("%x %s %s %s %s\n", id, ip, method, path, query)
-  --for i, k in pairs (h) do
-  --  print ("header ", i, k)
-  --end
   --set_option (req, "status", 403)
   --set_option (req, "cache", -1)
   --add_header (req, "Hello", "from server")
@@ -41,12 +38,6 @@ local server = create_httpd (function (server, req)
   local app_path, sub_path = string.match (path, '^/(%w+)/?(.*)')
   if (app_path == "proxy") then
     return proxy (req, "http://localhost:28005/" .. (sub_path or ""))
-  elseif (path == "/test.test") then
-    return cgi (req, "/usr/local/bin/fcgi_test", nil)
-  elseif (path == "/test1.test") then
-    return cgi (req, "/usr/local/bin/fcgi_test", "htdocs/test.php")
-  elseif (path == "/cat") then
-    return cgi (req, "/bin/cat", nil)
   elseif (path == "/hello") then
     return respond (req, 200, "Hello world")
   end
@@ -71,6 +62,11 @@ local server = create_httpd (function (server, req)
     set_content_type (req, content_type[ext])
   end
   send_file (req, file_path, 0, -1)
+
+end, function (server, req, status, err)
+  printf ("error callback called %d err '%s'\n", status, err)
+  respond (req, 404, "URL could not be found on this server")
+
 end, function (server, req)
   local status = get_option (req, "status")
   local id = get_option (req, "id")

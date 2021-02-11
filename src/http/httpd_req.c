@@ -54,15 +54,21 @@ int httpd_write_common_headers (hin_client_t * client, hin_buffer_t * buf) {
 
 static int http_raw_response_callback (hin_buffer_t * buffer, int ret) {
   httpd_client_t * http = (httpd_client_t*)buffer->parent;
+
   if (ret < 0) { printf ("httpd sending error %s\n", strerror (-ret)); }
   else if (ret != buffer->count) printf ("httpd http_error_write_callback not sent all of it %d/%d\n", ret, buffer->count);
+
   http->state &= ~HIN_REQ_RAW;
   httpd_client_finish_request (http);
+
   return 1;
 }
 
 int httpd_respond_text (httpd_client_t * http, int status, const char * body) {
   hin_client_t * client = &http->c;
+
+  if (http->state & HIN_REQ_DATA) return -1;
+  http->state |= HIN_REQ_DATA | HIN_REQ_RAW;
 
   if (http->method == HIN_HTTP_POST) {
     printf ("httpd 405 post on a raw resource\n");
@@ -101,15 +107,16 @@ int httpd_respond_text (httpd_client_t * http, int status, const char * body) {
   if (freeable) free ((char*)body);
   if (master.debug & DEBUG_RW) printf ("raw response '\n%.*s'\n", buf->count, buf->ptr);
   hin_request_write (buf);
-
-  http->state |= HIN_REQ_DATA | HIN_REQ_RAW;
+  return 0;
 }
 
 int httpd_respond_error (httpd_client_t * http, int status, const char * body) {
+  http->state &= ~HIN_REQ_DATA;
   return httpd_respond_text (http, status, body);
 }
 
 int httpd_respond_fatal (httpd_client_t * http, int status, const char * body) {
+  http->state &= ~HIN_REQ_DATA;
   httpd_respond_text (http, status, body);
   httpd_client_shutdown (http);
 }
@@ -271,7 +278,9 @@ static int httpd_open_filefd_callback (hin_buffer_t * buf, int ret) {
   httpd_client_t * http = (httpd_client_t*)client;
   if (ret < 0) {
     printf ("http 404 error can't open '%s': %s\n", http->file_path, strerror (-ret));
-    httpd_respond_error (http, 404, NULL);
+    int hin_server_error_callback (hin_client_t * client, int error_code, const char * msg);
+    if (hin_server_error_callback (client, 404, "can't open") == 0)
+      httpd_respond_error (http, 404, NULL);
     return -1;
   }
   http->file_fd = ret;
@@ -291,16 +300,19 @@ static int httpd_open_filefd_callback (hin_buffer_t * buf, int ret) {
 int httpd_handle_file_request (hin_client_t * client, const char * path, off_t pos, off_t count, uintptr_t param) {
   httpd_client_t * http = (httpd_client_t*)client;
 
+  if (http->state & HIN_REQ_DATA) return -1;
+  http->state |= HIN_REQ_DATA;
+
   if (http->method == HIN_HTTP_POST) {
     printf ("httpd 405 post on a file resource\n");
     httpd_respond_fatal (http, 405, NULL);
     return 0;
   }
 
+  if (http->file_path) free (http->file_path);
   http->file_path = strdup (path);
   http->pos = pos;
   http->count = count;
-  http->state |= HIN_REQ_DATA;
 
   hin_buffer_t * buf = malloc (sizeof (*buf) + READ_SZ);
   memset (buf, 0, sizeof (*buf));
