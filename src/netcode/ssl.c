@@ -205,11 +205,11 @@ static int hin_ssl_check_data (hin_ssl_t * ssl, hin_buffer_t * crypt) {
   break;
   }
 
-  if (n = hin_ssl_do_write (ssl, crypt)) {
+  if ((n = hin_ssl_do_write (ssl, crypt))) {
     if (n < 0) printf ("ssl error do write %s\n", strerror (-n));
     return n;
   }
-  if (n = hin_ssl_do_read (ssl, crypt)) {
+  if ((n = hin_ssl_do_read (ssl, crypt))) {
     if (n < 0) printf ("ssl error do read %s\n", strerror (-n));
     return n;
   }
@@ -247,6 +247,7 @@ int hin_ssl_request_write (hin_buffer_t * buffer) {
   if (buffer->prev || buffer->next) { printf ("ERROR! buffer is already part of a list\n"); }
   hin_buffer_list_append ((hin_buffer_t**)&ssl->write, buffer);
   if (ssl->write == buffer) hin_ssl_handshake (ssl, buffer);
+  return 0;
 }
 
 int hin_ssl_request_read (hin_buffer_t * buffer) {
@@ -254,6 +255,7 @@ int hin_ssl_request_read (hin_buffer_t * buffer) {
   if (buffer->prev || buffer->next) { printf ("ERROR! buffer is already part of a list\n"); }
   hin_buffer_list_append ((hin_buffer_t**)&ssl->read, buffer);
   if (ssl->read == buffer) hin_ssl_handshake (ssl, buffer);
+  return 0;
 }
 
 #endif

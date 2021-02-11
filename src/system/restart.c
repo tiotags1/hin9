@@ -35,6 +35,7 @@ int hin_check_alive () {
   hin_clean ();
 
   exit (0);
+  return -1;
 }
 
 void hin_stop () {
@@ -64,6 +65,7 @@ int hin_restart () {
   char * argv[] = {master.exe_path, buf, NULL};
   execvp (master.exe_path, argv);
   printf ("crash\n");
+  return 0;
 }
 
 static void sig_restart (int signo) {
@@ -122,6 +124,7 @@ int install_sighandler () {
 static int hin_use_sharedmem (int sharefd) {
   hin_master_share_t * share = mmap (NULL, 4096, PROT_READ|PROT_WRITE, MAP_SHARED, sharefd, 0);
   master.share = share;
+  return 0;
 }
 
 static int hin_create_sharedmem () {
@@ -138,13 +141,14 @@ static int hin_create_sharedmem () {
   master.share = share;
   master.sharefd = sharefd;
   memset (share, 0, 4096);
+  return 0;
 }
 
 int hin_init_sharedmem () {
   if (master.sharefd == 0) {
-    hin_create_sharedmem ();
+    return hin_create_sharedmem ();
   } else {
-    hin_use_sharedmem (master.sharefd);
+    return hin_use_sharedmem (master.sharefd);
   }
 }
 

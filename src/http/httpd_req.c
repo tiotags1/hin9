@@ -119,6 +119,7 @@ int httpd_respond_fatal (httpd_client_t * http, int status, const char * body) {
   http->state &= ~HIN_REQ_DATA;
   httpd_respond_text (http, status, body);
   httpd_client_shutdown (http);
+  return 0;
 }
 
 static int httpd_close_filefd (hin_buffer_t * buffer, httpd_client_t * http) {
@@ -132,11 +133,13 @@ static int httpd_close_filefd (hin_buffer_t * buffer, httpd_client_t * http) {
 static int httpd_pipe_error_callback (hin_pipe_t * pipe) {
   printf ("error in client %d\n", pipe->out.fd);
   httpd_client_shutdown (pipe->parent);
+  return 0;
 }
 
 static int done_file (hin_pipe_t * pipe) {
   if (master.debug & DEBUG_PIPE) printf ("pipe file transfer finished infd %d outfd %d\n", pipe->in.fd, pipe->out.fd);
   httpd_client_finish_request (pipe->parent);
+  return 0;
 }
 
 static int httpd_statx_callback (hin_buffer_t * buf, int ret) {

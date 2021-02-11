@@ -22,7 +22,7 @@ typedef struct {
   char ** env;
 } env_list_t;
 
-static int upcase (env_list_t * env) {
+static void upcase (env_list_t * env) {
   int p = env->pos - 1;
   for (char * ptr=env->env[p]; *ptr && *ptr != '='; ptr++) {
     *ptr = toupper (*ptr);
@@ -44,6 +44,7 @@ static int var (env_list_t * env, const char * fmt, ...) {
   if (master.debug & DEBUG_CGI) fprintf (stderr, "var set %s\n", env->env[p]);
 
   va_end(ap);
+  return 0;
 }
 
 static int hin_pipe_cgi_server_finish_callback (hin_pipe_t * pipe) {
@@ -59,6 +60,7 @@ static int hin_pipe_cgi_server_finish_callback (hin_pipe_t * pipe) {
   #endif
   free (worker);
   httpd_client_finish_request (http);
+  return 0;
 }
 
 int hin_pipe_cgi_server_read_callback (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush) {
@@ -204,6 +206,7 @@ int hin_cgi_send (httpd_client_t * http, hin_worker_t * worker, int fd) {
   lines->read_callback = hin_cgi_headers_read_callback;
   lines->close_callback = hin_cgi_headers_close_callback;
   hin_request_read (buf);
+  return 0;
 }
 
 int httpd_request_chunked (httpd_client_t * http);

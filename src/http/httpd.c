@@ -48,6 +48,7 @@ int httpd_client_start_request (httpd_client_t * http) {
     http->disable = data->disable;
   }
   httpd_client_ping (http, data->timeout);
+  return 0;
 }
 
 int httpd_client_finish_request (httpd_client_t * http) {
@@ -138,6 +139,7 @@ int httpd_client_accept (hin_client_t * client) {
   lines->eat_callback = httpd_client_buffer_eat_callback;
   hin_request_read (buf);
   http->read_buffer = buf;
+  return 0;
 }
 
 hin_client_t * httpd_create (const char * addr, const char * port, const char * sock_type, void * ssl_ctx) {

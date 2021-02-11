@@ -70,6 +70,7 @@ int hin_buffer_prepare (hin_buffer_t * buffer, int num) {
   }
   buffer->ptr = buffer->data + new_pos;
   buffer->count = num;
+  return 0;
 }
 
 int hin_buffer_eat (hin_buffer_t * buffer, int num) {
@@ -82,6 +83,7 @@ int hin_buffer_eat (hin_buffer_t * buffer, int num) {
 
   buffer->ptr = buffer->data + new_pos;
   buffer->count += num;
+  return 0;
 }
 
 static int hin_lines_read_callback (hin_buffer_t * buffer, int ret);
@@ -95,6 +97,7 @@ int hin_lines_request (hin_buffer_t * buffer) {
   hin_buffer_prepare (buffer, sz);
   buffer->callback = hin_lines_read_callback;
   hin_request_read (buffer);
+  return 0;
 }
 
 int hin_lines_default_eat (hin_buffer_t * buffer, int num) {

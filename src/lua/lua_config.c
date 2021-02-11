@@ -130,6 +130,6 @@ static lua_function_t functs [] = {
 };
 
 int hin_lua_config_init (lua_State * L) {
-  lua_add_functions (L, functs);
+  return lua_add_functions (L, functs);
 }
 

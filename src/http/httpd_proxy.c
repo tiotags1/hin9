@@ -25,6 +25,7 @@ static int httpd_proxy_close (http_client_t * http) {
     int http_client_finish_request (http_client_t * http);
     http_client_finish_request (http);
   }
+  return 0;
 }
 
 static int httpd_proxy_pipe_close (hin_pipe_t * pipe) {
@@ -32,7 +33,7 @@ static int httpd_proxy_pipe_close (hin_pipe_t * pipe) {
   http_client_t * http = pipe->parent1;
   http->io_state &= ~HIN_REQ_DATA;
   if (http->io_state & HIN_REQ_POST) return 0;
-  httpd_proxy_close (http);
+  return httpd_proxy_close (http);
 }
 
 static int httpd_proxy_pipe_post_close (hin_pipe_t * pipe) {
@@ -40,17 +41,18 @@ static int httpd_proxy_pipe_post_close (hin_pipe_t * pipe) {
   http_client_t * http = pipe->parent1;
   http->io_state &= ~HIN_REQ_POST;
   if (http->io_state & HIN_REQ_DATA) return 0;
-  httpd_proxy_close (http);
+  return httpd_proxy_close (http);
 }
 
 static int httpd_proxy_pipe_in_error (hin_pipe_t * pipe) {
   if (master.debug & DEBUG_PROXY) printf ("proxy proxied server connection error\n");
   int http_client_shutdown (http_client_t * http);
-  http_client_shutdown (pipe->parent1);
+  return http_client_shutdown (pipe->parent1);
 }
 
 static int httpd_proxy_pipe_out_error (hin_pipe_t * pipe) {
   if (master.debug & DEBUG_PROXY) printf ("proxy requester error\n");
+  return 0;
 }
 
 static int httpd_proxy_buffer_close (hin_buffer_t * buffer) {
@@ -58,7 +60,7 @@ static int httpd_proxy_buffer_close (hin_buffer_t * buffer) {
   http_client_t * http = (http_client_t*)buffer->parent;
   if (http->c.parent)
     httpd_proxy_close (http);
-  http_client_shutdown (http);
+  return http_client_shutdown (http);
 }
 
 static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer) {

@@ -25,6 +25,7 @@ int hin_server_callback (hin_client_t * client) {
     printf ("error running request callback '%s'\n", lua_tostring (L, -1));
     return -1;
   }
+  return 0;
 }
 
 #include "http.h"

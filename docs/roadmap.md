@@ -1,7 +1,6 @@
 
 * bugs
-  * ssl renegotiation
-  * if responses are larger than READ_SZ (4096 atm) it won't print overflowing headers
+  * ?
 
 
 * reverse proxy
@@ -17,7 +16,6 @@
   * graceful restart
   * daemon detach from console
   * pid file file locking
-  * better access log functions
 
 
 * sandboxing

@@ -20,6 +20,7 @@ static int hin_http_pipe_finish_callback (hin_pipe_t * pipe) {
   }
   int http_client_finish_request (http_client_t * http);
   http_client_finish_request (http);
+  return 0;
 }
 
 int http_client_send_data (hin_client_t * client, string_t * source) {
@@ -130,6 +131,7 @@ int http_send_request (hin_client_t * client) {
   header (client, buf, "\r\n");
   if (master.debug & DEBUG_RW) printf ("http request '%.*s'\n", buf->count, buf->ptr);
   hin_request_write (buf);
+  return 0;
 }
 
 

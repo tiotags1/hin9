@@ -57,11 +57,13 @@ int http_client_shutdown (http_client_t * http) {
   buf->ssl = &http->c.ssl;
   hin_request_close (buf);
   hin_client_list_remove (&master.connection_list, &http->c);
+  return 0;
 }
 
 int http_client_buffer_close (hin_buffer_t * buf) {
   printf ("http buffer close %d\n", buf->fd);
   http_client_shutdown (buf->parent);
+  return 0;
 }
 
 int match_string_equal1 (string_t * source, const char * str) {
@@ -109,6 +111,7 @@ int http_client_start_request (http_client_t * http, int ret) {
 
   int http_send_request (http_client_t * http);
   http_send_request (http);
+  return 0;
 }
 
 int http_client_finish_request (http_client_t * http) {
@@ -120,6 +123,7 @@ int http_client_finish_request (http_client_t * http) {
   } else {
     http_client_shutdown (http);
   }
+  return 0;
 }
 
 static int connected (hin_client_t * client, int ret) {

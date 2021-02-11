@@ -27,6 +27,7 @@ int console_execute (string_t * source) {
     if (lua_reload () < 0)
       printf ("reload failed\n");
   }
+  return 0;
 }
 
 static int hin_console_read_callback (hin_buffer_t * buf, int ret) {

@@ -1,4 +1,8 @@
 
+* documentation changes
+* fixing clang errors
+
+commit 7422660e2a454aa34646ac216e693639da78f0cc
 * callback handler for 404 errors (only static files atm)
 * option to disable continuous upload
 * bugfix: finish callback shouldn't crash if you access headers or path

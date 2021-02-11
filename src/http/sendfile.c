@@ -151,6 +151,7 @@ int httpd_pipe_set_chunked (httpd_client_t * http, hin_pipe_t * pipe) {
       pipe->read_callback = hin_pipe_copy_chunked;
     }
   }
+  return 0;
 }
 
 int httpd_pipe_upload_chunked (httpd_client_t * http, hin_pipe_t * pipe) {

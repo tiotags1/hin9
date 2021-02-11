@@ -14,6 +14,7 @@ int lua_add_functions (lua_State * L, lua_function_t * func) {
     lua_setglobal (L, func->name);
     func++;
   }
+  return 0;
 }
 
 int run_file (lua_State * L, const char * path) {
@@ -39,6 +40,7 @@ int run_function (lua_State * L, const char * name) {
     fprintf (stderr, "Failed to run function '%s': %s\n", name, lua_tostring (L, -1));
     return -1;
   }
+  return 0;
 }
 
 

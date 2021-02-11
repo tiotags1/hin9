@@ -33,6 +33,7 @@ int hin_pipe_write (hin_pipe_t * pipe, hin_buffer_t * buffer) {
     hin_buffer_list_append (&pipe->write, buf);
     pipe->num_write++;
   }
+  return 0;
 }
 
 int hin_pipe_append (hin_pipe_t * pipe, hin_buffer_t * buffer) {
@@ -54,6 +55,7 @@ int hin_pipe_append (hin_pipe_t * pipe, hin_buffer_t * buffer) {
     ret1 = pipe->read_callback (pipe, buffer, buffer->count, flush);
   }
   if (ret1) hin_buffer_clean (buffer);
+  return 0;
 }
 
 int hin_pipe_init (hin_pipe_t * pipe) {
@@ -61,10 +63,12 @@ int hin_pipe_init (hin_pipe_t * pipe) {
     pipe->read_callback = hin_pipe_copy_raw;
   if (pipe->buffer_callback == NULL)
     pipe->buffer_callback = hin_pipe_get_buffer;
+  return 0;
 }
 
 int hin_pipe_start (hin_pipe_t * pipe) {
   hin_pipe_advance (pipe);
+  return 0;
 }
 
 int hin_pipe_copy_raw (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush) {
@@ -89,6 +93,7 @@ static int hin_pipe_read_next (hin_buffer_t * buffer) {
   pipe->num_read++;
 
   hin_request_read (buffer);
+  return 0;
 }
 
 static int hin_pipe_write_next (hin_buffer_t * buffer) {
@@ -106,6 +111,7 @@ static int hin_pipe_write_next (hin_buffer_t * buffer) {
   }
 
   hin_request_write (buffer);
+  return 0;
 }
 
 int hin_pipe_advance (hin_pipe_t * pipe) {
@@ -128,6 +134,7 @@ int hin_pipe_advance (hin_pipe_t * pipe) {
     hin_buffer_list_remove (&pipe->write, buffer);
     hin_pipe_write_next (buffer);
   }
+  return 0;
 }
 
 int hin_pipe_write_callback (hin_buffer_t * buffer, int ret) {

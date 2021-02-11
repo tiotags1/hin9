@@ -130,12 +130,14 @@ int hin_event_init () {
     exit (1);
   }
   #endif
+  return 1;
 }
 
 int hin_event_clean () {
   if (ring.ring_fd > 0)
     io_uring_queue_exit (&ring);
   memset (&ring, 0, sizeof (ring));
+  return 0;
 }
 
 int hin_event_loop () {
@@ -160,6 +162,7 @@ int hin_event_loop () {
       hin_buffer_clean (buffer);
     }
   }
+  return 0;
 }
 
 

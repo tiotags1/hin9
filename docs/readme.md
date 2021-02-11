@@ -11,7 +11,16 @@ server tries to mitigate DDoS effects by offering a very robust way of dropping 
 requirements
 ------------
 
-linux kernel >5.6 (march 2020), liburing, liblua (5.1 ?), libz, openssl/libressl, ninja build, and the libs in the other repo
+linux kernel >5.6 (march 2020), liburing, lua (5.1 ?), libz
+optional: openssl/libressl
+ninja build system for compilation
+
+
+install & run
+-------------
+
+cd build && ninja && cd ..
+build/hin9
 
 
 roadmap
