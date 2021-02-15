@@ -60,7 +60,7 @@ int hin_pipe_copy_deflate (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, in
 
   int have, err;
   http->z.avail_in = num;
-  http->z.next_in = buffer->buffer;
+  http->z.next_in = (Bytef *)buffer->buffer;
   buffer->count = num;
 
   if (master.debug & DEBUG_DEFLATE) printf ("deflate num %d flush %d\n", num, flush);
@@ -74,7 +74,7 @@ int hin_pipe_copy_deflate (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, in
       new->count = sizeof (numbuf);
     }
     http->z.avail_out = new->sz;
-    http->z.next_out = &new->buffer[new->count];
+    http->z.next_out = (Bytef *)&new->buffer[new->count];
     int ret1 = deflate (&http->z, flush);
     have = new->sz - http->z.avail_out;
 
@@ -84,9 +84,9 @@ int hin_pipe_copy_deflate (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, in
 
       if (http->peer_flags & HIN_HTTP_CHUNKED) {
         new->sz += sizeof (numbuf) + 8;
-        header (client, new, "\r\n");
+        header (new, "\r\n");
         if (flush && (http->z.avail_out != 0)) {
-          header (client, new, "0\r\n\r\n");
+          header (new, "0\r\n\r\n");
         }
 
         int num = snprintf (numbuf, sizeof (numbuf), "%x\r\n", have);
@@ -123,16 +123,16 @@ int hin_pipe_copy_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, in
 
   //buffer->count = num;
   if (num > 0) {
-    header (client, buf, "%x\r\n", num);
+    header (buf, "%x\r\n", num);
 
     memcpy (buf->ptr + buf->count, buffer->ptr, num);
     buf->count += num;
 
-    header (client, buf, "\r\n");
+    header (buf, "\r\n");
   }
 
   if (flush) {
-    header (client, buf, "0\r\n\r\n");
+    header (buf, "0\r\n\r\n");
   }
 
   hin_pipe_write (pipe, buf);

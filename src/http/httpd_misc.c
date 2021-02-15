@@ -61,84 +61,11 @@ void httpd_close_socket () {
   }
 }
 
-static hin_buffer_t * new_buffer (hin_buffer_t * buffer) {
-  printf ("header needed to make new buffer\n");
-  hin_buffer_t * buf = calloc (1, sizeof (hin_buffer_t) + READ_SZ);
-  buf->sz = READ_SZ;
-  buf->fd = buffer->fd;
-  buf->flags = buffer->flags;
-  buf->callback = buffer->callback;
-  buf->parent = buffer->parent;
-  buf->ptr = buf->buffer;
-  buf->ssl = buffer->ssl;
-  buf->count = 0;
-  buffer->next = buf;
-  buf->prev = buffer;
-  return buf;
-}
-
-static int vheader (hin_client_t * client, hin_buffer_t * buffer, const char * fmt, va_list ap) {
-  if (buffer->next) return vheader (client, buffer->next, fmt, ap);
-  int pos = buffer->count;
-  int sz = buffer->sz - buffer->count;
-  va_list prev;
-  va_copy (prev, ap);
-  int len = vsnprintf (buffer->ptr + pos, sz, fmt, ap);
-  if (len > sz) {
-    if (len > READ_SZ) {
-      printf ("'header' failed to write more\n");
-      va_end (ap);
-      return 0;
-    }
-    hin_buffer_t * buf = new_buffer (buffer);
-    return vheader (client, buf, fmt, prev);
-  }
-  buffer->count += len;
-  return len;
-}
-
-int header (hin_client_t * client, hin_buffer_t * buffer, const char * fmt, ...) {
-  va_list ap;
-  va_start (ap, fmt);
-
-  int len = vheader (client, buffer, fmt, ap);
-
-  va_end (ap);
-  return len;
-}
-
-int header_raw (hin_client_t * client, hin_buffer_t * buffer, const char * data, int len) {
-  if (buffer->next) return header_raw (client, buffer->next, data, len);
-
-  int pos = buffer->count;
-  int sz = buffer->sz - buffer->count;
-  if (len > sz) return 0;
-  if (len > sz) {
-    if (len > READ_SZ) {
-      printf ("'header_raw' failed to write more\n");
-      return 0;
-    }
-    hin_buffer_t * buf = new_buffer (buffer);
-    return header_raw (client, buf, data, len);
-  }
-
-  memcpy (buffer->ptr + pos, data, len);
-  buffer->count += len;
-  return len;
-}
-
-int header_date (hin_client_t * client, hin_buffer_t * buf, const char * name, time_t time) {
-  char buffer[80];
-  struct tm *info = gmtime (&time);
-  strftime (buffer, sizeof buffer, "%a, %d %b %Y %X GMT", info);
-  return header (client, buf, "%s: %s\r\n", name, buffer);
-}
-
 time_t hin_date_str_to_time (string_t * source) {
   struct tm tm;
   time_t t;
   if (strptime (source->ptr, "%a, %d %b %Y %X GMT", &tm) == NULL) {
-    printf ("can't strptime\n");
+    printf ("can't strptime '%.*s'\n", 20, source->ptr);
     return 0;
   }
   tm.tm_isdst = -1; // Not set by strptime(); tells mktime() to determine whether daylight saving time is in effect

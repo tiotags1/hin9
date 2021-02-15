@@ -1,4 +1,10 @@
 
+
+* cgi output cache (cache doesn't check a max or free items)
+* option to disable local cache
+* pipe count output bytes
+
+commit 9ef4d28f233236083c921b8e5aa9a2ed3a0dea16
 * documentation changes
 * fixing clang errors
 

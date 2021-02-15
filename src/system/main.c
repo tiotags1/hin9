@@ -26,6 +26,8 @@ void hin_clean () {
   hin_event_clean ();
   void hin_sharedmem_clean ();
   hin_sharedmem_clean ();
+  void hin_cache_clean ();
+  hin_cache_clean ();
 
   //close (0); close (1); close (2);
 
@@ -60,7 +62,7 @@ int main (int argc, const char * argv[]) {
     }
   }
   master.debug = 0xffffffff;
-  master.debug = 0;
+  //master.debug = 0;
   //master.debug |= DEBUG_SOCKET;
   //master.debug &= ~(DEBUG_URING);
   #if HIN_HTTPD_WORKER_PREFORKED
@@ -84,6 +86,8 @@ int main (int argc, const char * argv[]) {
 
   printf ("hin serve ...\n");
   master.share->done = 1;
+
+  hin_cache_create ();
 
   //http_download ("http://localhost:28005/cgi-bin/test.php", "/tmp/dl.txt", NULL);
   //http_download ("https://localhost:28006/cgi-bin/test.php", "/tmp/dl.txt", NULL);

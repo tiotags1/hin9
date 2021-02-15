@@ -26,13 +26,13 @@ typedef struct hin_pipe_struct hin_pipe_t;
 enum { HIN_DONE = 0x1, HIN_SOCKET = 0x2, HIN_FILE = 0x4, HIN_OFFSETS = 0x8,
        HIN_SSL = 0x10, HIN_COUNT = 0x20, HIN_HIDE = 0x40 };
 
-enum { HIN_CLIENT = 1, HIN_DYN_BUFFER, HIN_SERVER, HIN_DOWNLOAD };
+enum { HIN_CLIENT = 1, HIN_DYN_BUFFER, HIN_SERVER, HIN_DOWNLOAD, HIN_CACHE_OBJECT };
 
 enum { DEBUG_OTHER = 0x1, DEBUG_PIPE = 0x2, DEBUG_HEADERS = 0x4, DEBUG_RW = 0x8,
   DEBUG_SSL = 0x10, DEBUG_PROTO = 0x20, DEBUG_URING = 0x40, DEBUG_SOCKET = 0x80,
   DEBUG_CGI = 0x100, DEBUG_POST = 0x200, DEBUG_CONFIG = 0x400, DEBUG_TIMER = 0x800,
   DEBUG_PROXY = 0x1000, DEBUG_DEFLATE = 0x2000, DEBUG_CHILD = 0x4000, DEBUG_CHUNK = 0x8000,
-  DEBUG_SYSCALL = 0x10000, DEBUG_MEMORY = 0x20000 };
+  DEBUG_SYSCALL = 0x10000, DEBUG_MEMORY = 0x20000, DEBUG_CACHE = 0x40000 };
 
 typedef int (*hin_callback_t) (hin_buffer_t * buffer, int ret);
 
@@ -59,7 +59,7 @@ typedef struct {
 
 struct hin_pipe_struct {
   hin_pipe_dir_t in, out;
-  off_t count, sz;
+  off_t count, left, sz;
   void * parent, * parent1;
   hin_buffer_t * write;
   int num_write, num_read;

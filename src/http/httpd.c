@@ -52,6 +52,9 @@ int httpd_client_start_request (httpd_client_t * http) {
 }
 
 int httpd_client_finish_request (httpd_client_t * http) {
+  if (http->c.type == HIN_CACHE_OBJECT) {
+    printf ("httpd client finished error: received cache object\n");
+  }
   // it waits for post data to finish
   http->state &= ~HIN_REQ_DATA;
   if (http->state & (HIN_REQ_POST)) return 0;

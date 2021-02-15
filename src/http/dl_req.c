@@ -56,7 +56,7 @@ int http_client_send_data (hin_client_t * client, string_t * source) {
     pipe->decode_callback = hin_pipe_decode_chunked;
   } else if (sz > 0) {
     pipe->in.flags |= HIN_COUNT;
-    pipe->count = pipe->sz = sz;
+    pipe->left = pipe->sz = sz;
   }
 
   if (len > 0) {
@@ -117,18 +117,18 @@ int http_send_request (hin_client_t * client) {
     path_max = http->uri.query.ptr + http->uri.query.len;
   }
 
-  header (client, buf, "GET %.*s HTTP/1.1\r\n", path_max - path, path);
+  header (buf, "GET %.*s HTTP/1.1\r\n", path_max - path, path);
   if (http->uri.port.len > 0) {
-    header (client, buf, "Host: %.*s:%.*s\r\n", http->uri.host.len, http->uri.host.ptr, http->uri.port.len, http->uri.port.ptr);
+    header (buf, "Host: %.*s:%.*s\r\n", http->uri.host.len, http->uri.host.ptr, http->uri.port.len, http->uri.port.ptr);
   } else {
-    header (client, buf, "Host: %.*s\r\n", http->uri.host.len, http->uri.host.ptr);
+    header (buf, "Host: %.*s\r\n", http->uri.host.len, http->uri.host.ptr);
   }
   if (HIN_HTTPD_PROXY_CONNECTION_REUSE) {
-    header (client, buf, "Connection: keep-alive\r\n");
+    header (buf, "Connection: keep-alive\r\n");
   } else {
-    header (client, buf, "Connection: close\r\n");
+    header (buf, "Connection: close\r\n");
   }
-  header (client, buf, "\r\n");
+  header (buf, "\r\n");
   if (master.debug & DEBUG_RW) printf ("http request '%.*s'\n", buf->count, buf->ptr);
   hin_request_write (buf);
   return 0;

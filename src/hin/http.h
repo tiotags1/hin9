@@ -15,7 +15,7 @@ enum { HIN_HTTP_GET = 1, HIN_HTTP_POST, HIN_HTTP_HEAD };
 
 enum { HIN_HTTP_KEEPALIVE = 0x1, HIN_HTTP_RANGE = 0x2, HIN_HTTP_MODIFIED = 0x4, HIN_HTTP_ETAG = 0x8,
 HIN_HTTP_CACHE = 0x10, HIN_HTTP_CHUNKED = 0x20, HIN_HTTP_DEFLATE = 0x40, HIN_HTTP_DATE = 0x80,
-HIN_HTTP_VER0 = 0x100, HIN_HTTP_SERVNAME = 0x200, HIN_HTTP_CHUNKUP = 0x400 };
+HIN_HTTP_VER0 = 0x100, HIN_HTTP_SERVNAME = 0x200, HIN_HTTP_CHUNKUP = 0x400, HIN_HTTP_LOCAL_CACHE = 0x800 };
 
 typedef struct {
   char * name;
@@ -38,6 +38,7 @@ typedef struct {
 
   time_t cache;
   time_t modified_since;
+  uintptr_t cache_key1, cache_key2;
   uint64_t etag;
 
   int post_fd;
@@ -73,10 +74,10 @@ typedef struct {
 
 #include <basic_pattern.h>
 
-int header (hin_client_t * client, hin_buffer_t * buffer, const char * fmt, ...);
-int header_raw (hin_client_t * client, hin_buffer_t * buffer, const char * data, int len);
-int header_date (hin_client_t * client, hin_buffer_t * buffer, const char * name, time_t time);
-int httpd_write_common_headers (hin_client_t * client, hin_buffer_t * buf);
+int header (hin_buffer_t * buffer, const char * fmt, ...);
+int header_raw (hin_buffer_t * buffer, const char * data, int len);
+int header_date (hin_buffer_t * buffer, const char * name, time_t time);
+int httpd_write_common_headers (httpd_client_t * http, hin_buffer_t * buf);
 
 const char * http_status_name (int nr);
 

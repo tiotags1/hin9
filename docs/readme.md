@@ -7,6 +7,8 @@ uses lua for configuration and scripting, setting a file to be cached is as simp
 
 server tries to mitigate DDoS effects by offering a very robust way of dropping clients and mitigating the effects of keeping too many connections open, should offer good performance for video serving, web file uploading
 
+whenever possible coherency, ease of understanding and algorithm aesthetic are prioritized over speed, optimization or features
+
 
 requirements
 ------------

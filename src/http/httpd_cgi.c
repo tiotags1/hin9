@@ -48,18 +48,25 @@ static int var (env_list_t * env, const char * fmt, ...) {
 }
 
 static int hin_pipe_cgi_server_finish_callback (hin_pipe_t * pipe) {
-  if (master.debug & DEBUG_PIPE) printf ("cgi transfer finished infd %d outfd %d\n", pipe->in.fd, pipe->out.fd);
+  if (master.debug & DEBUG_PIPE) printf ("cgi transfer finished infd %d outfd %d bytes %ld\n", pipe->in.fd, pipe->out.fd, pipe->count);
   hin_worker_t * worker = (hin_worker_t *)pipe->parent1;
-  httpd_client_t * http = (httpd_client_t*)worker->data;
+  httpd_client_t * http = (httpd_client_t*)pipe->parent;
 
   if (master.debug & DEBUG_SYSCALL) printf ("  cgi read done, close %d\n", pipe->in.fd);
   close (pipe->in.fd);
 
   #if HIN_HTTPD_WORKER_PREFORKED
   hin_worker_reset (worker);
-  #endif
+  #else
   free (worker);
-  httpd_client_finish_request (http);
+  #endif
+
+  if (http->c.type == HIN_CACHE_OBJECT) {
+    int hin_cache_finish (httpd_client_t * client, hin_pipe_t * pipe);
+    return hin_cache_finish (http, pipe);
+  } else {
+    httpd_client_finish_request (http);
+  }
   return 0;
 }
 
@@ -88,6 +95,7 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
   string_t line, orig=*source, param1, param2;
   http->status = 200;
   off_t sz = 0;
+  int cache = 0;
   while (1) {
     if (find_line (source, &line) == 0) { return 0; }
     if (line.len == 0) break;
@@ -100,8 +108,9 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
       http->disable |= HIN_HTTP_DEFLATE;
     } else if (matchi_string_equal (&line, "Transfer%-Encoding: .*") > 0) {
       http->disable |= HIN_HTTP_CHUNKED;
-    } else if (matchi_string_equal (&line, "Cache%-Control: .*") > 0) {
+    } else if (match_string (&line, "Cache%-Control:") > 0) {
       http->disable |= HIN_HTTP_CACHE;
+      cache = 1;
     } else if (matchi_string_equal (&line, "Date: .*") > 0) {
       http->disable |= HIN_HTTP_DATE;
     }
@@ -123,6 +132,24 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
   pipe->parent1 = worker;
   pipe->finish_callback = hin_pipe_cgi_server_finish_callback;
 
+  if (cache && http->method != HIN_HTTP_POST && http->status == 200) {
+    // cache check is somewhere else
+    int hin_cache_save (void * store, hin_pipe_t * pipe);
+    int n = hin_cache_save (NULL, pipe);
+    if (n == 0) {
+      // pipe already started ?
+      free (pipe);
+      return 0;
+    } else if (n > 0) {
+      if (len > 0) {
+        hin_buffer_t * buf1 = hin_buffer_create_from_data (pipe, source->ptr, len);
+        hin_pipe_append (pipe, buf1);
+      }
+      hin_pipe_start (pipe);
+      return 0;
+    }
+  }
+
   int httpd_pipe_set_chunked (httpd_client_t * http, hin_pipe_t * pipe);
   if (http->method == HIN_HTTP_HEAD) {
     http->peer_flags &= ~(HIN_HTTP_CHUNKED | HIN_HTTP_DEFLATE);
@@ -132,7 +159,7 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
 
   if ((http->peer_flags & HIN_HTTP_CHUNKED) == 0 && sz > 0) {
     pipe->in.flags |= HIN_COUNT;
-    pipe->count = pipe->sz = sz;
+    pipe->left = pipe->sz = sz;
   }
 
   int sz1 = source->len + 512;
@@ -147,10 +174,10 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
   buf->ssl = &client->ssl;
 
   *source = orig;
-  header (client, buf, "HTTP/1.%d %d %s\r\n", http->peer_flags & HIN_HTTP_VER0 ? 0 : 1, http->status, http_status_name (http->status));
+  header (buf, "HTTP/1.%d %d %s\r\n", http->peer_flags & HIN_HTTP_VER0 ? 0 : 1, http->status, http_status_name (http->status));
   http->peer_flags = http->peer_flags & (~http->disable);
 
-  httpd_write_common_headers (client, buf);
+  httpd_write_common_headers (http, buf);
 
   while (1) {
     if (find_line (source, &line) == 0) { hin_buffer_clean (buf); return 0; }
@@ -161,10 +188,10 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
     } else if ((http->peer_flags & HIN_HTTP_CHUNKED) && matchi_string (&line, "Content%-Length:") > 0) {
     } else if (HIN_HTTPD_DISABLE_POWERED_BY && matchi_string (&line, "X%-Powered%-By:") > 0) {
     } else {
-      header (client, buf, "%.*s\r\n", line.len, line.ptr);
+      header (buf, "%.*s\r\n", line.len, line.ptr);
     }
   }
-  header (client, buf, "\r\n");
+  header (buf, "\r\n");
 
   if (master.debug & DEBUG_RW) {
     printf ("cgi response %d is '\n%.*s'\n", http->c.sockfd, buf->count, buf->ptr);
@@ -216,6 +243,11 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
 
   if (http->state & HIN_REQ_DATA) return -1;
   http->state |= (HIN_REQ_DATA | HIN_REQ_CGI);
+
+  int hin_cache_check (void * store, httpd_client_t * client);
+  if (hin_cache_check (NULL, http) > 0) {
+    return 0;
+  }
 
   httpd_request_chunked (http);
 

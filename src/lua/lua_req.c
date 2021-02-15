@@ -85,8 +85,7 @@ static int l_hin_send_file (lua_State *L) {
   off_t pos = lua_tonumber (L, 3);
   off_t count = lua_tonumber (L, 4);
   lua_pushvalue (L, 5);
-  int ref = luaL_ref (L, LUA_REGISTRYINDEX);
-  httpd_handle_file_request (client, path, pos, count, ref);
+  httpd_handle_file_request (client, path, pos, count, 0);
 
   return 1;
 }

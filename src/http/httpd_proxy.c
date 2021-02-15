@@ -145,7 +145,7 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer) {
     pipe->decode_callback = hin_pipe_decode_chunked;
   } else if (sz > 0) {
     pipe->in.flags |= HIN_COUNT;
-    pipe->count = pipe->sz = sz;
+    pipe->left = pipe->sz = sz;
   }
 
   hin_buffer_t * buf = malloc (sizeof (*buf) + READ_SZ);
@@ -155,11 +155,11 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer) {
   buf->ptr = buf->buffer;
   buf->parent = pipe;
 
-  header (client, buf, "HTTP/1.%d %d %s\r\n", http->peer_flags & HIN_HTTP_VER0 ? 0 : 1, http->status, http_status_name (http->status));
-  httpd_write_common_headers (client, buf);
+  header (buf, "HTTP/1.%d %d %s\r\n", http->peer_flags & HIN_HTTP_VER0 ? 0 : 1, http->status, http_status_name (http->status));
+  httpd_write_common_headers (http, buf);
   if (sz && (http->peer_flags & HIN_HTTP_CHUNKED) == 0)
-    header (client, buf, "Content-Length: %ld\r\n", sz);
-  header (client, buf, "\r\n");
+    header (buf, "Content-Length: %ld\r\n", sz);
+  header (buf, "\r\n");
 
   if (master.debug & DEBUG_RW) printf ("proxy response '\n%.*s'\n", buf->count, buf->ptr);
 
@@ -226,7 +226,7 @@ static int http_client_sent_callback (hin_buffer_t * buffer, int ret) {
     httpd_pipe_upload_chunked (http, pipe);
   } else if (sz > 0) {
     pipe->in.flags |= HIN_COUNT;
-    pipe->count = pipe->sz = sz;
+    pipe->left = pipe->sz = sz;
   }
   hin_pipe_start (pipe);
   return 1;
@@ -282,28 +282,28 @@ int http_proxy_start_request (http_client_t * http, int ret) {
   default: printf ("bad method detected\n"); break;
   }
 
-  header (client, buf, "%s %.*s HTTP/1.1\r\n", method, path_max - path, path);
+  header (buf, "%s %.*s HTTP/1.1\r\n", method, path_max - path, path);
   if (http->uri.port.len > 0) {
-    header (client, buf, "Host: %.*s:%.*s\r\n", http->uri.host.len, http->uri.host.ptr, http->uri.port.len, http->uri.port.ptr);
+    header (buf, "Host: %.*s:%.*s\r\n", http->uri.host.len, http->uri.host.ptr, http->uri.port.len, http->uri.port.ptr);
   } else {
-    header (client, buf, "Host: %.*s\r\n", http->uri.host.len, http->uri.host.ptr);
+    header (buf, "Host: %.*s\r\n", http->uri.host.len, http->uri.host.ptr);
   }
   if (HIN_HTTPD_PROXY_CONNECTION_REUSE) {
-    header (client, buf, "Connection: keep-alive\r\n");
+    header (buf, "Connection: keep-alive\r\n");
   } else {
-    header (client, buf, "Connection: close\r\n");
+    header (buf, "Connection: close\r\n");
   }
   if (parent->method == HIN_HTTP_POST) {
     if (parent->post_sz > 0)
-      header (client, buf, "Content-Length: %ld\r\n", parent->post_sz);
+      header (buf, "Content-Length: %ld\r\n", parent->post_sz);
     if (parent->post_sep)
-      header (client, buf, "Content-Type: multipart/form-data; boundary=%s\r\n", parent->post_sep+2);
+      header (buf, "Content-Type: multipart/form-data; boundary=%s\r\n", parent->post_sep+2);
   }
-  header (client, buf, "\r\n");
+  header (buf, "\r\n");
   if (parent->post_sz > 0) {
     int len = source.len;
     if (len > parent->post_sz) len = parent->post_sz;
-    header_raw (client, buf, source.ptr, len);
+    header_raw (buf, source.ptr, len);
   }
   if (master.debug & DEBUG_RW) printf ("proxy request is '\n%.*s'\n", buf->count, buf->ptr);
   hin_request_write (buf);
