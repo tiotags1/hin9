@@ -105,9 +105,9 @@ int hin_cache_save (hin_cache_store_t * store, hin_pipe_t * pipe) {
   } else {
     item = calloc (1, sizeof (*item));
     item->type = HIN_CACHE_OBJECT;
+    item->refcount = 2;
     item->cache_key1 = http->cache_key1;
     item->cache_key2 = http->cache_key2;
-    item->refcount = 2;
     item->life = http->cache;
     basic_ht_set_pair (&store->ht, http->cache_key1, http->cache_key2, (uintptr_t)item, 0);
     item->client_queue = queue;

@@ -14,7 +14,7 @@ void httpd_client_ping (httpd_client_t * http, int timeout) {
   http->next_time.sec += timeout;
 }
 
-static void httpd_client_timer (httpd_client_t * http, basic_time_t * now) {
+static inline void httpd_client_timer (httpd_client_t * http, basic_time_t * now) {
   if (http->next_time.sec == 0) return ;
   basic_ftime dt = basic_time_fdiff (now, &http->next_time);
   if (dt < 0.0) {

@@ -9,6 +9,7 @@
 
 #include "hin.h"
 #include "utils.h"
+#include "conf.h"
 
 static hin_buffer_t * buffer = NULL;
 static hin_buffer_t * timeout_buffer = NULL;
@@ -61,7 +62,7 @@ static int hin_timer_callback (hin_buffer_t * buffer, int ret) {
   void httpd_timer ();
   httpd_timer ();
   int hin_timeout_callback (float dt);
-  hin_timeout_callback (1.0);
+  hin_timeout_callback (HIN_HTTPD_TIME_DT / 1000.0f);
   return 0;
 }
 
@@ -87,8 +88,8 @@ void hin_timer_init () {
   buf->ptr = buf->buffer;
   timeout_buffer = buf;
   struct timespec * ts = (struct timespec *)&buf->buffer;
-  ts->tv_sec = 1;
-  ts->tv_nsec = 0;
+  ts->tv_sec = HIN_HTTPD_TIME_DT / 1000;
+  ts->tv_nsec = (HIN_HTTPD_TIME_DT % 1000) * 1000000;
   hin_request_timeout (buf, ts, 0, 0);
 }
 
