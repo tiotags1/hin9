@@ -62,7 +62,7 @@ int main (int argc, const char * argv[]) {
     }
   }
   master.debug = 0xffffffff;
-  //master.debug = 0;
+  master.debug = 0;
   //master.debug |= DEBUG_SOCKET;
   //master.debug &= ~(DEBUG_URING);
   #if HIN_HTTPD_WORKER_PREFORKED

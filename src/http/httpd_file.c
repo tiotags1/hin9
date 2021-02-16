@@ -88,6 +88,9 @@ int httpd_send_file (httpd_client_t * http, hin_cache_item_t * item, hin_buffer_
   } else if (http->etag) {
     http->status = 200;
   }
+  if (http->cache == 0) {
+    http->cache = item->lifetime;
+  }
 
   if (HIN_HTTPD_MAX_DEFLATE_SIZE && sz > HIN_HTTPD_MAX_DEFLATE_SIZE) {
     http->disable |= HIN_HTTP_DEFLATE;

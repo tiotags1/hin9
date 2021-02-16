@@ -53,19 +53,6 @@ void hin_console_clean () {
     hin_buffer_clean (timeout_buffer);
 }
 
-static int hin_timer_callback (hin_buffer_t * buffer, int ret) {
-  if (ret < 0 && ret != -ETIME) {
-    printf ("timer callback error is %s\n", strerror (-ret));
-  }
-  struct timespec * ts = (struct timespec *)&buffer->buffer;
-  hin_request_timeout (buffer, ts, 0, 0);
-  void httpd_timer ();
-  httpd_timer ();
-  int hin_timeout_callback (float dt);
-  hin_timeout_callback (HIN_HTTPD_TIME_DT / 1000.0f);
-  return 0;
-}
-
 void hin_console_init () {
   hin_buffer_t * buf = malloc (sizeof (*buf) + READ_SZ);
   memset (buf, 0, sizeof (*buf));
@@ -78,8 +65,36 @@ void hin_console_init () {
   buffer = buf;
 }
 
+#include <basic_timer.h>
+
+typedef struct {
+  basic_timer_t timer;
+  struct timespec ts;
+} hin_timeout_t;
+
+static int hin_timer_callback (hin_buffer_t * buffer, int ret) {
+  if (ret < 0 && ret != -ETIME) {
+    printf ("timer callback error is %s\n", strerror (-ret));
+  }
+  hin_timeout_t * tm = (void*)&buffer->buffer;
+  hin_request_timeout (buffer, &tm->ts, 0, 0);
+
+  void httpd_timer ();
+  httpd_timer ();
+
+  int frames = basic_timer_frames (tm);
+
+  int hin_timeout_callback (float dt);
+  hin_timeout_callback (tm->timer.dt);
+  void hin_cache_timer (int num);
+  if (frames > 0)
+    hin_cache_timer (frames);
+
+  return 0;
+}
+
 void hin_timer_init () {
-  hin_buffer_t * buf = malloc (sizeof (*buf) + sizeof (struct timespec));
+  hin_buffer_t * buf = malloc (sizeof (*buf) + sizeof (hin_timeout_t));
   memset (buf, 0, sizeof (*buf));
   buf->flags = HIN_HIDE;
   buf->fd = 0;
@@ -87,10 +102,13 @@ void hin_timer_init () {
   buf->count = buf->sz = sizeof (struct timespec);
   buf->ptr = buf->buffer;
   timeout_buffer = buf;
-  struct timespec * ts = (struct timespec *)&buf->buffer;
-  ts->tv_sec = HIN_HTTPD_TIME_DT / 1000;
-  ts->tv_nsec = (HIN_HTTPD_TIME_DT % 1000) * 1000000;
-  hin_request_timeout (buf, ts, 0, 0);
+
+  hin_timeout_t * tm = (void*)&buf->buffer;
+  tm->ts.tv_sec = HIN_HTTPD_TIME_DT / 1000;
+  tm->ts.tv_nsec = (HIN_HTTPD_TIME_DT % 1000) * 1000000;
+  hin_request_timeout (buf, &tm->ts, 0, 0);
+
+  basic_timer_init (tm, 1);
 }
 
 

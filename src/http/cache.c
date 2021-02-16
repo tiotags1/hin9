@@ -13,6 +13,7 @@
 #include <basic_hashtable.h>
 
 typedef struct {
+  off_t size, max_size;
   basic_ht_t ht;
 } hin_cache_store_t;
 
@@ -25,6 +26,7 @@ hin_cache_store_t * hin_cache_create () {
   }
   if (default_store == NULL)
     default_store = store;
+  store->max_size = HIN_HTTPD_CACHE_MAX_SIZE;
 
   return store;
 }
@@ -60,6 +62,12 @@ void hin_cache_unref (hin_cache_item_t * item) {
   }
 }
 
+void hin_cache_remove (hin_cache_store_t * store, hin_cache_item_t * item) {
+  basic_ht_delete_pair (&store->ht, item->cache_key1, item->cache_key2);
+  store->size -= item->size;
+  hin_cache_unref (item);
+}
+
 void hin_cache_store_clean (hin_cache_store_t * store) {
   basic_ht_iterator_t iter;
   basic_ht_pair_t * pair;
@@ -75,6 +83,34 @@ void hin_cache_store_clean (hin_cache_store_t * store) {
 void hin_cache_clean () {
   if (master.debug & DEBUG_CACHE) printf ("cache clean\n");
   hin_cache_store_clean (default_store);
+  default_store = NULL;
+}
+
+void hin_cache_timer (int seconds) {
+  basic_ht_iterator_t iter;
+  basic_ht_pair_t * pair;
+  hin_cache_store_t * store = default_store;
+  hin_cache_item_t * prev = NULL;
+  if (store) {
+    memset (&iter, 0, sizeof iter);
+    while ((pair = basic_ht_iterate_pair (&store->ht, &iter)) != NULL) {
+      if (prev) {
+        hin_cache_remove (store, prev);
+        prev = NULL;
+      }
+      hin_cache_item_t * item = (void*)pair->value1;
+      if (item->flags & HIN_CACHE_DONE)
+        item->lifetime -= seconds;
+      if (master.debug & DEBUG_CACHE) printf ("cache %lx_%lx item life %ld\n", item->cache_key1, item->cache_key2, item->lifetime);
+      if (item->lifetime <= 0) {
+        prev = item;
+      }
+    }
+    if (prev) {
+      hin_cache_remove (store, prev);
+      prev = NULL;
+    }
+  }
 }
 
 hin_cache_item_t * hin_cache_get (hin_cache_store_t * store, basic_ht_hash_t key1, basic_ht_hash_t key2) {
@@ -84,12 +120,41 @@ hin_cache_item_t * hin_cache_get (hin_cache_store_t * store, basic_ht_hash_t key
   return item;
 }
 
+static int hin_cache_pipe_error_callback (hin_pipe_t * pipe) {
+  hin_cache_item_t * item = (hin_cache_item_t*)pipe->parent;
+  hin_cache_store_t * store = item->parent;
+
+  printf ("cache %lx_%lx error in generating\n", item->cache_key1, item->cache_key2);
+
+  hin_cache_client_queue_t * next;
+  for (hin_cache_client_queue_t * queue = item->client_queue; queue; queue = next) {
+    next = queue->next;
+
+    httpd_client_t * http = queue->ptr;
+    if (master.debug & DEBUG_CACHE) printf (" error to %d\n", http->c.sockfd);
+    http->state &= ~HIN_REQ_DATA;
+    httpd_respond_error (http, 500, NULL);
+    hin_cache_unref (item);
+    free (queue);
+  }
+  item->client_queue = NULL;
+  item->flags |= HIN_CACHE_ERROR;
+
+  basic_ht_delete_pair (&store->ht, item->cache_key1, item->cache_key2);
+
+  return 0;
+}
+
 int hin_cache_save (hin_cache_store_t * store, hin_pipe_t * pipe) {
   if (store == NULL) store = default_store;
   httpd_client_t * http = pipe->parent;
 
   if (http->disable & HIN_HTTP_LOCAL_CACHE) return -1;
   if ((http->cache_key1 | http->cache_key2) == 0) return -1;
+  if (store->size >= store->max_size) {
+    printf ("cache is full\n");
+    return -1;
+  }
 
   hin_cache_item_t * item = hin_cache_get (store, http->cache_key1, http->cache_key2);
   hin_cache_client_queue_t * queue = calloc (1, sizeof (*queue));
@@ -102,16 +167,17 @@ int hin_cache_save (hin_cache_store_t * store, hin_pipe_t * pipe) {
     item->refcount++;
     if (master.debug & DEBUG_CACHE) printf ("cache %lx_%lx queue event\n", http->cache_key1, http->cache_key2);
     return 0;
-  } else {
-    item = calloc (1, sizeof (*item));
-    item->type = HIN_CACHE_OBJECT;
-    item->refcount = 2;
-    item->cache_key1 = http->cache_key1;
-    item->cache_key2 = http->cache_key2;
-    item->life = http->cache;
-    basic_ht_set_pair (&store->ht, http->cache_key1, http->cache_key2, (uintptr_t)item, 0);
-    item->client_queue = queue;
   }
+
+  item = calloc (1, sizeof (*item));
+  item->type = HIN_CACHE_OBJECT;
+  item->refcount = 2;
+  item->cache_key1 = http->cache_key1;
+  item->cache_key2 = http->cache_key2;
+  item->lifetime = http->cache;
+  item->parent = store;
+  item->client_queue = queue;
+  basic_ht_set_pair (&store->ht, http->cache_key1, http->cache_key2, (uintptr_t)item, 0);
 
   if (HIN_HTTPD_CACHE_TMPFILE) {
     item->fd = openat (AT_FDCWD, HIN_HTTPD_CACHE_DIRECTORY, O_RDWR | O_TMPFILE, 0600);
@@ -127,6 +193,8 @@ int hin_cache_save (hin_cache_store_t * store, hin_pipe_t * pipe) {
   pipe->out.fd = item->fd;
   pipe->out.flags = (pipe->out.flags & ~(HIN_SOCKET|HIN_SSL)) | (HIN_FILE|HIN_OFFSETS);
   pipe->parent = item;
+  pipe->out_error_callback = hin_cache_pipe_error_callback;
+  pipe->in_error_callback = hin_cache_pipe_error_callback;
 
   // save php headers
   // how do you resend the static resource and notify cache object is done and should be sent
@@ -137,11 +205,19 @@ int httpd_send_file (httpd_client_t * http, hin_cache_item_t * item, hin_buffer_
 
 int hin_cache_finish (httpd_client_t * client, hin_pipe_t * pipe) {
   hin_cache_item_t * item = (hin_cache_item_t*)client;
+  if (item->flags & HIN_CACHE_ERROR) {
+    hin_cache_unref (item);
+    return 0;
+  }
 
   item->size = pipe->count;
   item->etag = 0;
+  item->flags |= HIN_CACHE_DONE;
   time (&item->modified);
   if (master.debug & DEBUG_CACHE) printf ("cache %lx_%lx finish sz %ld etag %lx\n", item->cache_key1, item->cache_key2, item->size, item->etag);
+
+  hin_cache_store_t * store = item->parent;
+  store->size += item->size;
 
   hin_cache_client_queue_t * next;
   for (hin_cache_client_queue_t * queue = item->client_queue; queue; queue = next) {

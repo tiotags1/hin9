@@ -1,5 +1,12 @@
 
+* cache max size
+* cache remove items when they expire
+* cache handling errors in cache_item creation
+* fixes to time callback
 
+* timer duration customization
+
+commit d3ab74f4662de8c99a67dca65c6aea4120eb648c
 * cgi output cache (cache doesn't check a max or free items)
 * option to disable local cache
 * pipe count output bytes

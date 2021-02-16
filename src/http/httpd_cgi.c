@@ -15,6 +15,7 @@
 #include "worker.h"
 #include "conf.h"
 #include "lua.h"
+#include "file.h"
 
 typedef struct {
   int pos;
@@ -110,6 +111,11 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
       http->disable |= HIN_HTTP_CHUNKED;
     } else if (match_string (&line, "Cache%-Control:") > 0) {
       http->disable |= HIN_HTTP_CACHE;
+      int httpd_parse_cache_str (string_t * orig, hin_cache_data_t * cache);
+      hin_cache_data_t data;
+      memset (&data, 0, sizeof (data));
+      httpd_parse_cache_str (&line, &data);
+      http->cache = data.max_age;
       cache = 1;
     } else if (matchi_string_equal (&line, "Date: .*") > 0) {
       http->disable |= HIN_HTTP_DATE;

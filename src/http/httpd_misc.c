@@ -8,6 +8,7 @@
 #include "hin.h"
 #include "http.h"
 #include "lua.h"
+#include "file.h"
 
 void httpd_client_ping (httpd_client_t * http, int timeout) {
   http->next_time = basic_time_get ();
@@ -59,6 +60,17 @@ void httpd_close_socket () {
     hin_server_blueprint_t * bp = (hin_server_blueprint_t*)server;
     close (server->sockfd);
   }
+}
+
+int httpd_parse_cache_str (string_t * orig, hin_cache_data_t * cache) {
+  string_t source = *orig, opt, param1;
+  while (match_string (&source, "%s*([%w%-=]+)", &opt) > 0) {
+    if (match_string (&opt, "max-age=%s*(%d+)", &param1) > 0) {
+      cache->max_age = atoi (param1.ptr);
+    }
+    if (match_string (&source, "%s*,%s*") <= 0) break;
+  }
+  return 0;
 }
 
 time_t hin_date_str_to_time (string_t * source) {

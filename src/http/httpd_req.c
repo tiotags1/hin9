@@ -105,7 +105,7 @@ int httpd_write_common_headers (httpd_client_t * http, hin_buffer_t * buf) {
   }
   if ((http->disable & HIN_HTTP_CACHE) == 0) {
     if (http->cache > 0) {
-      header (buf, "Cache-Control: public, max-age=%ld\r\n", http->cache);
+      header (buf, "Cache-Control: public, max-age=%ld, immutable\r\n", http->cache);
     } else if (http->cache < 0) {
       header (buf, "Cache-Control: no-cache, no-store\r\n");
     }
