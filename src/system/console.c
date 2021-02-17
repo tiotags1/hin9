@@ -82,7 +82,7 @@ static int hin_timer_callback (hin_buffer_t * buffer, int ret) {
   void httpd_timer ();
   httpd_timer ();
 
-  int frames = basic_timer_frames (tm);
+  int frames = basic_timer_frames (&tm->timer);
 
   int hin_timeout_callback (float dt);
   hin_timeout_callback (tm->timer.dt);
@@ -108,7 +108,7 @@ void hin_timer_init () {
   tm->ts.tv_nsec = (HIN_HTTPD_TIME_DT % 1000) * 1000000;
   hin_request_timeout (buf, &tm->ts, 0, 0);
 
-  basic_timer_init (tm, 1);
+  basic_timer_init (&tm->timer, 1);
 }
 
 

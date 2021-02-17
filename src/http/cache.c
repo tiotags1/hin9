@@ -190,6 +190,7 @@ int hin_cache_save (hin_cache_store_t * store, hin_pipe_t * pipe) {
     if (item->fd < 0) perror ("openat");
   }
 
+  pipe->flags |= HIN_HASH;
   pipe->out.fd = item->fd;
   pipe->out.flags = (pipe->out.flags & ~(HIN_SOCKET|HIN_SSL)) | (HIN_FILE|HIN_OFFSETS);
   pipe->parent = item;
@@ -203,6 +204,12 @@ int hin_cache_save (hin_cache_store_t * store, hin_pipe_t * pipe) {
 
 int httpd_send_file (httpd_client_t * http, hin_cache_item_t * item, hin_buffer_t * buf);
 
+void hin_cache_serve_client (httpd_client_t * http, hin_cache_item_t * item) {
+  http->peer_flags &= ~(HIN_HTTP_CHUNKED);
+  http->state &= ~HIN_REQ_DATA;
+  httpd_send_file (http, item, NULL);
+}
+
 int hin_cache_finish (httpd_client_t * client, hin_pipe_t * pipe) {
   hin_cache_item_t * item = (hin_cache_item_t*)client;
   if (item->flags & HIN_CACHE_ERROR) {
@@ -211,7 +218,7 @@ int hin_cache_finish (httpd_client_t * client, hin_pipe_t * pipe) {
   }
 
   item->size = pipe->count;
-  item->etag = 0;
+  item->etag = pipe->hash;
   item->flags |= HIN_CACHE_DONE;
   time (&item->modified);
   if (master.debug & DEBUG_CACHE) printf ("cache %lx_%lx finish sz %ld etag %lx\n", item->cache_key1, item->cache_key2, item->size, item->etag);
@@ -224,9 +231,7 @@ int hin_cache_finish (httpd_client_t * client, hin_pipe_t * pipe) {
     next = queue->next;
 
     httpd_client_t * http = queue->ptr;
-    http->peer_flags &= ~(HIN_HTTP_CHUNKED);
-    http->state &= ~HIN_REQ_DATA;
-    httpd_send_file (http, item, NULL);
+    hin_cache_serve_client (http, item);
     free (queue);
   }
   item->client_queue = NULL;
@@ -247,9 +252,7 @@ int hin_cache_check (hin_cache_store_t * store, httpd_client_t * http) {
 
   item->refcount++;
 
-  http->peer_flags &= ~(HIN_HTTP_CHUNKED);
-  http->state &= ~HIN_REQ_DATA;
-  httpd_send_file (http, item, NULL);
+  hin_cache_serve_client (http, item);
 
   return 1;
 }

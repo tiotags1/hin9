@@ -28,6 +28,7 @@
 
 #define HIN_HTTPD_ASYNC_OPEN 1
 #define HIN_HTTPD_ASYNC_STATX 0
+#define HIN_HTTPD_NULL_SERVER 0
 
 
 #endif

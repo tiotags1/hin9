@@ -97,6 +97,7 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
   http->status = 200;
   off_t sz = 0;
   int cache = 0;
+  uint32_t disable = 0;
   while (1) {
     if (find_line (source, &line) == 0) { return 0; }
     if (line.len == 0) break;
@@ -106,11 +107,11 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
     } else if (matchi_string_equal (&line, "Content%-Length: (%d+)", &param1) > 0) {
       sz = atoi (param1.ptr);
     } else if (matchi_string_equal (&line, "Content%-Encoding: .*") > 0) {
-      http->disable |= HIN_HTTP_DEFLATE;
+      disable |= HIN_HTTP_DEFLATE;
     } else if (matchi_string_equal (&line, "Transfer%-Encoding: .*") > 0) {
-      http->disable |= HIN_HTTP_CHUNKED;
+      disable |= HIN_HTTP_CHUNKED;
     } else if (match_string (&line, "Cache%-Control:") > 0) {
-      http->disable |= HIN_HTTP_CACHE;
+      disable |= HIN_HTTP_CACHE;
       int httpd_parse_cache_str (string_t * orig, hin_cache_data_t * cache);
       hin_cache_data_t data;
       memset (&data, 0, sizeof (data));
@@ -118,7 +119,7 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
       http->cache = data.max_age;
       cache = 1;
     } else if (matchi_string_equal (&line, "Date: .*") > 0) {
-      http->disable |= HIN_HTTP_DATE;
+      disable |= HIN_HTTP_DATE;
     }
   }
 
@@ -155,6 +156,8 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
       return 0;
     }
   }
+
+  http->disable |= disable;
 
   int httpd_pipe_set_chunked (httpd_client_t * http, hin_pipe_t * pipe);
   if (http->method == HIN_HTTP_HEAD) {

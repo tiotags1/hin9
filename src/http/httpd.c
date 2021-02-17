@@ -98,6 +98,13 @@ int httpd_client_shutdown (httpd_client_t * http) {
   if (http->state & HIN_REQ_ENDING) return -1;
   http->state |= HIN_REQ_ENDING;
   if (master.debug & DEBUG_SOCKET) printf ("httpd shutdown %d\n", http->c.sockfd);
+
+  struct linger sl;
+  sl.l_onoff = 1;		// non-zero value enables linger option in kernel
+  sl.l_linger = 10;		// timeout interval in seconds
+  if (setsockopt (http->c.sockfd, SOL_SOCKET, SO_LINGER, &sl, sizeof(sl)) < 0)
+    perror ("setsockopt(SO_LINGER) failed");
+
   hin_buffer_t * buf = malloc (sizeof *buf);
   memset (buf, 0, sizeof (*buf));
   buf->flags = HIN_SOCKET | (http->c.flags & HIN_SSL);
@@ -126,10 +133,52 @@ static int httpd_client_buffer_eat_callback (hin_buffer_t * buffer, int num) {
   return 0;
 }
 
+extern hin_buffer_t * buf_list;
+
+int temp_callback2 (hin_buffer_t * buf, int ret) {
+  if (ret < 0) {
+    printf ("error2 '%s'\n", strerror (-ret));
+  }
+  httpd_client_t * http = buf->parent;
+  //close (http->c.sockfd);
+  httpd_client_shutdown (http);
+  hin_buffer_list_add (&buf_list, buf);
+  return 0;
+}
+
+int temp_callback1 (hin_buffer_t * buf, int ret) {
+  if (ret < 0) {
+    printf ("error1 '%s'\n", strerror (-ret));
+  }
+
+  httpd_client_t * http = buf->parent;
+  buf->callback = temp_callback2;
+  buf->count = 0;
+
+  const char * text = "HTTP/1.0 200 OK\r\nContent-Length: 6\r\nConnection: close\r\n\r\nHello\n";
+  header_raw (buf, text, strlen (text));
+  hin_request_write (buf);
+
+  return 0;
+}
+
 int httpd_client_accept (hin_client_t * client) {
   httpd_client_t * http = (httpd_client_t*)client;
   httpd_client_start_request (http);
 
+#if HIN_HTTPD_NULL_SERVER
+  hin_buffer_t * buf = buf_list;
+  buf->flags = HIN_SOCKET | (http->c.flags & HIN_SSL);
+  buf->fd = http->c.sockfd;
+  buf->parent = http;
+  buf->ssl = &http->c.ssl;
+  buf->callback = temp_callback1;
+  buf->count = buf->sz;
+  hin_buffer_list_remove (&buf_list, buf);
+
+  hin_request_read (buf);
+  return 0;
+#else
   hin_buffer_t * buf = hin_lines_create_raw ();
   buf->fd = http->c.sockfd;
   buf->parent = http;
@@ -143,6 +192,7 @@ int httpd_client_accept (hin_client_t * client) {
   hin_request_read (buf);
   http->read_buffer = buf;
   return 0;
+#endif
 }
 
 hin_client_t * httpd_create (const char * addr, const char * port, const char * sock_type, void * ssl_ctx) {

@@ -24,7 +24,7 @@ typedef struct hin_pipe_struct hin_pipe_t;
 #define HIN_SERVER_MAGIC 0xfcadc123
 
 enum { HIN_DONE = 0x1, HIN_SOCKET = 0x2, HIN_FILE = 0x4, HIN_OFFSETS = 0x8,
-       HIN_SSL = 0x10, HIN_COUNT = 0x20, HIN_HIDE = 0x40 };
+       HIN_SSL = 0x10, HIN_COUNT = 0x20, HIN_HIDE = 0x40, HIN_HASH = 0x80 };
 
 enum { HIN_CLIENT = 1, HIN_DYN_BUFFER, HIN_SERVER, HIN_DOWNLOAD, HIN_CACHE_OBJECT };
 
@@ -39,6 +39,7 @@ typedef int (*hin_callback_t) (hin_buffer_t * buffer, int ret);
 struct hin_buffer_struct {
   int type;
   int fd;
+  int buf_index;
   uint32_t flags;
   hin_callback_t callback;
   off_t pos;
@@ -70,6 +71,8 @@ struct hin_pipe_struct {
   int (*in_error_callback) (hin_pipe_t * pipe);
   hin_buffer_t * (*buffer_callback) (hin_pipe_t * pipe, int sz);
 
+  uint32_t flags;
+  uint64_t hash;
   off_t extra_sz;
 };
 
@@ -114,8 +117,10 @@ void hin_client_shutdown (hin_client_t * client);
 void hin_client_close (hin_client_t * client);
 
 // uring
-int hin_request_read (hin_buffer_t * buffer);
 int hin_request_write (hin_buffer_t * buffer);
+int hin_request_read (hin_buffer_t * buffer);
+int hin_request_write_fixed (hin_buffer_t * buffer);
+int hin_request_read_fixed (hin_buffer_t * buffer);
 int hin_request_accept (hin_buffer_t * buffer, int flags);
 int hin_request_connect (hin_buffer_t * buffer);
 int hin_request_close (hin_buffer_t * buffer);

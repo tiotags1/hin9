@@ -67,6 +67,9 @@ int hin_pipe_init (hin_pipe_t * pipe) {
 }
 
 int hin_pipe_start (hin_pipe_t * pipe) {
+  if (pipe->flags & HIN_HASH) {
+    pipe->hash = 6883;
+  }
   hin_pipe_advance (pipe);
   return 0;
 }
@@ -148,6 +151,14 @@ int hin_pipe_write_callback (hin_buffer_t * buffer, int ret) {
   }
   if (master.debug & DEBUG_PIPE) printf ("pipe %d>%d write %d/%d pos %ld left %ld\n", pipe->in.fd, pipe->out.fd, ret, buffer->count, pipe->out.pos, pipe->left);
   pipe->count += ret;
+  if (pipe->flags & HIN_HASH) {
+    uint8_t * start = buffer->ptr;
+    uint8_t * max = start + ret;
+    while (start < max) {
+      int c = *start++;
+      pipe->hash = ((pipe->hash << 3) + pipe->hash) + c;
+    }
+  }
   if (ret < buffer->count) {
     printf ("pipe %d>%d write incomplete %d/%d\n", pipe->in.fd, pipe->out.fd, ret, buffer->count);
     buffer->ptr += ret;

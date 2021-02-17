@@ -53,6 +53,30 @@ int hin_request_read (hin_buffer_t * buffer) {
   return 0;
 }
 
+int hin_request_write_fixed (hin_buffer_t * buffer) {
+  struct io_uring_sqe *sqe = io_uring_get_sqe (&ring);
+  //if (buffer->flags & HIN_SOCKET) {
+  //  io_uring_prep_send (sqe, buffer->fd, buffer->ptr, buffer->count, 0);
+  //} else {
+    io_uring_prep_write_fixed (sqe, buffer->fd, buffer->ptr, buffer->count, buffer->pos, buffer->buf_index);
+  //}
+  io_uring_sqe_set_data (sqe, buffer);
+  if (master.debug & DEBUG_URING) printf ("req%d %s buf %p cb %p fd %d\n", master.id, "fwrite", buffer, buffer->callback, buffer->fd);
+  return 0;
+}
+
+int hin_request_read_fixed (hin_buffer_t * buffer) {
+  struct io_uring_sqe *sqe = io_uring_get_sqe (&ring);
+  if (buffer->flags & HIN_SOCKET) {
+    io_uring_prep_recv (sqe, buffer->fd, buffer->ptr, buffer->count, 0);
+  } else {
+    io_uring_prep_read_fixed (sqe, buffer->fd, buffer->ptr, buffer->count, buffer->pos, buffer->buf_index);
+  }
+  io_uring_sqe_set_data (sqe, buffer);
+  if (master.debug & DEBUG_URING) printf ("req%d %s buf %p cb %p fd %d\n", master.id, "fread ", buffer, buffer->callback, buffer->fd);
+  return 0;
+}
+
 int hin_request_accept (hin_buffer_t * buffer, int flags) {
   hin_client_t * client = (hin_client_t*)buffer->parent;
   hin_client_t * server = (hin_client_t*)client->parent;
@@ -110,6 +134,34 @@ int hin_request_statx (hin_buffer_t * buffer, int dfd, const char * path, int fl
   return 0;
 }
 
+hin_buffer_t * buf_list = NULL;
+
+static int num = 120;
+struct iovec iov[120];
+
+int hin_generate_buffers () {
+  int sz = 512;
+  //memset (iov, 0, sizeof (iov));
+
+  for (int i=0; i<num; i++) {
+    hin_buffer_t * buf = malloc (sizeof *buf + sz);
+    memset (buf, 0, sizeof (*buf));
+    buf->count = buf->sz = sz;
+    buf->ptr = buf->buffer;
+    buf->buf_index = i;
+    iov[i].iov_base = buf->ptr;
+    iov[i].iov_len = buf->sz;
+    hin_buffer_list_add (&buf_list, buf);
+  }
+
+  int ret = io_uring_register_buffers (&ring, iov, num);
+  if (ret) {
+    fprintf (stderr, "Error registering buffers: %s\n", strerror (-ret));
+    return -1;
+  }
+  return 0;
+}
+
 int hin_event_init () {
   struct io_uring_params params;
   memset (&params, 0, sizeof params);
@@ -130,6 +182,9 @@ int hin_event_init () {
     exit (1);
   }
   #endif
+  #if HIN_HTTPD_NULL_SERVER
+  hin_generate_buffers ();
+  #endif
   return 1;
 }
 
@@ -137,6 +192,12 @@ int hin_event_clean () {
   if (ring.ring_fd > 0)
     io_uring_queue_exit (&ring);
   memset (&ring, 0, sizeof (ring));
+  hin_buffer_t * next = NULL;
+  for (hin_buffer_t * buf = buf_list; buf; buf=next) {
+    next = buf->next;
+    hin_buffer_clean (buf);
+  }
+  buf_list = NULL;
   return 0;
 }
 

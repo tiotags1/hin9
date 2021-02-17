@@ -1,9 +1,16 @@
 
+
+* cache can generate an etag by hashing content
+* bugfix: send client cache header if cgi sent it originally but it's being served from the local cache
+* test: null server
+
+commit 13f398fa1a593b6a2b8abf883f00911a17b920ea
 * cache max size
 * cache remove items when they expire
-* cache handling errors in cache_item creation
+* cache handling errors in cache\_item creation
 * fixes to time callback
 
+commit 2d22f713c82c512f84f6506f3f92d330d895625e
 * timer duration customization
 
 commit d3ab74f4662de8c99a67dca65c6aea4120eb648c

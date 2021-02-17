@@ -50,11 +50,6 @@ int hin_server_accept (hin_buffer_t * buffer, int ret) {
   }
 
   hin_client_list_add (&bp->active_client, client);
-  struct linger sl;
-  sl.l_onoff = 1;		// non-zero value enables linger option in kernel
-  sl.l_linger = 10;		// timeout interval in seconds
-  if (setsockopt (client->sockfd, SOL_SOCKET, SO_LINGER, &sl, sizeof(sl)) < 0) 
-    perror ("setsockopt(SO_LINGER) failed");
 
   if (master.quit) return 1;
 
