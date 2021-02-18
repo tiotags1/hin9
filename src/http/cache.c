@@ -207,6 +207,7 @@ int httpd_send_file (httpd_client_t * http, hin_cache_item_t * item, hin_buffer_
 void hin_cache_serve_client (httpd_client_t * http, hin_cache_item_t * item) {
   http->peer_flags &= ~(HIN_HTTP_CHUNKED);
   http->state &= ~HIN_REQ_DATA;
+  http->status = 200;
   httpd_send_file (http, item, NULL);
 }
 

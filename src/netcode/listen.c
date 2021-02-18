@@ -111,17 +111,6 @@ static int create_and_bind (const char * addr, const char *port, const char * so
           client->in_addr = *rp->ai_addr;
           client->in_len = rp->ai_addrlen;
         }
-        #ifndef _WIN32
-        struct linger sl;
-        sl.l_onoff = 1;		// non-zero value enables linger option in kernel
-        sl.l_linger = 0;	// timeout interval in seconds
-        if (setsockopt (sockfd, SOL_SOCKET, SO_LINGER, &sl, sizeof(sl)) < 0) 
-          perror ("setsockopt(SO_LINGER) failed");
-        //if (setsockopt (sockfd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0)
-        //  perror ("setsockopt(SO_REUSEADDR) failed");
-        //if (setsockopt (sockfd, SOL_SOCKET, SO_REUSEPORT, &(int){1}, sizeof(int)) < 0)
-        //  perror ("setsockopt(SO_REUSEADDR) failed");
-        #endif
         break;
       }
 

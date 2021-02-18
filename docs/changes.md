@@ -1,5 +1,8 @@
 
+* reverse proxy caching
+* removed linger, why doesn't close peer reset with buffered data ?
 
+commit ce785167140d68cc4eb4d65c8ca06542119cf836
 * cache can generate an etag by hashing content
 * bugfix: send client cache header if cgi sent it originally but it's being served from the local cache
 * test: null server
@@ -56,6 +59,7 @@ commit b8fd799c8bd8e007db7253d4a3d20d24c59bdcc4
 * bugfix: restricted post on file handler
 * bugfix: segfault for post error handling
 
+commit 5d8c6b6f3ee9182df60b4e6a44342ac1bb4698ce
 * proxy post fixes
 
 commit ac66658427e2b8861f43be271f68dfb9149f3b18

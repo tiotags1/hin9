@@ -99,11 +99,13 @@ int httpd_client_shutdown (httpd_client_t * http) {
   http->state |= HIN_REQ_ENDING;
   if (master.debug & DEBUG_SOCKET) printf ("httpd shutdown %d\n", http->c.sockfd);
 
+#if 0
   struct linger sl;
   sl.l_onoff = 1;		// non-zero value enables linger option in kernel
   sl.l_linger = 10;		// timeout interval in seconds
   if (setsockopt (http->c.sockfd, SOL_SOCKET, SO_LINGER, &sl, sizeof(sl)) < 0)
     perror ("setsockopt(SO_LINGER) failed");
+#endif
 
   hin_buffer_t * buf = malloc (sizeof *buf);
   memset (buf, 0, sizeof (*buf));
@@ -157,15 +159,13 @@ int temp_callback1 (hin_buffer_t * buf, int ret) {
 
   const char * text = "HTTP/1.0 200 OK\r\nContent-Length: 6\r\nConnection: close\r\n\r\nHello\n";
   header_raw (buf, text, strlen (text));
-  hin_request_write (buf);
+  hin_request_write_fixed (buf);
 
   return 0;
 }
 
 int httpd_client_accept (hin_client_t * client) {
   httpd_client_t * http = (httpd_client_t*)client;
-  httpd_client_start_request (http);
-
 #if HIN_HTTPD_NULL_SERVER
   hin_buffer_t * buf = buf_list;
   buf->flags = HIN_SOCKET | (http->c.flags & HIN_SSL);
@@ -176,9 +176,11 @@ int httpd_client_accept (hin_client_t * client) {
   buf->count = buf->sz;
   hin_buffer_list_remove (&buf_list, buf);
 
-  hin_request_read (buf);
+  hin_request_read_fixed (buf);
   return 0;
 #else
+  httpd_client_start_request (http);
+
   hin_buffer_t * buf = hin_lines_create_raw ();
   buf->fd = http->c.sockfd;
   buf->parent = http;

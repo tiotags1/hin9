@@ -55,11 +55,12 @@ int hin_request_read (hin_buffer_t * buffer) {
 
 int hin_request_write_fixed (hin_buffer_t * buffer) {
   struct io_uring_sqe *sqe = io_uring_get_sqe (&ring);
-  //if (buffer->flags & HIN_SOCKET) {
-  //  io_uring_prep_send (sqe, buffer->fd, buffer->ptr, buffer->count, 0);
-  //} else {
+  if (buffer->flags & HIN_SOCKET) {
+    io_uring_prep_send (sqe, buffer->fd, buffer->ptr, buffer->count, 0);
+    //io_uring_prep_send_fixed (sqe, buffer->fd, buffer->ptr, buffer->count, 0, buffer->buf_index);
+  } else {
     io_uring_prep_write_fixed (sqe, buffer->fd, buffer->ptr, buffer->count, buffer->pos, buffer->buf_index);
-  //}
+  }
   io_uring_sqe_set_data (sqe, buffer);
   if (master.debug & DEBUG_URING) printf ("req%d %s buf %p cb %p fd %d\n", master.id, "fwrite", buffer, buffer->callback, buffer->fd);
   return 0;
@@ -69,6 +70,7 @@ int hin_request_read_fixed (hin_buffer_t * buffer) {
   struct io_uring_sqe *sqe = io_uring_get_sqe (&ring);
   if (buffer->flags & HIN_SOCKET) {
     io_uring_prep_recv (sqe, buffer->fd, buffer->ptr, buffer->count, 0);
+    //io_uring_prep_recv_fixed (sqe, buffer->fd, buffer->ptr, buffer->count, 0, buffer->buf_index);
   } else {
     io_uring_prep_read_fixed (sqe, buffer->fd, buffer->ptr, buffer->count, buffer->pos, buffer->buf_index);
   }

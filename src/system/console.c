@@ -70,6 +70,7 @@ void hin_console_init () {
 typedef struct {
   basic_timer_t timer;
   struct timespec ts;
+  int pad;
 } hin_timeout_t;
 
 static int hin_timer_callback (hin_buffer_t * buffer, int ret) {

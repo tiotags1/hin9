@@ -6,6 +6,10 @@
 #include "hin.h"
 #include "http.h"
 #include "conf.h"
+#include "file.h"
+
+int http_client_finish_request (http_client_t * http);
+int hin_cache_finish (httpd_client_t * client, hin_pipe_t * pipe);
 
 static int httpd_proxy_close (http_client_t * http) {
   httpd_client_t * parent = (httpd_client_t*)http->c.parent;
@@ -22,7 +26,6 @@ static int httpd_proxy_close (http_client_t * http) {
   }
 
   if (http->c.sockfd >= 0) {
-    int http_client_finish_request (http_client_t * http);
     http_client_finish_request (http);
   }
   return 0;
@@ -32,6 +35,16 @@ static int httpd_proxy_pipe_close (hin_pipe_t * pipe) {
   if (master.debug & DEBUG_PROXY) printf ("proxy pipe close\n");
   http_client_t * http = pipe->parent1;
   http->io_state &= ~HIN_REQ_DATA;
+
+  httpd_client_t * parent = pipe->parent;
+  if (parent->c.type == HIN_CACHE_OBJECT) {
+    if (http->c.sockfd >= 0) {
+      http_client_finish_request (http);
+    }
+    hin_cache_finish (parent, pipe);
+    return 0;
+  }
+
   if (http->io_state & HIN_REQ_POST) return 0;
   return httpd_proxy_close (http);
 }
@@ -65,9 +78,9 @@ static int httpd_proxy_buffer_close (hin_buffer_t * buffer) {
 
 static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer) {
   hin_client_t * client1 = (hin_client_t*)buffer->parent;
+  http_client_t * http1 = (http_client_t*)client1;
   hin_client_t * client = (hin_client_t*)client1->parent;
   httpd_client_t * http = (httpd_client_t*)client;
-  http_client_t * http1 = (http_client_t*)client1;
 
   string_t source, orig, line, param1, param2;
   source.ptr = buffer->data;
@@ -96,6 +109,7 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer) {
   http->status = atoi (param2.ptr);
   if (master.debug & DEBUG_PROXY) printf ("proxy: status %d\n", http->status);
 
+  int cache = 0;
   while (1) {
     if (find_line (&source, &line) == 0) { return 0; }
     if (line.len == 0) break;
@@ -113,6 +127,13 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer) {
         httpd_respond_fatal (http, 502, NULL);
         return 0;
       }
+    } else if (match_string (&line, "Cache%-Control:") > 0) {
+      int httpd_parse_cache_str (string_t * orig, hin_cache_data_t * cache);
+      hin_cache_data_t data;
+      memset (&data, 0, sizeof (data));
+      httpd_parse_cache_str (&line, &data);
+      http->cache = data.max_age;
+      cache = 1;
     }
   }
 
@@ -137,9 +158,6 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer) {
   pipe->in_error_callback = httpd_proxy_pipe_in_error;
   pipe->out_error_callback = httpd_proxy_pipe_out_error;
 
-  int httpd_pipe_set_chunked (httpd_client_t * http, hin_pipe_t * pipe);
-  httpd_pipe_set_chunked (http, pipe);
-
   if (http1->flags & HIN_HTTP_CHUNKED) {
     int hin_pipe_decode_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush);
     pipe->decode_callback = hin_pipe_decode_chunked;
@@ -147,6 +165,27 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer) {
     pipe->in.flags |= HIN_COUNT;
     pipe->left = pipe->sz = sz;
   }
+
+  if (cache && http->method != HIN_HTTP_POST && http->status == 200) {
+    // cache check is somewhere else
+    int hin_cache_save (void * store, hin_pipe_t * pipe);
+    int n = hin_cache_save (NULL, pipe);
+    if (n == 0) {
+      // pipe already started ?
+      free (pipe);
+      return 0;
+    } else if (n > 0) {
+      if (len > 0) {
+        hin_buffer_t * buf1 = hin_buffer_create_from_data (pipe, source.ptr, len);
+        hin_pipe_append (pipe, buf1);
+      }
+      hin_pipe_start (pipe);
+      return (uintptr_t)source.ptr - (uintptr_t)orig.ptr;
+    }
+  }
+
+  int httpd_pipe_set_chunked (httpd_client_t * http, hin_pipe_t * pipe);
+  httpd_pipe_set_chunked (http, pipe);
 
   hin_buffer_t * buf = malloc (sizeof (*buf) + READ_SZ);
   memset (buf, 0, sizeof (*buf));
@@ -317,6 +356,11 @@ http_client_t * hin_proxy (hin_client_t * parent_c, const char * url1) {
 
   if (parent->state & HIN_REQ_DATA) return NULL;
   parent->state |= HIN_REQ_DATA | HIN_REQ_PROXY;
+
+  int hin_cache_check (void * store, httpd_client_t * client);
+  if (hin_cache_check (NULL, parent) > 0) {
+    return 0;
+  }
 
   hin_uri_t info;
   char * url = strdup (url1);
