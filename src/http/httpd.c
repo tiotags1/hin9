@@ -34,6 +34,7 @@ void httpd_client_clean (httpd_client_t * http) {
   http->status = http->method = 0;
   http->pos = http->count = 0;
   http->cache = http->modified_since = 0;
+  http->cache_flags = 0;
   http->etag = http->post_sz = 0;
   http->post_sep = http->file_path = http->append_headers = http->content_type = NULL;
 }

@@ -1,4 +1,10 @@
 
+* cache control improvements
+* cgi cache fixes
+* bugfix: don't cache items marked as private (or not marked as public)
+* function reference in readme
+
+commit 59f28b6ec0d78563cb527d543c96b4c0556b816d
 * reverse proxy caching
 * removed linger, why doesn't close peer reset with buffered data ?
 

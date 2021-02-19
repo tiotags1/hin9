@@ -50,7 +50,12 @@ static int l_hin_get_server_option (lua_State *L) {
   const char * name = lua_tostring (L, 2);
   if (name == NULL) { printf ("option nil\n"); return 0; }
 
-  if (1) {
+  if (strcmp (name, "enable") == 0) {
+    const char * param = lua_tostring (L, 3);
+    int ret = client->disable & get_mask (param);
+    lua_pushboolean (L, ret);
+    return 1;
+  } else {
     printf ("get_otion unknown option '%s'\n", name);
     return 0;
   }
@@ -111,8 +116,13 @@ static int l_hin_get_option (lua_State *L) {
     lua_pushnumber (L, http->status);
     return 1;
   } else if (strcmp (name, "keepalive") == 0) {
-    if (http->disable & HIN_HTTP_KEEPALIVE) lua_pushboolean (L, 1);
+    if (http->peer_flags & HIN_HTTP_KEEPALIVE) lua_pushboolean (L, 1);
     else lua_pushboolean (L, 0);
+    return 1;
+  } else if (strcmp (name, "enable") == 0) {
+    const char * param = lua_tostring (L, 3);
+    int ret = http->disable & get_mask (param);
+    lua_pushboolean (L, ret);
     return 1;
   } else {
     printf ("get_option unknown option '%s'\n", name);
@@ -146,7 +156,14 @@ static int l_hin_set_option (lua_State *L) {
     basic_ht_hash (str, len, &http->cache_key1, &http->cache_key2);
     return 0;
   } else if (strcmp (name, "cache") == 0) {
-    http->cache = lua_tonumber (L, 3);
+    if (lua_isnumber (L, 3)) {
+      void hin_cache_set_number (httpd_client_t * http, time_t num);
+      hin_cache_set_number (http, lua_tonumber (L, 3));
+    } else {
+      size_t len = 0;
+      const char * str = lua_tolstring (L, 3, &len);
+      httpd_parse_cache_str (str, len, &http->cache_flags, &http->cache);
+    }
     return 0;
   } else if (strcmp (name, "keepalive") == 0) {
     int value = lua_toboolean (L, 3);

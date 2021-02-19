@@ -99,6 +99,7 @@ int httpd_client_read_callback (hin_buffer_t * buffer) {
     return -1;
   }
 
+  int httpd_parse_req (httpd_client_t * http, string_t * source);
   int used = httpd_parse_req (http, source);
   if (used <= 0) return used;
 

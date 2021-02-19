@@ -26,15 +26,12 @@ svg="image/svg+xml"}
 
 local server = create_httpd (function (server, req)
   local path, query, method, version = parse_path (req)
-  --print ("path is ", path, method, query, version)
   --local h = parse_headers (req)
   local ip, port = remote_address (req)
   local id = get_option (req, "id")
   set_option (req, "cache_key", path)
   access ("%x %s %s %s %s\n", id, ip, method, path, query)
-  --set_option (req, "status", 403)
-  --set_option (req, "cache", -1)
-  --add_header (req, "Hello", "from server")
+
   local root = "htdocs"
   local app_path, sub_path = string.match (path, '^/(%w+)/?(.*)')
   if (app_path == "proxy") then
@@ -49,12 +46,15 @@ local server = create_httpd (function (server, req)
   end
   if (app_path == "wordpress") then
     file_path, file_name, ext = sanitize_path (req, root, path, "index.php")
-    if (((file_name == "index.php") or (content_type[ext] == nil)) and ext ~= "php") then
+    local dir_path = string.match (sub_path, '^([%w-]+)')
+
+    if (dir_path == "archives" or dir_path == "wp-json") then
       return cgi (req, "/usr/bin/php-cgi", root, root.."/wordpress/index.php")
     elseif (ext == "php") then
       return cgi (req, "/usr/bin/php-cgi", root, file_path)
     end
-  elseif (ext == "php") then
+  end
+  if (ext == "php") then
     return cgi (req, "/usr/bin/php-cgi", root, file_path)
   elseif (to_cache[ext]) then
     set_option (req, "cache", 604800)
@@ -62,7 +62,7 @@ local server = create_httpd (function (server, req)
   if (content_type[ext]) then
     set_content_type (req, content_type[ext])
   end
-  send_file (req, file_path, 0, -1)
+  send_file (req, file_path)
 
 end, function (server, req, status, err)
   printf ("error callback called %d err '%s'\n", status, err)
@@ -74,14 +74,6 @@ end, function (server, req)
   access ("%x    status %d\n", id, status)
 end)
 
---[[
-  listen
-  1st param: server object
-  2nd param: bind address
-  3rd param: port number
-  4th param: ipv4, ipv6, any/nil
-  5th and 6th param: ssl certificate and ssl key
-]]
 --listen (server, "localhost", "8081", nil, "workdir/cert.pem", "workdir/key.pem")
 listen (server, "localhost", "8080", "ipv4")
 --listen (server, nil, "8080", "ipv4")

@@ -98,7 +98,6 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer) {
 
   off_t sz = 0;
   uint32_t flags = 0;
-  http->status = 200;
   if (find_line (&source, &line) == 0 || match_string (&line, "HTTP/1.([01]) (%d+) %w+", &param1, &param2) <= 0) {
     printf ("proxy: error parsing header line '%.*s'\n", (int)line.len, line.ptr);
     httpd_respond_fatal (http, 502, NULL);
@@ -109,7 +108,6 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer) {
   http->status = atoi (param2.ptr);
   if (master.debug & DEBUG_PROXY) printf ("proxy: status %d\n", http->status);
 
-  int cache = 0;
   while (1) {
     if (find_line (&source, &line) == 0) { return 0; }
     if (line.len == 0) break;
@@ -128,12 +126,7 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer) {
         return 0;
       }
     } else if (match_string (&line, "Cache%-Control:") > 0) {
-      int httpd_parse_cache_str (string_t * orig, hin_cache_data_t * cache);
-      hin_cache_data_t data;
-      memset (&data, 0, sizeof (data));
-      httpd_parse_cache_str (&line, &data);
-      http->cache = data.max_age;
-      cache = 1;
+      httpd_parse_cache_str (line.ptr, line.len, &http->cache_flags, &http->cache);
     }
   }
 
@@ -166,7 +159,7 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer) {
     pipe->left = pipe->sz = sz;
   }
 
-  if (cache && http->method != HIN_HTTP_POST && http->status == 200) {
+  if ((http->cache_flags & HIN_CACHE_PUBLIC) && http->method != HIN_HTTP_POST && http->status == 200) {
     // cache check is somewhere else
     int hin_cache_save (void * store, hin_pipe_t * pipe);
     int n = hin_cache_save (NULL, pipe);

@@ -66,7 +66,6 @@ int header_raw (hin_buffer_t * buffer, const char * data, int len) {
 
   int pos = buffer->count;
   int sz = buffer->sz - buffer->count;
-  if (len > sz) return 0;
   if (len > sz) {
     if (len > READ_SZ) {
       printf ("'header_raw' failed to write more\n");
@@ -103,12 +102,8 @@ int httpd_write_common_headers (httpd_client_t * http, hin_buffer_t * buf) {
   if (http->peer_flags & HIN_HTTP_CHUNKED) {
     header (buf, "Transfer-Encoding: chunked\r\n");
   }
-  if ((http->disable & HIN_HTTP_CACHE) == 0) {
-    if (http->cache > 0) {
-      header (buf, "Cache-Control: public, max-age=%ld, immutable\r\n", http->cache);
-    } else if (http->cache < 0) {
-      header (buf, "Cache-Control: no-cache, no-store\r\n");
-    }
+  if ((http->disable & HIN_HTTP_CACHE) == 0 && http->cache_flags) {
+    header_cache_control (buf, http->cache_flags, http->cache);
   }
   if (http->peer_flags & HIN_HTTP_KEEPALIVE) {
     header (buf, "Connection: keep-alive\r\n");

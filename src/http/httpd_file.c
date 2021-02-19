@@ -16,7 +16,7 @@
 #include "file.h"
 #include "conf.h"
 
-static int httpd_close_filefd (hin_buffer_t * buffer, httpd_client_t * http) {
+static int httpd_close_filefd (httpd_client_t * http) {
   if (http->file_fd <= 0) return 0;
   if (master.debug & DEBUG_SYSCALL) printf ("close filefd %d\n", http->file_fd);
   close (http->file_fd);
@@ -66,18 +66,19 @@ int httpd_send_file (httpd_client_t * http, hin_cache_item_t * item, hin_buffer_
   if (http->pos < 0 || http->pos > sz || http->pos + http->count > sz) {
     printf ("http 416 error out of range\n");
     httpd_respond_error (http, 416, NULL);
-    httpd_close_filefd (NULL, http);
+    httpd_close_filefd (http);
     return 0;
   }
 
   if (master.debug & DEBUG_PIPE) {
-    printf ("sending file '%s' size %ld sockfd %d filefd %d\n", http->file_path, sz, http->c.sockfd, http->file_fd);
+    printf ("sending file '%s' size %ld sockfd %d filefd %d\n", http->file_path, sz, http->c.sockfd, item->fd);
   }
 
-  if (http->disable & HIN_HTTP_MODIFIED) {
+  // do you need to check http->status for 200 or can you return a 304 for a 206
+  if ((http->disable & HIN_HTTP_MODIFIED)) {
     http->modified_since = 0;
   }
-  if (http->disable & HIN_HTTP_ETAG) {
+  if ((http->disable & HIN_HTTP_ETAG)) {
     http->etag = 0;
   }
   if (http->modified_since && http->modified_since < item->modified) {
@@ -85,11 +86,8 @@ int httpd_send_file (httpd_client_t * http, hin_cache_item_t * item, hin_buffer_
   }
   if (http->etag && http->etag == item->etag) {
     http->status = 304;
-  } else if (http->etag) {
+  } else if (http->etag && http->status == 304) {
     http->status = 200;
-  }
-  if (http->cache == 0) {
-    http->cache = item->lifetime;
   }
 
   if (HIN_HTTPD_MAX_DEFLATE_SIZE && sz > HIN_HTTPD_MAX_DEFLATE_SIZE) {
@@ -110,40 +108,34 @@ int httpd_send_file (httpd_client_t * http, hin_cache_item_t * item, hin_buffer_
   pipe->finish_callback = done_file;
   pipe->out_error_callback = httpd_pipe_error_callback;
 
+  buf->parent = pipe;
+  if (item->type) { pipe->parent1 = item; }
+
   int httpd_pipe_set_chunked (httpd_client_t * http, hin_pipe_t * pipe);
-  if (http->method == HIN_HTTP_HEAD) {
+  if (http->status == 304 || http->method == HIN_HTTP_HEAD) {
     http->peer_flags &= ~(HIN_HTTP_CHUNKED | HIN_HTTP_DEFLATE);
   } else {
     httpd_pipe_set_chunked (http, pipe);
   }
 
-  if ((http->peer_flags & HIN_HTTP_CHUNKED) == 0 && http->count > 0) {
+  if ((http->peer_flags & HIN_HTTP_CHUNKED) == 0) {
     pipe->in.flags |= HIN_COUNT;
-    if (http->method != HIN_HTTP_HEAD) {
-      pipe->left = pipe->sz = http->count;
-    } else {
+    pipe->left = pipe->sz = http->count;
+    if (http->status == 304 || http->method == HIN_HTTP_HEAD) {
       pipe->left = 0;
     }
-  }
-
-  buf->parent = pipe;
-  if (item->type) { pipe->parent1 = item; }
-
-  if (http->status == 304) {
-    pipe->left = 0;
-    pipe->in.flags |= HIN_COUNT;
   }
 
   header (buf, "HTTP/1.%d %d %s\r\n", http->peer_flags & HIN_HTTP_VER0 ? 0 : 1, http->status, http_status_name (http->status));
   httpd_write_common_headers (http, buf);
 
-  if ((http->disable & HIN_HTTP_MODIFIED) == 0) {
+  if ((http->disable & HIN_HTTP_MODIFIED) == 0 && item->modified) {
     header_date (buf, "Last-Modified", item->modified);
   }
   if ((http->disable & HIN_HTTP_ETAG) == 0 && item->etag) {
     header (buf, "ETag: \"%lx\"\r\n", item->etag);
   }
-  if (sz && (http->peer_flags & HIN_HTTP_CHUNKED) == 0) {
+  if ((http->peer_flags & HIN_HTTP_CHUNKED) == 0) {
     header (buf, "Content-Length: %ld\r\n", sz);
   }
   if ((http->disable & HIN_HTTP_RANGE) == 0 && (http->peer_flags & HIN_HTTP_CHUNKED) == 0) {
@@ -169,8 +161,8 @@ static int httpd_statx_callback (hin_buffer_t * buf, int ret) {
   if (ret < 0) {
     printf ("http 404 error can't open1 '%s': %s\n", http->file_path, strerror (-ret));
     httpd_respond_error (http, 404, NULL);
-    httpd_close_filefd (buf, http);
-    return 0;
+    httpd_close_filefd (http);
+    return 1;
   }
   struct statx stat1 = *(struct statx *)buf->ptr;
   struct statx * stat = &stat1;

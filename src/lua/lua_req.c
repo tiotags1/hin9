@@ -82,9 +82,10 @@ static int l_hin_send_file (lua_State *L) {
   httpd_client_t * http = (httpd_client_t*)client;
   const char * path = lua_tostring (L, 2);
   if (path == NULL) { printf ("no path supplied\n"); return 0; }
-  off_t pos = lua_tonumber (L, 3);
-  off_t count = lua_tonumber (L, 4);
-  lua_pushvalue (L, 5);
+  off_t pos = 0, count = -1;
+  if (lua_isnumber (L, 3)) pos = lua_tonumber (L, 3);
+  if (lua_isnumber (L, 4)) count = lua_tonumber (L, 4);
+
   httpd_handle_file_request (client, path, pos, count, 0);
 
   return 1;
@@ -100,8 +101,6 @@ static int l_hin_proxy (lua_State *L) {
   const char * url = lua_tostring (L, 2);
   if (url == NULL) { printf ("no path supplied\n"); return 0; }
 
-  lua_pushvalue (L, 3);
-  int ref = luaL_ref (L, LUA_REGISTRYINDEX);
   int hin_proxy (hin_client_t * client, const char * url);
   hin_proxy (client, url);
 

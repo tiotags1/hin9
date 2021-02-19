@@ -37,6 +37,7 @@ typedef struct {
   off_t pos, count;
 
   time_t cache;
+  uint32_t cache_flags;
   time_t modified_since;
   uintptr_t cache_key1, cache_key2;
   uint64_t etag;
@@ -77,11 +78,11 @@ typedef struct {
 int header (hin_buffer_t * buffer, const char * fmt, ...);
 int header_raw (hin_buffer_t * buffer, const char * data, int len);
 int header_date (hin_buffer_t * buffer, const char * name, time_t time);
+int header_cache_control (hin_buffer_t * buf, uint32_t flags, time_t max_age);
 int httpd_write_common_headers (httpd_client_t * http, hin_buffer_t * buf);
 
 const char * http_status_name (int nr);
-
-int httpd_parse_req (httpd_client_t * http, string_t * source);
+int httpd_parse_cache_str (const char * str, size_t len, uint32_t * flags_out, time_t * max_age);
 
 int httpd_respond_text (httpd_client_t * http, int status, const char * body);
 int httpd_respond_error (httpd_client_t * http, int status, const char * body);
