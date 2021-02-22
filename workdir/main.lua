@@ -1,5 +1,6 @@
 
 --redirect_log ("/tmp/log1.txt")
+--redirect_log (NULL, "ffffffff")
 
 function create_log (path)
   local fp = io.open (path, "w")

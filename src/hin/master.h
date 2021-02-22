@@ -27,6 +27,7 @@ typedef struct {
   int sharefd;
   int quit;
   int restart_pid;
+  int restarting;
   void * servers;
   int num_client;
   int num_connection;

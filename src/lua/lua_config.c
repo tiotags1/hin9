@@ -109,14 +109,30 @@ static int l_hin_redirect_log (lua_State *L) {
   const char * path = lua_tostring (L, 1);
   FILE * fp = NULL;
 
-  fp = freopen (path, "w", stdout);
-  if (fp == NULL) { printf ("can't open '%s'\n", path); return 0; }
-  fp = freopen (path, "w", stderr);
-  if (fp == NULL) { printf ("can't open '%s'\n", path); return 0; }
+  if (path) {
+    fp = freopen (path, "w", stdout);
+    if (fp == NULL) { printf ("can't open '%s'\n", path); return 0; }
+    fp = freopen (path, "w", stderr);
+    if (fp == NULL) { printf ("can't open '%s'\n", path); return 0; }
 
-  dup2 (fileno(stderr), fileno(stdout));
-  setvbuf (stdout, NULL, _IOLBF, 2024);
-  setvbuf (stderr, NULL, _IOLBF, 2024);
+    dup2 (fileno(stderr), fileno(stdout));
+    setvbuf (stdout, NULL, _IOLBF, 2024);
+    setvbuf (stderr, NULL, _IOLBF, 2024);
+  } else if (!lua_isnil (L, 1)) {
+    printf ("redirect log path needs to be a string\n");
+  }
+
+  const char * mask = lua_tostring (L, 2);
+  if (mask) {
+    char * ptr = NULL;
+    uint32_t nr = strtol (mask, &ptr, 16);
+    if (ptr <= mask) {
+      printf ("can't parse debug mask\n");
+    }
+    master.debug = nr;
+  } else if (!lua_isnil (L, 2)) {
+    printf ("redirect log debug mask needs to be a string\n");
+  }
 
   return 1;
 }

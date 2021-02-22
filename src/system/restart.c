@@ -14,13 +14,14 @@
 #include "hin.h"
 
 int hin_check_alive () {
-  if (master.restart_pid) {
+  if (master.restarting) {
     if (master.share->done == 0) {
       printf ("not done\n");
     } else if (master.share->done > 0) {
       printf ("restart succesful\n");
-      hin_stop ();
       master.share->done = 0;
+      master.restarting = 0;
+      hin_stop ();
     } else {
       printf ("failed to restart\n");
       master.share->done = 0;
@@ -38,6 +39,14 @@ int hin_check_alive () {
   return -1;
 }
 
+int hin_check_alive_timer () {
+  if (master.restart_pid && master.share->done) {
+    hin_stop ();
+    master.share->done = 0;
+  }
+  return 0;
+}
+
 void hin_stop () {
   master.quit = 1;
   void httpd_proxy_connection_close_all ();
@@ -47,24 +56,38 @@ void hin_stop () {
   hin_check_alive ();
 }
 
-int hin_restart () {
-  printf("hin restart ...\n");
-  int pid = fork ();
-  if (pid != 0) {
-    printf ("wait restart issued to former process\n");
-    master.share->done = 0;
-    master.restart_pid = pid;
-    return 0;
-  }
+static void hin_restart_old () {
+  master.restarting = 1;
+}
+
+static void hin_restart_new () {
   int hin_event_clean ();
   hin_event_clean ();
-  printf ("running exe file '%s'\n", master.exe_path);
+  printf ("restart exe file '%s'\n", master.exe_path);
   char * buf = NULL;
   if (asprintf (&buf, "--reuse=%d", master.sharefd) < 0)
     perror ("asprintf");
   char * argv[] = {master.exe_path, buf, NULL};
   execvp (master.exe_path, argv);
   printf ("crash\n");
+  exit (-1);
+}
+
+int hin_restart () {
+  printf("hin restart ...\n");
+
+  master.share->done = 0;
+
+  int pid = fork ();
+  if (pid == 0) {
+    hin_restart_new ();
+    return 0;
+  }
+
+  printf ("restart %d into %d\n", getpid (), pid);
+  master.restart_pid = pid;
+  hin_restart_old ();
+
   return 0;
 }
 

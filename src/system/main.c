@@ -65,10 +65,6 @@ int main (int argc, const char * argv[]) {
   master.debug = 0;
   //master.debug |= DEBUG_SOCKET;
   //master.debug &= ~(DEBUG_URING);
-  #if HIN_HTTPD_WORKER_PREFORKED
-  int hin_worker_init ();
-  hin_worker_init ();
-  #endif
   void hin_init_sharedmem ();
   hin_init_sharedmem ();
   void hin_event_init ();
@@ -83,6 +79,11 @@ int main (int argc, const char * argv[]) {
     printf ("could not load config file\n");
     return -1;
   }
+
+  #if HIN_HTTPD_WORKER_PREFORKED
+  int hin_worker_init ();
+  hin_worker_init ();
+  #endif
 
   printf ("hin serve ...\n");
   master.share->done = 1;

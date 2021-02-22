@@ -82,6 +82,8 @@ static int hin_timer_callback (hin_buffer_t * buffer, int ret) {
 
   void httpd_timer ();
   httpd_timer ();
+  int hin_check_alive_timer ();
+  hin_check_alive_timer ();
 
   int frames = basic_timer_frames (&tm->timer);
 

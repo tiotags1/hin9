@@ -1,4 +1,9 @@
 
+* bugfixed: graceful restart
+* lua option to toggle debug output
+* gitlab markdown doesn't know what newlines are
+
+commit 95f4357027f24f959ecd5dd2564b616772db6ef7
 * cache control improvements
 * cgi cache fixes
 * bugfix: don't cache items marked as private (or not marked as public)
