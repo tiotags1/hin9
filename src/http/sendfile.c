@@ -8,29 +8,60 @@
 #include "hin.h"
 #include "http.h"
 
+void hin_pipe_handled_read (hin_pipe_t * pipe);
+
+typedef struct {
+  off_t chunk_sz;
+  int left_over;
+} hin_pipe_chunked_decode_t;
+
+static void hin_pipe_decode_prepare_half_read (hin_pipe_t * pipe, hin_buffer_t * buffer, int left, int num) {
+  hin_pipe_chunked_decode_t * decode = pipe->extra;
+  decode->left_over = left;
+  printf ("chunk needs more space left %d num %d\n", left, num);
+  buffer->count = buffer->sz;
+  if (left > 0) {
+    memmove (buffer->ptr, buffer->ptr + num - left, left);
+    buffer->count -= left;
+  }
+  printf ("left in buffer is '%.*s'\n", left, buffer->ptr);
+  hin_pipe_handled_read (pipe);
+  // offset should increase ?
+  hin_request_read (buffer);
+}
+
 int hin_pipe_decode_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush) {
+  hin_pipe_chunked_decode_t * decode = pipe->extra;
+  if (decode == NULL) {
+    decode = calloc (1, sizeof (*decode));
+    pipe->extra = decode;
+  }
   string_t source, orig, param1, param2;
-  orig.ptr = buffer->ptr;
-  orig.len = num;
+  orig.ptr = buffer->ptr - decode->left_over;
+  orig.len = num + decode->left_over;
   source = orig;
   while (1) {
-    if (master.debug & DEBUG_CHUNK) printf ("chunk sz left %ld\n", pipe->extra_sz);
-    if (pipe->extra_sz > 0) {
-      int consume = pipe->extra_sz;
+    if (master.debug & DEBUG_CHUNK) printf ("chunk sz left %ld\n", decode->chunk_sz);
+    if (decode->chunk_sz > 0) {
+      int consume = decode->chunk_sz;
       if (consume > source.len) consume = source.len;
       if (master.debug & DEBUG_CHUNK) printf ("chunk consume %d\n", consume);
       hin_buffer_t * buf = hin_pipe_get_buffer (pipe, consume);
       memcpy (buf->ptr, source.ptr, consume);
       if (pipe->read_callback (pipe, buf, consume, 0))
         hin_buffer_clean (buf);
-      if (pipe->extra_sz > consume) {
+      if (decode->chunk_sz > consume) {
         // want more;
-        pipe->extra_sz -= consume;
+        decode->chunk_sz -= consume;
         return 1;
       }
       source.ptr += consume;
       source.len -= consume;
-      pipe->extra_sz -= consume;
+      decode->chunk_sz -= consume;
+      if (source.len < 2) {
+        hin_pipe_decode_prepare_half_read (pipe, buffer, source.len-2, num);
+        return 0;
+      }
       if (match_string (&source, "\r\n") < 0) {
         printf ("chunk format error\n");
         return -1;
@@ -39,13 +70,16 @@ int hin_pipe_decode_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, 
     int err = 0;
     if ((err = match_string (&source, "(%x+)\r\n", &param1)) <= 0) {
       // save stuff
-      if (source.len < 10) return 1;
+      if (source.len < 10) {
+        hin_pipe_decode_prepare_half_read (pipe, buffer, source.len, num);
+        return 0;
+      }
       printf ("chunk couldn't find in '%.*s'\n", (int)(source.len > 20 ? 20 : source.len), source.ptr);
       return -1;
     }
-    pipe->extra_sz = strtol (param1.ptr, NULL, 16);
-    if (master.debug & DEBUG_CHUNK) printf ("chunk of size %ld found\n", pipe->extra_sz);
-    if (pipe->extra_sz == 0 && param1.len > 0) {
+    decode->chunk_sz = strtol (param1.ptr, NULL, 16);
+    if (master.debug & DEBUG_CHUNK) printf ("chunk of size %ld found\n", decode->chunk_sz);
+    if (decode->chunk_sz == 0 && param1.len > 0) {
       int ret = pipe->read_callback (pipe, buffer, 0, 1);
       pipe->in.flags |= HIN_DONE;
       return 1;
@@ -155,8 +189,8 @@ int httpd_pipe_set_chunked (httpd_client_t * http, hin_pipe_t * pipe) {
 }
 
 int httpd_pipe_upload_chunked (httpd_client_t * http, hin_pipe_t * pipe) {
-  if (http->disable & HIN_HTTP_CHUNKUP) return 0;
-  if (http->peer_flags & HIN_HTTP_CHUNKUP) {
+  if (http->disable & HIN_HTTP_CHUNKED_UPLOAD) return 0;
+  if (http->peer_flags & HIN_HTTP_CHUNKED_UPLOAD) {
     pipe->decode_callback = hin_pipe_decode_chunked;
     pipe->read_callback = hin_pipe_copy_chunked;
   }

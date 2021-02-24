@@ -72,7 +72,7 @@ end, function (server, req, status, err)
 end, function (server, req)
   local status = get_option (req, "status")
   local id = get_option (req, "id")
-  access ("%x    status %d\n", id, status)
+  access ("%x    status %d\n", id or -1, status or 1)
 end)
 
 --listen (server, "localhost", "8081", nil, "workdir/cert.pem", "workdir/key.pem")

@@ -45,7 +45,7 @@ int hin_server_error_callback (hin_client_t * client, int error_code, const char
   if (http->state & HIN_REQ_ERROR_HANDLED) return 0;
   http->state |= HIN_REQ_ERROR_HANDLED;
 
-  http->state &= ~(HIN_REQ_DATA | HIN_REQ_RAW);
+  http->state &= ~(HIN_REQ_DATA | HIN_REQ_ERROR);
 
   lua_rawgeti (L, LUA_REGISTRYINDEX, server->error_callback);
   lua_pushlightuserdata (L, server);

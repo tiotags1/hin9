@@ -93,8 +93,8 @@ int httpd_write_common_headers (httpd_client_t * http, hin_buffer_t * buf) {
     time (&rawtime);
     header_date (buf, "Date", rawtime);
   }
-  if ((http->disable & HIN_HTTP_SERVNAME) == 0) {
-    header (buf, "Server: %s\r\n", HIN_HTTPD_SERVER_NAME);
+  if ((http->disable & HIN_HTTP_BANNER) == 0) {
+    header (buf, "Server: %s\r\n", HIN_HTTPD_SERVER_BANNER);
   }
   if (http->peer_flags & HIN_HTTP_DEFLATE) {
     header (buf, "Content-Encoding: deflate\r\n");
@@ -125,7 +125,7 @@ static int http_raw_response_callback (hin_buffer_t * buffer, int ret) {
   if (ret < 0) { printf ("httpd sending error %s\n", strerror (-ret)); }
   else if (ret != buffer->count) printf ("httpd http_error_write_callback not sent all of it %d/%d\n", ret, buffer->count);
 
-  http->state &= ~HIN_REQ_RAW;
+  http->state &= ~HIN_REQ_ERROR;
   httpd_client_finish_request (http);
 
   return 1;
@@ -135,7 +135,7 @@ int httpd_respond_text (httpd_client_t * http, int status, const char * body) {
   hin_client_t * client = &http->c;
 
   if (http->state & HIN_REQ_DATA) return -1;
-  http->state |= HIN_REQ_DATA | HIN_REQ_RAW;
+  http->state |= HIN_REQ_DATA;
 
   if (http->method == HIN_HTTP_POST) {
     printf ("httpd 405 post on a raw resource\n");
@@ -172,18 +172,24 @@ int httpd_respond_text (httpd_client_t * http, int status, const char * body) {
     header (buf, "%s", body);
   }
   if (freeable) free ((char*)body);
-  if (master.debug & DEBUG_RW) printf ("raw response '\n%.*s'\n", buf->count, buf->ptr);
+  if (http->debug & DEBUG_RW) printf ("raw response %d '\n%.*s'\n", http->c.sockfd, buf->count, buf->ptr);
   hin_request_write (buf);
   return 0;
 }
 
 int httpd_respond_error (httpd_client_t * http, int status, const char * body) {
-  http->state &= ~HIN_REQ_DATA;
+  if (http->state & HIN_REQ_ERROR) return 0;
+  http->state &= ~(HIN_REQ_DATA | HIN_REQ_POST);
+  http->state |= HIN_REQ_ERROR;
+  http->method = HIN_HTTP_GET;
   return httpd_respond_text (http, status, body);
 }
 
 int httpd_respond_fatal (httpd_client_t * http, int status, const char * body) {
-  http->state &= ~HIN_REQ_DATA;
+  if (http->state & HIN_REQ_ERROR) return 0;
+  http->state &= ~(HIN_REQ_DATA | HIN_REQ_POST);
+  http->state |= HIN_REQ_ERROR;
+  http->method = HIN_HTTP_GET;
   httpd_respond_text (http, status, body);
   httpd_client_shutdown (http);
   return 0;

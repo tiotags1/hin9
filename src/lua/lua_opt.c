@@ -29,8 +29,10 @@ uint32_t get_mask (const char * name) {
     return HIN_HTTP_DEFLATE;
   } else if (strcmp (name, "date") == 0) {
     return HIN_HTTP_DATE;
+  } else if (strcmp (name, "banner") == 0) {
+    return HIN_HTTP_BANNER;
   } else if (strcmp (name, "chunked_upload") == 0) {
-    return HIN_HTTP_CHUNKUP;
+    return HIN_HTTP_CHUNKED_UPLOAD;
   } else if (strcmp (name, "local_cache") == 0) {
     return HIN_HTTP_LOCAL_CACHE;
   } else if (strcmp (name, "all") == 0) {
@@ -151,6 +153,10 @@ static int l_hin_set_option (lua_State *L) {
     http->status = lua_tonumber (L, 3);
     return 0;
   } else if (strcmp (name, "cache_key") == 0) {
+    if (lua_isnil (L, 3)) {
+      http->cache_key1 = http->cache_key2 = 0;
+      return 0;
+    }
     size_t len = 0;
     const char * str = lua_tolstring (L, 3, &len);
     basic_ht_hash (str, len, &http->cache_key1, &http->cache_key2);
@@ -169,6 +175,19 @@ static int l_hin_set_option (lua_State *L) {
     int value = lua_toboolean (L, 3);
     if (value) {  }
     else { http->peer_flags &= ~HIN_HTTP_KEEPALIVE; }
+    return 0;
+  } else if (strcmp (name, "debug") == 0) {
+    const char * mask = lua_tostring (L, 3);
+    if (mask) {
+      char * ptr = NULL;
+      uint32_t nr = strtol (mask, &ptr, 16);
+      if (ptr <= mask) {
+        printf ("can't parse debug mask\n");
+      }
+      http->debug = nr;
+    } else if (!lua_isnil (L, 3)) {
+      printf ("debug mask needs to be a string\n");
+    }
     return 0;
   } else {
     printf ("set_otion unknown option '%s'\n", name);

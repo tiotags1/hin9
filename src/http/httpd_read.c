@@ -16,12 +16,13 @@ int httpd_client_read_callback (hin_buffer_t * buffer);
 int httpd_client_reread (httpd_client_t * http) {
   hin_buffer_t * buffer = http->read_buffer;
 
-  if (http->status & HIN_REQ_ENDING) return 0;
+  if (http->state & HIN_REQ_ENDING) return 0;
 
   int len = buffer->ptr - buffer->data;
   int num = 0;
-  if (len > 0)
+  if (len > 0) {
     num = httpd_client_read_callback (buffer);
+  }
   if (num > 0) {
   } else if (num == 0) {
     buffer->count = buffer->sz;
@@ -47,13 +48,16 @@ static int post_done (hin_pipe_t * pipe) {
   return httpd_client_finish_request (http);
 }
 
-static int httpd_client_handle_post (httpd_client_t * http, string_t * source) {
-  int consume = source->len;
-  if (http->post_sz && consume > http->post_sz) consume = http->post_sz;
-  off_t sz = http->post_sz;
-  // send post data in buffer to post handler
+static int httpd_client_start_post (httpd_client_t * http, string_t * source) {
   http->post_fd = openat (AT_FDCWD, HIN_HTTPD_POST_DIRECTORY, O_RDWR | O_TMPFILE, 0600);
   if (http->post_fd < 0) { printf ("openat tmpfile failed %s\n", strerror (errno)); return -1; }
+  http->state |= HIN_REQ_POST;
+}
+
+static int httpd_client_handle_post (httpd_client_t * http, string_t * source) {
+  int consume = source->len;
+  off_t sz = http->post_sz;
+  if (http->state & HIN_REQ_ERROR) return consume;
 
   hin_pipe_t * pipe = calloc (1, sizeof (*pipe));
   hin_pipe_init (pipe);
@@ -67,7 +71,7 @@ static int httpd_client_handle_post (httpd_client_t * http, string_t * source) {
   pipe->parent = http;
   pipe->finish_callback = post_done;
 
-  if (http->peer_flags & HIN_HTTP_CHUNKUP) {
+  if (http->peer_flags & HIN_HTTP_CHUNKED_UPLOAD) {
     int httpd_pipe_upload_chunked (httpd_client_t * http, hin_pipe_t * pipe);
     httpd_pipe_upload_chunked (http, pipe);
   } else if (sz) {
@@ -80,8 +84,6 @@ static int httpd_client_handle_post (httpd_client_t * http, string_t * source) {
   }
 
   hin_pipe_start (pipe);
-
-  http->state |= HIN_REQ_POST;
 
   return consume;
 }
@@ -103,12 +105,14 @@ int httpd_client_read_callback (hin_buffer_t * buffer) {
   int used = httpd_parse_req (http, source);
   if (used <= 0) return used;
 
-  if (http->post_sz > 0 && http->state & HIN_REQ_PROXY) {
-    int consume = source->len > http->post_sz ? http->post_sz : source->len;
-    used += consume;
+  int consume = 0;
+  if (http->peer_flags & HIN_HTTP_CHUNKED_UPLOAD) {
+    printf ("TODO chunked upload later\n");
+    exit (1);
   } else if (http->post_sz > 0) {
-    int consume = httpd_client_handle_post (http, source);
-    if (consume < 0) {  }
+    consume = source->len;
+    if (consume > http->post_sz) consume = http->post_sz;
+    httpd_client_start_post (http, source);
     used += consume;
   }
 
@@ -125,13 +129,16 @@ int httpd_client_read_callback (hin_buffer_t * buffer) {
   if (http->state & HIN_REQ_END) {
     printf ("httpd issued forced shutdown\n");
     return -1;
-  } else if (http->peer_flags & http->disable & HIN_HTTP_CHUNKUP) {
+  } else if (http->peer_flags & http->disable & HIN_HTTP_CHUNKED_UPLOAD) {
     printf ("httpd 411 chunked upload disabled\n");
     httpd_respond_fatal (http, 411, NULL);
-  } else if ((http->state & ~(HIN_REQ_HEADERS|HIN_REQ_END)) == 0) {
-    printf ("httpd 500 missing request\n");
+  } else if ((http->state & (HIN_REQ_DATA)) == 0) {
+    printf ("httpd 500 missing request %x\n", http->state);
     httpd_respond_error (http, 500, NULL);
     return -1;
+  } else if (http->state & (HIN_REQ_ERROR)) {
+  } else if ((http->state & HIN_REQ_CGI) && (http->state & HIN_REQ_POST)) {
+    httpd_client_handle_post (http, source);
   }
 
   if (http->peer_flags & HIN_HTTP_DEFLATE) {

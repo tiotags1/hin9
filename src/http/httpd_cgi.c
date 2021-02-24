@@ -49,11 +49,11 @@ static int var (env_list_t * env, const char * fmt, ...) {
 }
 
 static int hin_pipe_cgi_server_finish_callback (hin_pipe_t * pipe) {
-  if (master.debug & DEBUG_PIPE) printf ("cgi transfer finished infd %d outfd %d bytes %ld\n", pipe->in.fd, pipe->out.fd, pipe->count);
   hin_worker_t * worker = (hin_worker_t *)pipe->parent1;
   httpd_client_t * http = (httpd_client_t*)pipe->parent;
+  if (http->debug & DEBUG_PIPE) printf ("cgi transfer finished infd %d outfd %d bytes %ld\n", pipe->in.fd, pipe->out.fd, pipe->count);
 
-  if (master.debug & DEBUG_SYSCALL) printf ("  cgi read done, close %d\n", pipe->in.fd);
+  if (http->debug & DEBUG_SYSCALL) printf ("  cgi read done, close %d\n", pipe->in.fd);
   close (pipe->in.fd);
 
   #if HIN_HTTPD_WORKER_PREFORKED
@@ -76,7 +76,7 @@ int hin_pipe_cgi_server_read_callback (hin_pipe_t * pipe, hin_buffer_t * buffer,
   httpd_client_t * http = (httpd_client_t*)worker->data;
 
   if (num <= 0 || flush) {
-    if (master.debug & DEBUG_CGI) printf ("cgi pipe subprocess closed pipe\n");
+    if (http->debug & DEBUG_CGI) printf ("cgi pipe subprocess closed pipe\n");
     return 1;
   }
 
@@ -102,7 +102,7 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
     if (line.len == 0) break;
     if (matchi_string (&line, "Status: (%d+)", &param1) > 0) {
       http->status = atoi (param1.ptr);
-      if (master.debug & DEBUG_CGI) printf ("cgi status is %d\n", http->status);
+      if (http->debug & DEBUG_CGI) printf ("cgi status is %d\n", http->status);
     } else if (matchi_string_equal (&line, "Content%-Length: (%d+)", &param1) > 0) {
       sz = atoi (param1.ptr);
     } else if (matchi_string_equal (&line, "Content%-Encoding: .*") > 0) {
@@ -185,7 +185,7 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
   while (1) {
     if (find_line (source, &line) == 0) { hin_buffer_clean (buf); return 0; }
     if (line.len == 0) break;
-    if (master.debug & DEBUG_CGI)
+    if (http->debug & DEBUG_CGI)
       fprintf (stderr, "cgi header is '%.*s'\n", (int)line.len, line.ptr);
     if (matchi_string (&line, "Status:") > 0) {
     } else if ((http->peer_flags & HIN_HTTP_CHUNKED) && matchi_string (&line, "Content%-Length:") > 0) {
@@ -196,7 +196,7 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
   }
   header (buf, "\r\n");
 
-  if (master.debug & DEBUG_RW) {
+  if (http->debug & DEBUG_RW) {
     printf ("cgi response %d is '\n%.*s'\n", http->c.sockfd, buf->count, buf->ptr);
     for (hin_buffer_t * elem = buf->next; elem; elem=elem->next) {
       printf ("continue %d '\n%.*s'\n", elem->count, elem->count, elem->ptr);
@@ -247,6 +247,12 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
   if (http->state & HIN_REQ_DATA) return -1;
   http->state |= (HIN_REQ_DATA | HIN_REQ_CGI);
 
+  if (!HIN_HTTPD_CGI_CHUNKED_UPLOAD && (http->peer_flags & HIN_HTTP_CHUNKED_UPLOAD)) {
+    printf ("cgi spec denies chunked upload\n");
+    httpd_respond_fatal (http, 411, NULL);
+    return -1;
+  }
+
   int hin_cache_check (void * store, httpd_client_t * client);
   if (hin_cache_check (NULL, http) > 0) {
     return 0;
@@ -266,7 +272,7 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
   int pid = fork ();
   if (pid != 0) {
     // this is root
-    if (master.debug & DEBUG_CGI) printf ("cgi %d pipe read %d write %d pid %d\n", http->c.sockfd, out_pipe[0], out_pipe[1], pid);
+    if (http->debug & DEBUG_CGI) printf ("cgi %d pipe read %d write %d pid %d\n", http->c.sockfd, out_pipe[0], out_pipe[1], pid);
     hin_cgi_send (http, worker, out_pipe[0]);
     close (out_pipe[1]);
     return out_pipe[0];
@@ -282,7 +288,7 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
     exit (1);
   }
   if (http->method == HIN_HTTP_POST && http->post_fd) {
-    if (master.debug & DEBUG_CGI)
+    if (http->debug & DEBUG_CGI)
       fprintf (stderr, "cgi stdin set to %d\n", http->post_fd);
 
     lseek (http->post_fd, 0, SEEK_SET);
@@ -291,7 +297,7 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
       exit (1);
     }
   } else {
-    if (master.debug & DEBUG_CGI)
+    if (http->debug & DEBUG_CGI)
       fprintf (stderr, "cgi no stdin\n");
     close (STDIN_FILENO);
   }
@@ -311,7 +317,10 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
     return -1;
   }
   var (&env, "REQUEST_URI=%.*s", path.len, path.ptr);
-  var (&env, "SCRIPT_NAME=%.*s", uri.path.len, uri.path.ptr);
+  if (1) {
+    var (&env, "REDIRECT_URI=%.*s", path.len, path.ptr);
+  }
+  var (&env, "SCRIPT_NAME=%s", script_path);
   var (&env, "QUERY_STRING=%.*s", uri.query.len, uri.query.ptr);
   var (&env, "SCRIPT_FILENAME=%s", script_path);
   var (&env, "DOCUMENT_ROOT=%s", root_path);

@@ -17,7 +17,7 @@ static int httpd_proxy_close (http_client_t * http) {
   if (parent) {
     if (master.debug & DEBUG_PROXY) printf ("proxy close %d>%d\n", http->c.sockfd, parent->c.sockfd);
     parent->state &= ~HIN_REQ_PROXY;
-    if ((parent->state & HIN_REQ_RAW) == 0) {
+    if ((parent->state & HIN_REQ_ERROR) == 0) {
       parent->state &= ~(HIN_REQ_PROXY | HIN_REQ_DATA);
       httpd_client_finish_request (parent);
     }
@@ -253,7 +253,7 @@ static int http_client_sent_callback (hin_buffer_t * buffer, int ret) {
   pipe->finish_callback = httpd_proxy_pipe_post_close;
   //pipe->out_error_callback = httpd_proxy_pipe_in_error;
   //pipe->in_error_callback = httpd_proxy_pipe_out_error;
-  if (http->peer_flags & HIN_HTTP_CHUNKUP) {
+  if (http->peer_flags & HIN_HTTP_CHUNKED_UPLOAD) {
     int httpd_pipe_upload_chunked (httpd_client_t * http, hin_pipe_t * pipe);
     httpd_pipe_upload_chunked (http, pipe);
   } else if (sz > 0) {

@@ -60,16 +60,16 @@ set\_server\_option (server, "enable", feature)
 set\_server\_option (server, "disable", feature)
   * enable/disable a certain feature on the whole server
 
+get\_server\_option (server-object, option-name)
+
+get\_server\_option (server, "enable", feature)
+  * returns if feature is enabled or disabled
+
 set\_server\_option (server, "timeout", timeout)
   * number of seconds to keep clients after a request is done
 
 set\_server\_option (server, "hostname", feature)
   * set server hostname
-
-get\_server\_option (server-object, option-name)
-
-get\_server\_option (server, "enable", feature)
-  * returns if feature is enabled or disabled
 
 set\_option (request-object, option-name, option-value)
 
@@ -79,6 +79,7 @@ set\_option (request-object, "disable", feature)
   * enable/disable a certain feature for a single request
 
 set\_option (request-object, "status", http status number)
+  * sets http status
 
 set\_option (request-object, "cache\_key", cache uri)
   * identifies a cache object, uri is hashed and if caching is requested it will be used to identify cache object
@@ -123,13 +124,17 @@ parse\_headers (request-object)
   * returns headers as a lua hashtable
 
 send\_file (request-object, path, start offset, byte count)
+  * sends file at path to client
 
 proxy (request-object, uri)
+  * proxies a request for uri to client
   * uri is in the form of "http(s)://host(:port)/request"
 
 cgi (request-object, executable path, htdocs / root dir, file path)
+  * executes cgi program and pipes the output to client
 
 respond (request-object, http status code, optional body)
+  * returns a raw message to client expl respond (req, 403, "don't look")
 
 sanitize\_path (request-object, htdocs / root dir, path)
   * returns dir path relative to root dir, file name, file extension
@@ -138,11 +143,13 @@ remote\_address (request-object)
   * returns ip address, port number
 
 add\_header (request-object, name, value)
+  * adds header to request
 
 shutdown (request-object)
   * closes connection without response
 
 set\_content\_type (request-object, content type string)
+  * sets content type returned
 
 
 

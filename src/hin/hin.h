@@ -73,7 +73,7 @@ struct hin_pipe_struct {
 
   uint32_t flags;
   uint64_t hash;
-  off_t extra_sz;
+  void * extra;
 };
 
 struct hin_client_struct {

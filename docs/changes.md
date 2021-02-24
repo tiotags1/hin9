@@ -1,4 +1,10 @@
 
+* bugfix: post errors causing crashes
+* option to limit chunked upload for cgi
+* chunked decode edge cases handling
+* per request debug logging
+
+commit 2f754a5743f26f6b6021565a209b36e4d9f7acfb
 * bugfixed: graceful restart
 * lua option to toggle debug output
 * gitlab markdown doesn't know what newlines are

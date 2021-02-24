@@ -51,10 +51,10 @@ int httpd_parse_headers_line (httpd_client_t * http, string_t * line) {
       if (master.debug & DEBUG_PROTO) printf (" range requested is %ld-%ld\n", http->pos, http->count);
     }
   } else if (http->method == HIN_HTTP_POST) {
-    if (match_string (line, "Content%-Length: (%d+)", &param) > 0) {
+    if (match_string (line, "Content-Length: (%d+)", &param) > 0) {
       http->post_sz = atoi (param.ptr);
       if (master.debug & DEBUG_POST) printf ("Content length is %ld\n", http->post_sz);
-    } else if (match_string (line, "Content%-Type: multipart/form%-data; boundary=([%-%w]+)", &param) > 0) {
+    } else if (match_string (line, "Content-Type:%s*multipart/form-data;%s*boundary=%\"?([%-%w]+)%\"?", &param) > 0) {
       char * new = malloc (param.len + 2 + 1);
       new[0] = '-';
       new[1] = '-';
@@ -62,12 +62,15 @@ int httpd_parse_headers_line (httpd_client_t * http, string_t * line) {
       new[param.len + 2] = '\0';
       http->post_sep = new;
       if (master.debug & DEBUG_POST) printf ("Content type multipart/form-data boundry is '%s'\n", new);
-    } else if (match_string (line, "Transfer%-Encoding:%s*chunked") > 0) {
-      if (master.debug & DEBUG_POST) printf ("Post content encoding is chunked\n");
-      http->peer_flags |= HIN_HTTP_CHUNKUP;
-    } else if (match_string (line, "Transfer%-Encoding:%s*") > 0) {
-      printf ("httpd don't accept post with transfer encoding\n");
-      return -1;
+    } else if (match_string (line, "Transfer-Encoding:%s*") > 0) {
+      if (match_string (line, "chunked") > 0) {
+        if (master.debug & DEBUG_POST) printf ("Post content encoding is chunked\n");
+        http->peer_flags |= HIN_HTTP_CHUNKED_UPLOAD;
+      } else if (match_string (line, "identity") > 0) {
+      } else {
+        printf ("httpd don't accept post with transfer encoding\n");
+        return -1;
+      }
     }
   }
   return 1;
@@ -124,11 +127,14 @@ int httpd_parse_headers (httpd_client_t * http, string_t * source) {
     }
   }
 
-  if (http->method == HIN_HTTP_POST && http->post_sz <= 0) {
+  if (http->peer_flags & HIN_HTTP_CHUNKED_UPLOAD) {
+    http->post_sz = 0;
+  }
+  if (http->method == HIN_HTTP_POST && (http->post_sz <= 0 && (http->peer_flags & HIN_HTTP_CHUNKED_UPLOAD) == 0)) {
     printf ("httpd post missing size\n");
     httpd_respond_fatal (http, 411, NULL);
     return -1;
-  } else if (http->post_sz >= HIN_HTTPD_MAX_POST_SIZE) {
+  } else if (HIN_HTTPD_MAX_POST_SIZE && http->post_sz >= HIN_HTTPD_MAX_POST_SIZE) {
     printf ("httpd post size %ld >= %ld\n", http->post_sz, (long)HIN_HTTPD_MAX_POST_SIZE);
     httpd_respond_fatal (http, 413, NULL);
     return -1;
