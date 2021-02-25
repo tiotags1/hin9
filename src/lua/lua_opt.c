@@ -10,7 +10,24 @@
 
 #include <basic_hashtable.h>
 
-uint32_t get_mask (const char * name) {
+static int hin_lua_mask_from_str (lua_State * L, int pos, uint32_t * ptr1) {
+  const char * mask = lua_tostring (L, pos);
+  if (mask) {
+    char * ptr = NULL;
+    uint32_t nr = strtol (mask, &ptr, 16);
+    if (ptr <= mask) {
+      printf ("can't parse debug mask\n");
+      return -1;
+    }
+    *ptr1 = nr;
+    return 1;
+  } else if (!lua_isnil (L, 3)) {
+    printf ("debug mask needs to be a string\n");
+  }
+  return -1;
+}
+
+static uint32_t get_mask (const char * name) {
   if (strcmp (name, "keepalive") == 0) {
     return HIN_HTTP_KEEPALIVE;
   } else if (strcmp (name, "range") == 0) {
@@ -36,7 +53,7 @@ uint32_t get_mask (const char * name) {
   } else if (strcmp (name, "local_cache") == 0) {
     return HIN_HTTP_LOCAL_CACHE;
   } else if (strcmp (name, "all") == 0) {
-    return 0xffffffff;
+    return ~0;
   } else {
     printf ("unknown option %s\n", name);
     return 0;
@@ -76,23 +93,27 @@ static int l_hin_set_server_option (lua_State *L) {
   if (strcmp (name, "enable") == 0) {
     const char * param = lua_tostring (L, 3);
     client->disable &= ~get_mask (param);
-    if (master.debug & DEBUG_CONFIG) printf ("lua server enable %s\n", param);
+    if (client->debug & DEBUG_CONFIG) printf ("lua server enable %s\n", param);
     return 0;
   } else if (strcmp (name, "disable") == 0) {
     const char * param = lua_tostring (L, 3);
     client->disable |= get_mask (param);
-    if (master.debug & DEBUG_CONFIG) printf ("lua server disable %s\n", param);
+    if (client->debug & DEBUG_CONFIG) printf ("lua server disable %s\n", param);
     return 0;
   } else if (strcmp (name, "timeout") == 0) {
     int timeout = lua_tonumber (L, 3);
     client->timeout = timeout;
-    if (master.debug & DEBUG_CONFIG) printf ("lua server timeout set to %d\n", timeout);
+    if (client->debug & DEBUG_CONFIG) printf ("lua server timeout set to %d\n", timeout);
     return 0;
   } else if (strcmp (name, "hostname") == 0) {
     const char * name = lua_tostring (L, 3);
     if (client->hostname) free (client->hostname);
     client->hostname = strdup (name);
-    if (master.debug & DEBUG_CONFIG) printf ("lua server hostname set to %s\n", name);
+    if (client->debug & DEBUG_CONFIG) printf ("lua server hostname set to %s\n", name);
+    return 0;
+  } else if (strcmp (name, "debug") == 0) {
+    if (hin_lua_mask_from_str (L, 3, &client->debug) >= 0) {
+    }
     return 0;
   } else {
     printf ("set_otion unknown option '%s'\n", name);
@@ -177,16 +198,7 @@ static int l_hin_set_option (lua_State *L) {
     else { http->peer_flags &= ~HIN_HTTP_KEEPALIVE; }
     return 0;
   } else if (strcmp (name, "debug") == 0) {
-    const char * mask = lua_tostring (L, 3);
-    if (mask) {
-      char * ptr = NULL;
-      uint32_t nr = strtol (mask, &ptr, 16);
-      if (ptr <= mask) {
-        printf ("can't parse debug mask\n");
-      }
-      http->debug = nr;
-    } else if (!lua_isnil (L, 3)) {
-      printf ("debug mask needs to be a string\n");
+    if (hin_lua_mask_from_str (L, 3, &http->debug) >= 0) {
     }
     return 0;
   } else {
@@ -195,7 +207,6 @@ static int l_hin_set_option (lua_State *L) {
   }
   return 0;
 }
-
 
 static lua_function_t functs [] = {
 {"set_server_option",	l_hin_set_server_option },

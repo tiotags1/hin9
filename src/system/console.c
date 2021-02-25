@@ -33,7 +33,7 @@ int console_execute (string_t * source) {
 
 static int hin_console_read_callback (hin_buffer_t * buf, int ret) {
   if (ret == 0) {
-    if (master.debug & DEBUG_OTHER) printf ("console EOF\n");
+    if (master.debug & DEBUG_CONFIG) printf ("console EOF\n");
     hin_stop ();
     return 0;
   }
@@ -99,7 +99,7 @@ static int hin_timer_callback (hin_buffer_t * buffer, int ret) {
 void hin_timer_init () {
   hin_buffer_t * buf = malloc (sizeof (*buf) + sizeof (hin_timeout_t));
   memset (buf, 0, sizeof (*buf));
-  buf->flags = HIN_HIDE;
+  buf->flags = 0;
   buf->fd = 0;
   buf->callback = hin_timer_callback;
   buf->count = buf->sz = sizeof (struct timespec);

@@ -221,7 +221,7 @@ static int hin_ssl_check_data (hin_ssl_t * ssl, hin_buffer_t * crypt) {
 
 static int hin_ssl_handshake (hin_ssl_t * ssl, hin_buffer_t * buf) {
   hin_buffer_t * crypt = buf;
-  if (buf == NULL || buf->flags & HIN_SSL) {
+  if (buf->flags & HIN_SSL) {
     int sz = READ_SZ + 100;
     crypt = malloc (sizeof (hin_buffer_t) + sz);
     memset (crypt, 0, sizeof (hin_buffer_t));
@@ -231,6 +231,11 @@ static int hin_ssl_handshake (hin_ssl_t * ssl, hin_buffer_t * buf) {
     crypt->ptr = crypt->buffer;
     crypt->callback = hin_ssl_read_callback;
     crypt->ssl = ssl;
+    if (buf) {
+      crypt->debug = buf->debug;
+    } else {
+      crypt->debug = master.debug;
+    }
   }
   crypt->parent = NULL;
 

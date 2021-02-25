@@ -28,7 +28,7 @@ int hin_check_alive () {
     }
   }
   if (master.quit == 0) return 1;
-  if (master.debug & DEBUG_OTHER) printf ("hin live client %d conn %d\n", master.num_client, master.num_connection);
+  if (master.debug & DEBUG_CONFIG) printf ("hin live client %d conn %d\n", master.num_client, master.num_connection);
   if (master.num_client > 0) return 1;
   if (master.num_connection > 0) return 1;
 

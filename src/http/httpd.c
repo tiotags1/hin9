@@ -12,16 +12,16 @@ void httpd_client_ping (httpd_client_t * http, int timeout);
 int httpd_client_reread (httpd_client_t * http);
 
 void httpd_client_clean (httpd_client_t * http) {
-  if (http->debug & DEBUG_MEMORY) printf ("httpd clean %d\n", http->c.sockfd);
+  if (http->debug & (DEBUG_HTTP|DEBUG_MEMORY)) printf ("httpd %d clean\n", http->c.sockfd);
   if (http->file_path) free ((void*)http->file_path);
   if (http->post_sep) free ((void*)http->post_sep);
 
   if (http->file_fd) {
-    if (http->debug & DEBUG_SYSCALL) printf ("  close file_fd %d\n", http->file_fd);
+    if (http->debug & (DEBUG_HTTP|DEBUG_SYSCALL)) printf ("  close file_fd %d\n", http->file_fd);
     close (http->file_fd);
   }
   if (!HIN_HTTPD_WORKER_PREFORKED && http->post_fd) {
-    if (http->debug & DEBUG_SYSCALL) printf ("  close post_fd %d\n", http->post_fd);
+    if (http->debug & (DEBUG_HTTP|DEBUG_SYSCALL)) printf ("  close post_fd %d\n", http->post_fd);
     close (http->post_fd); // TODO cgi worker needs to keep this
   }
   http->file_fd = http->post_fd = 0;
@@ -41,14 +41,15 @@ void httpd_client_clean (httpd_client_t * http) {
 
 int httpd_client_start_request (httpd_client_t * http) {
   http->state = HIN_REQ_HEADERS | (http->state & HIN_REQ_ENDING);
-  http->debug = master.debug;
-  if (http->debug & DEBUG_PROTO) printf ("httpd request begin %d\n", http->c.sockfd);
 
   hin_client_t * server = (hin_client_t*)http->c.parent;
   hin_server_data_t * data = (hin_server_data_t*)server->parent;
   if (data) {
     http->disable = data->disable;
+    http->debug = data->debug;
   }
+
+  if (http->debug & DEBUG_HTTP) printf ("httpd %d request begin\n", http->c.sockfd);
   httpd_client_ping (http, data->timeout);
   return 0;
 }
@@ -62,7 +63,7 @@ int httpd_client_finish_request (httpd_client_t * http) {
   if (http->state & (HIN_REQ_POST)) return 0;
 
   int keep = (http->peer_flags & HIN_HTTP_KEEPALIVE) && ((http->state & HIN_REQ_ENDING) == 0);
-  if (http->debug & DEBUG_PROTO) printf ("httpd request done %d %s\n", http->c.sockfd, keep ? "keep" : "close");
+  if (http->debug & DEBUG_HTTP) printf ("httpd %d request done %s\n", http->c.sockfd, keep ? "keep" : "close");
 
   int hin_server_finish_callback (httpd_client_t * client);
   hin_server_finish_callback (http);
@@ -83,10 +84,10 @@ int httpd_client_finish_request (httpd_client_t * http) {
 static int httpd_client_close_callback (hin_buffer_t * buffer, int ret) {
   httpd_client_t * http = (httpd_client_t*)buffer->parent;
   if (ret < 0) {
-    printf ("httpd client close callback error: %s\n", strerror (-ret));
+    printf ("httpd %d client close callback error: %s\n", http->c.sockfd, strerror (-ret));
     return -1;
   }
-  if (http->debug & DEBUG_PROTO) printf ("httpd close %d\n", http->c.sockfd);
+  if (http->debug & (DEBUG_HTTP)) printf ("httpd %d close\n", http->c.sockfd);
   if (http->read_buffer && http->read_buffer != buffer) {
     hin_buffer_clean (http->read_buffer);
     http->read_buffer = NULL;
@@ -99,7 +100,7 @@ static int httpd_client_close_callback (hin_buffer_t * buffer, int ret) {
 int httpd_client_shutdown (httpd_client_t * http) {
   if (http->state & HIN_REQ_ENDING) return -1;
   http->state |= HIN_REQ_ENDING;
-  if (http->debug & DEBUG_SOCKET) printf ("httpd shutdown %d\n", http->c.sockfd);
+  if (http->debug & (DEBUG_HTTP)) printf ("httpd %d shutdown\n", http->c.sockfd);
 
 #if 0
   struct linger sl;
@@ -116,13 +117,15 @@ int httpd_client_shutdown (httpd_client_t * http) {
   buf->callback = httpd_client_close_callback;
   buf->parent = (hin_client_t*)http;
   buf->ssl = &http->c.ssl;
+  buf->debug = http->debug;
+
   hin_request_close (buf);
   return 0;
 }
 
 static int httpd_client_buffer_close_callback (hin_buffer_t * buffer) {
   httpd_client_t * http = (httpd_client_t*)buffer->parent;
-  if (http->debug & DEBUG_PROTO) printf ("httpd shutdown buffer %d\n", http->c.sockfd);
+  if (http->debug & DEBUG_HTTP) printf ("httpd %d shutdown buffer\n", http->c.sockfd);
   httpd_client_shutdown (http);
   return 0;
 }
@@ -141,7 +144,7 @@ extern hin_buffer_t * buf_list;
 
 int temp_callback2 (hin_buffer_t * buf, int ret) {
   if (ret < 0) {
-    printf ("error2 '%s'\n", strerror (-ret));
+    printf ("null server %d error write '%s'\n", buf->fd, strerror (-ret));
   }
   httpd_client_t * http = buf->parent;
   //close (http->c.sockfd);
@@ -152,7 +155,7 @@ int temp_callback2 (hin_buffer_t * buf, int ret) {
 
 int temp_callback1 (hin_buffer_t * buf, int ret) {
   if (ret < 0) {
-    printf ("error1 '%s'\n", strerror (-ret));
+    printf ("null server %d error read '%s'\n", buf->fd, strerror (-ret));
   }
 
   httpd_client_t * http = buf->parent;
@@ -176,9 +179,11 @@ int httpd_client_accept (hin_client_t * client) {
   buf->ssl = &http->c.ssl;
   buf->callback = temp_callback1;
   buf->count = buf->sz;
-  hin_buffer_list_remove (&buf_list, buf);
+  buf->debug = http->debug;
 
+  hin_buffer_list_remove (&buf_list, buf);
   hin_request_read_fixed (buf);
+
   return 0;
 #else
   httpd_client_start_request (http);
@@ -188,13 +193,15 @@ int httpd_client_accept (hin_client_t * client) {
   buf->parent = http;
   buf->flags = HIN_SOCKET | (http->c.flags & HIN_SSL);
   buf->ssl = &http->c.ssl;
+  buf->debug = http->debug;
+  http->read_buffer = buf;
+
   hin_lines_t * lines = (hin_lines_t*)&buf->buffer;
   int httpd_client_read_callback (hin_buffer_t * buffer);
   lines->read_callback = httpd_client_read_callback;
   lines->close_callback = httpd_client_buffer_close_callback;
   lines->eat_callback = httpd_client_buffer_eat_callback;
   hin_request_read (buf);
-  http->read_buffer = buf;
   return 0;
 #endif
 }
@@ -206,10 +213,10 @@ hin_client_t * httpd_create (const char * addr, const char * port, const char * 
   if (sockfd < 0) {
     sockfd = hin_socket_listen (addr, port, sock_type, server);
   } else {
-    printf ("reused sockfd %d\n", sockfd);
+    printf ("httpd server %d reuse sockfd\n", sockfd);
   }
   if (sockfd < 0) {
-    printf ("can't listen on %s:%s\n", addr, port);
+    printf ("httpd server %d can't listen on %s:%s\n", sockfd, addr, port);
     free (server);
     return NULL;
   }

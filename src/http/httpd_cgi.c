@@ -20,6 +20,7 @@
 typedef struct {
   int pos;
   int num;
+  uint32_t debug;
   char ** env;
 } env_list_t;
 
@@ -42,18 +43,20 @@ static int var (env_list_t * env, const char * fmt, ...) {
   }
   env->env[env->pos] = NULL;
   int len = vasprintf (&env->env[p], fmt, ap);
-  if (master.debug & DEBUG_CGI) fprintf (stderr, "var set %s\n", env->env[p]);
+  if (env->debug & DEBUG_CGI) fprintf (stderr, " '%s'\n", env->env[p]);
 
-  va_end(ap);
+  va_end (ap);
   return 0;
 }
 
 static int hin_pipe_cgi_server_finish_callback (hin_pipe_t * pipe) {
   hin_worker_t * worker = (hin_worker_t *)pipe->parent1;
   httpd_client_t * http = (httpd_client_t*)pipe->parent;
-  if (http->debug & DEBUG_PIPE) printf ("cgi transfer finished infd %d outfd %d bytes %ld\n", pipe->in.fd, pipe->out.fd, pipe->count);
+  if (pipe->debug & (DEBUG_CGI|DEBUG_PIPE))
+    printf ("pipe %d>%d cgi transfer finished bytes %ld\n", pipe->in.fd, pipe->out.fd, pipe->count);
 
-  if (http->debug & DEBUG_SYSCALL) printf ("  cgi read done, close %d\n", pipe->in.fd);
+  if (pipe->debug & (DEBUG_CGI|DEBUG_SYSCALL))
+    printf ("  cgi read done, close %d\n", pipe->in.fd);
   close (pipe->in.fd);
 
   #if HIN_HTTPD_WORKER_PREFORKED
@@ -76,7 +79,7 @@ int hin_pipe_cgi_server_read_callback (hin_pipe_t * pipe, hin_buffer_t * buffer,
   httpd_client_t * http = (httpd_client_t*)worker->data;
 
   if (num <= 0 || flush) {
-    if (http->debug & DEBUG_CGI) printf ("cgi pipe subprocess closed pipe\n");
+    if (http->debug & DEBUG_CGI) printf ("pipe %d>%d cgi subprocess closed\n", pipe->in.fd, pipe->out.fd);
     return 1;
   }
 
@@ -102,7 +105,7 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
     if (line.len == 0) break;
     if (matchi_string (&line, "Status: (%d+)", &param1) > 0) {
       http->status = atoi (param1.ptr);
-      if (http->debug & DEBUG_CGI) printf ("cgi status is %d\n", http->status);
+      if (http->debug & DEBUG_CGI) printf ("cgi %d status is %d\n", http->c.sockfd, http->status);
     } else if (matchi_string_equal (&line, "Content%-Length: (%d+)", &param1) > 0) {
       sz = atoi (param1.ptr);
     } else if (matchi_string_equal (&line, "Content%-Encoding: .*") > 0) {
@@ -132,6 +135,7 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
   pipe->parent = client;
   pipe->parent1 = worker;
   pipe->finish_callback = hin_pipe_cgi_server_finish_callback;
+  pipe->debug = http->debug;
 
   if ((http->cache_flags & HIN_CACHE_PUBLIC) && http->method != HIN_HTTP_POST && http->status == 200) {
     // cache check is somewhere else
@@ -175,6 +179,7 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
   buf->ptr = buf->buffer;
   buf->parent = pipe;
   buf->ssl = &client->ssl;
+  buf->debug = http->debug;
 
   *source = orig;
   header (buf, "HTTP/1.%d %d %s\r\n", http->peer_flags & HIN_HTTP_VER0 ? 0 : 1, http->status, http_status_name (http->status));
@@ -182,12 +187,14 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
 
   httpd_write_common_headers (http, buf);
 
+  if (http->debug & (DEBUG_CGI|DEBUG_RW))
+    fprintf (stderr, "cgi %d headers\n", http->c.sockfd);
   while (1) {
     if (find_line (source, &line) == 0) { hin_buffer_clean (buf); return 0; }
     if (line.len == 0) break;
-    if (http->debug & DEBUG_CGI)
-      fprintf (stderr, "cgi header is '%.*s'\n", (int)line.len, line.ptr);
-    if (matchi_string (&line, "Status:") > 0) {
+    if (http->debug & (DEBUG_CGI|DEBUG_RW))
+      fprintf (stderr, " %ld '%.*s'\n", line.len, (int)line.len, line.ptr);
+    if (matchi_string (&line, "  Status:") > 0) {
     } else if ((http->peer_flags & HIN_HTTP_CHUNKED) && matchi_string (&line, "Content%-Length:") > 0) {
     } else if (HIN_HTTPD_DISABLE_POWERED_BY && matchi_string (&line, "X%-Powered%-By:") > 0) {
     } else {
@@ -197,11 +204,11 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
   header (buf, "\r\n");
 
   if (http->debug & DEBUG_RW) {
-    printf ("cgi response %d is '\n%.*s'\n", http->c.sockfd, buf->count, buf->ptr);
+    printf ("httpd %d cgi response %d '\n%.*s'\n", http->c.sockfd, buf->count, buf->count, buf->ptr);
     for (hin_buffer_t * elem = buf->next; elem; elem=elem->next) {
-      printf ("continue %d '\n%.*s'\n", elem->count, elem->count, elem->ptr);
+      printf (" cont %d '\n%.*s'\n", elem->count, elem->count, elem->ptr);
     }
-    printf ("left after is %d\n", len);
+    printf (" left after is %d\n", len);
   }
 
   hin_pipe_write (pipe, buf);
@@ -232,6 +239,7 @@ int hin_cgi_send (httpd_client_t * http, hin_worker_t * worker, int fd) {
   buf->fd = fd;
   buf->parent = (hin_client_t*)worker;
   buf->flags = 0;
+  buf->debug = http->debug;
   hin_lines_t * lines = (hin_lines_t*)&buf->buffer;
   lines->read_callback = hin_cgi_headers_read_callback;
   lines->close_callback = hin_cgi_headers_close_callback;
@@ -272,7 +280,7 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
   int pid = fork ();
   if (pid != 0) {
     // this is root
-    if (http->debug & DEBUG_CGI) printf ("cgi %d pipe read %d write %d pid %d\n", http->c.sockfd, out_pipe[0], out_pipe[1], pid);
+    if (http->debug & (DEBUG_CGI|DEBUG_SYSCALL)) printf ("cgi %d pipe read fd %d write fd %d pid %d\n", http->c.sockfd, out_pipe[0], out_pipe[1], pid);
     hin_cgi_send (http, worker, out_pipe[0]);
     close (out_pipe[1]);
     return out_pipe[0];
@@ -289,7 +297,7 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
   }
   if (http->method == HIN_HTTP_POST && http->post_fd) {
     if (http->debug & DEBUG_CGI)
-      fprintf (stderr, "cgi stdin set to %d\n", http->post_fd);
+      fprintf (stderr, "cgi %d stdin set to %d\n", http->c.sockfd, http->post_fd);
 
     lseek (http->post_fd, 0, SEEK_SET);
     if (dup2 (http->post_fd, STDIN_FILENO) < 0) {
@@ -298,11 +306,12 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
     }
   } else {
     if (http->debug & DEBUG_CGI)
-      fprintf (stderr, "cgi no stdin\n");
+      fprintf (stderr, "cgi %d no stdin\n", http->c.sockfd);
     close (STDIN_FILENO);
   }
   env_list_t env;
   memset (&env, 0, sizeof (env));
+  env.debug = http->debug;
 
   string_t source, line, method, path, param1;
   source = http->headers;
@@ -316,6 +325,8 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
     fprintf (stderr, "error parsing uri\n");
     return -1;
   }
+
+  if (http->debug & DEBUG_CGI) fprintf (stderr, "cgi %d\n", http->c.sockfd);
   var (&env, "REQUEST_URI=%.*s", path.len, path.ptr);
   if (1) {
     var (&env, "REDIRECT_URI=%.*s", path.len, path.ptr);

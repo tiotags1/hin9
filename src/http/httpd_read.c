@@ -28,7 +28,7 @@ int httpd_client_reread (httpd_client_t * http) {
     buffer->count = buffer->sz;
     hin_lines_request (buffer);
   } else {
-    printf ("client reread error\n");
+    printf ("httpd %d reread error\n", http->c.sockfd);
     return -1;
   }
   return 0;
@@ -38,7 +38,7 @@ int httpd_client_reread (httpd_client_t * http) {
 #include <fcntl.h>
 
 static int post_done (hin_pipe_t * pipe) {
-  if (master.debug & DEBUG_POST)
+  if (pipe->debug & DEBUG_POST)
     printf ("cgi post done %d\n", pipe->out.fd);
 
   httpd_client_t * http = (httpd_client_t*)pipe->parent;
@@ -70,6 +70,7 @@ static int httpd_client_handle_post (httpd_client_t * http, string_t * source) {
   pipe->out.pos = 0;
   pipe->parent = http;
   pipe->finish_callback = post_done;
+  pipe->debug = http->debug;
 
   if (http->peer_flags & HIN_HTTP_CHUNKED_UPLOAD) {
     int httpd_pipe_upload_chunked (httpd_client_t * http, hin_pipe_t * pipe);

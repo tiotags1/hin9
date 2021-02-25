@@ -21,7 +21,7 @@ int httpd_parse_headers_line (httpd_client_t * http, string_t * line) {
   if (match_string (line, "Accept%-Encoding: ") > 0) {
     while (match_string (line, "([%w]+)", &param) > 0) {
       if (match_string (&param, "deflate") > 0) {
-        if (master.debug) printf (" can use deflate\n");
+        if (http->debug & (DEBUG_HTTP|DEBUG_HTTP_FILTER)) printf ("  can use deflate\n");
         http->peer_flags |= HIN_HTTP_DEFLATE;
       }
       if (match_string (line, "%s*,%s*") <= 0) break;
@@ -34,10 +34,10 @@ int httpd_parse_headers_line (httpd_client_t * http, string_t * line) {
     http->etag = etag;
   } else if (match_string (line, "Connection:%s*") > 0) {
     if (match_string (line, "close") > 0) {
-      if (master.debug) printf ("connection requested closed\n");
+      if (http->debug & (DEBUG_HTTP|DEBUG_HTTP_FILTER)) printf ("  connection requested closed\n");
       http->peer_flags &= ~HIN_HTTP_KEEPALIVE;
     } else if (match_string (line, "keep%-alive") > 0) {
-      if (master.debug) printf ("connection requested keepalive\n");
+      if (http->debug & (DEBUG_HTTP|DEBUG_HTTP_FILTER)) printf ("  connection requested keepalive\n");
       http->peer_flags |= HIN_HTTP_KEEPALIVE;
     }
   } else if (match_string (line, "Range:%s*") > 0) {
@@ -48,12 +48,12 @@ int httpd_parse_headers_line (httpd_client_t * http, string_t * line) {
       } else {
         http->count = -1;
       }
-      if (master.debug & DEBUG_PROTO) printf (" range requested is %ld-%ld\n", http->pos, http->count);
+      if (http->debug & (DEBUG_HTTP|DEBUG_HTTP_FILTER)) printf ("  range requested is %ld-%ld\n", http->pos, http->count);
     }
   } else if (http->method == HIN_HTTP_POST) {
     if (match_string (line, "Content-Length: (%d+)", &param) > 0) {
       http->post_sz = atoi (param.ptr);
-      if (master.debug & DEBUG_POST) printf ("Content length is %ld\n", http->post_sz);
+      if (http->debug & (DEBUG_HTTP|DEBUG_POST)) printf ("  post length is %ld\n", http->post_sz);
     } else if (match_string (line, "Content-Type:%s*multipart/form-data;%s*boundary=%\"?([%-%w]+)%\"?", &param) > 0) {
       char * new = malloc (param.len + 2 + 1);
       new[0] = '-';
@@ -61,14 +61,14 @@ int httpd_parse_headers_line (httpd_client_t * http, string_t * line) {
       memcpy (&new[2], param.ptr, param.len);
       new[param.len + 2] = '\0';
       http->post_sep = new;
-      if (master.debug & DEBUG_POST) printf ("Content type multipart/form-data boundry is '%s'\n", new);
+      if (http->debug & (DEBUG_HTTP|DEBUG_POST)) printf ("  post content type multipart/form-data boundry is '%s'\n", new);
     } else if (match_string (line, "Transfer-Encoding:%s*") > 0) {
       if (match_string (line, "chunked") > 0) {
-        if (master.debug & DEBUG_POST) printf ("Post content encoding is chunked\n");
+        if (http->debug & (DEBUG_HTTP|DEBUG_POST)) printf ("  post content encoding is chunked\n");
         http->peer_flags |= HIN_HTTP_CHUNKED_UPLOAD;
       } else if (match_string (line, "identity") > 0) {
       } else {
-        printf ("httpd don't accept post with transfer encoding\n");
+        printf ("httpd %d don't accept post with transfer encoding\n", http->c.sockfd);
         return -1;
       }
     }
@@ -112,14 +112,14 @@ int httpd_parse_headers (httpd_client_t * http, string_t * source) {
     return -1;
   }
 
-  if (master.debug & DEBUG_HEADERS)
-    printf ("method '%.*s' path '%.*s' HTTP/1.%d fd %d\n", (int)method.len, method.ptr,
-      (int)path.len, path.ptr, http->peer_flags & HIN_HTTP_VER0 ? 0 : 1, client->sockfd);
+  if (http->debug & (DEBUG_HTTP|DEBUG_RW))
+    printf ("httpd %d method '%.*s' path '%.*s' HTTP/1.%d\n", http->c.sockfd, (int)method.len, method.ptr,
+      (int)path.len, path.ptr, http->peer_flags & HIN_HTTP_VER0 ? 0 : 1);
 
   http->count = -1;
 
   while (find_line (source, &line)) {
-    if (master.debug & DEBUG_HEADERS) printf ("header len %d '%.*s'\n", (int)line.len, (int)line.len, line.ptr);
+    if (http->debug & DEBUG_RW) printf (" %d '%.*s'\n", (int)line.len, (int)line.len, line.ptr);
     if (line.len == 0) break;
     if (httpd_parse_headers_line (http, &line) < 0) {
       *source = orig;

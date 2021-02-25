@@ -10,13 +10,16 @@ int http_parse_headers_line (http_client_t * http, string_t * line) {
   string_t param, param1, param2;
   if (matchi_string_equal (line, "Content-Length: (%d+)", &param) > 0) {
     http->sz = atoi (param.ptr);
-    printf ("Content length is %ld\n", http->sz);
-  } else if (matchi_string_equal (line, "Transfer-Encoding:%s*chunked") > 0) {
-    printf ("transfer encoding is chunked\n");
-    http->flags |= HIN_HTTP_CHUNKED;
-  } else if (matchi_string (line, "Transfer-Encoding: ") > 0) {
-    printf ("transport encoding '%.*s' not supported\n", (int)line->len, line->ptr);
-    return -1;
+    if (http->debug & DEBUG_HTTP_FILTER) printf ("  content length is %ld\n", http->sz);
+  } else if (matchi_string (line, "Transfer-Encoding:%s*") > 0) {
+    if (matchi_string (line, "chunked") > 0) {
+      if (http->debug & DEBUG_HTTP_FILTER) printf ("  transfer encoding is chunked\n");
+      http->flags |= HIN_HTTP_CHUNKED;
+    } else if (matchi_string (line, "identity") > 0) {
+    } else {
+      printf ("http %d transport encoding '%.*s' not supported\n", http->c.sockfd, (int)line->len, line->ptr);
+      return -1;
+    }
   }
   return 1;
 }
@@ -35,13 +38,14 @@ int http_parse_headers (hin_client_t * client, string_t * source) {
   http_client_t * http = (http_client_t*)client;
 
   if (find_line (source, &line) == 0 || match_string (&line, "HTTP/1.%d ([%w%/]+) %w+", &param1) <= 0) {
-    printf ("http parsing error\n");
+    printf ("http %d parsing error\n", http->c.sockfd);
     // close connection return error
     return -1;
   }
 
+  if (http->debug & DEBUG_RW) printf ("http %d headers\n", http->c.sockfd);
   while (find_line (source, &line)) {
-    if (master.debug & DEBUG_HEADERS) printf ("header len %d '%.*s'\n", (int)line.len, (int)line.len, line.ptr);
+    if (http->debug & DEBUG_RW) printf (" %d '%.*s'\n", (int)line.len, (int)line.len, line.ptr);
     if (line.len == 0) break;
     if (http_parse_headers_line (http, &line) < 0) {
       *source = orig;

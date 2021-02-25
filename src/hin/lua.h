@@ -18,6 +18,7 @@ typedef struct hin_server_data_struct {
   uint32_t disable;
   int timeout;
   char * hostname;
+  uint32_t debug;
   lua_State *L;
   struct hin_server_data_struct * next;
 } hin_server_data_t;

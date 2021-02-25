@@ -40,12 +40,13 @@ int hin_pipe_decode_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, 
   orig.ptr = buffer->ptr - decode->left_over;
   orig.len = num + decode->left_over;
   source = orig;
+  if (pipe->debug & DEBUG_HTTP_FILTER) printf ("pipe %d>%d decode chunk sz %d left %d %s\n", pipe->in.fd, pipe->out.fd, num, decode->left_over, flush ? "flush" : "cont");
   while (1) {
-    if (master.debug & DEBUG_CHUNK) printf ("chunk sz left %ld\n", decode->chunk_sz);
+    if (pipe->debug & DEBUG_HTTP_FILTER) printf ("  chunk sz left %ld\n", decode->chunk_sz);
     if (decode->chunk_sz > 0) {
       int consume = decode->chunk_sz;
       if (consume > source.len) consume = source.len;
-      if (master.debug & DEBUG_CHUNK) printf ("chunk consume %d\n", consume);
+      if (pipe->debug & DEBUG_HTTP_FILTER) printf ("  chunk consume %d\n", consume);
       hin_buffer_t * buf = hin_pipe_get_buffer (pipe, consume);
       memcpy (buf->ptr, source.ptr, consume);
       if (pipe->read_callback (pipe, buf, consume, 0))
@@ -63,7 +64,7 @@ int hin_pipe_decode_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, 
         return 0;
       }
       if (match_string (&source, "\r\n") < 0) {
-        printf ("chunk format error\n");
+        printf ("chunk decode format error\n");
         return -1;
       }
     }
@@ -74,11 +75,11 @@ int hin_pipe_decode_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, 
         hin_pipe_decode_prepare_half_read (pipe, buffer, source.len, num);
         return 0;
       }
-      printf ("chunk couldn't find in '%.*s'\n", (int)(source.len > 20 ? 20 : source.len), source.ptr);
+      printf ("chunk decode couldn't find in '%.*s'\n", (int)(source.len > 20 ? 20 : source.len), source.ptr);
       return -1;
     }
     decode->chunk_sz = strtol (param1.ptr, NULL, 16);
-    if (master.debug & DEBUG_CHUNK) printf ("chunk of size %ld found\n", decode->chunk_sz);
+    if (pipe->debug & DEBUG_HTTP_FILTER) printf ("  chunk sz %ld found\n", decode->chunk_sz);
     if (decode->chunk_sz == 0 && param1.len > 0) {
       int ret = pipe->read_callback (pipe, buffer, 0, 1);
       pipe->in.flags |= HIN_DONE;
@@ -97,7 +98,7 @@ int hin_pipe_copy_deflate (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, in
   http->z.next_in = (Bytef *)buffer->buffer;
   buffer->count = num;
 
-  if (master.debug & DEBUG_DEFLATE) printf ("deflate num %d flush %d\n", num, flush);
+  if (http->debug & DEBUG_HTTP_FILTER) printf ("httpd %d deflate num %d flush %d\n", http->c.sockfd, num, flush);
   char numbuf[10]; // size of max nr (7 bytes) + crlf + \0
 
   do {
@@ -131,7 +132,7 @@ int hin_pipe_copy_deflate (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, in
         new->ptr = ptr;
         new->count -= offset;
       }
-      if (master.debug & DEBUG_DEFLATE) printf ("deflate write to pipe write %d total %d%s\n", have, new->count, flush ? " flush" : "");
+      if (http->debug & DEBUG_HTTP_FILTER) printf ("  deflate write %d total %d %s\n", have, new->count, flush ? "flush" : "cont");
       hin_pipe_write (pipe, new);
     } else {
       hin_buffer_clean (new);
@@ -144,7 +145,7 @@ int hin_pipe_copy_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, in
   hin_client_t * client = (hin_client_t*)pipe->parent;
   httpd_client_t * http = (httpd_client_t*)client;
 
-  if (master.debug & DEBUG_RW) printf ("chunked num %d flush %d\n", num, flush);
+  if (http->debug & DEBUG_HTTP_FILTER) printf ("httpd %d chunked num %d flush %d\n", http->c.sockfd, num, flush);
 
   hin_buffer_t * buf = malloc (sizeof *buf + num + 50);
   memset (buf, 0, sizeof (*buf));
@@ -154,6 +155,7 @@ int hin_pipe_copy_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, in
   buf->count = 0;
   buf->sz = num + 50;
   buf->ssl = pipe->out.ssl;
+  buf->debug = buffer->debug;
 
   //buffer->count = num;
   if (num > 0) {

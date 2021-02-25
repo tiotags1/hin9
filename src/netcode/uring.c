@@ -19,7 +19,7 @@ int hin_ssl_request_read (hin_buffer_t * buffer);
 
 int hin_request_write (hin_buffer_t * buffer) {
   if (buffer->flags & HIN_SSL) {
-    if (master.debug & DEBUG_URING) printf ("req%d %s buf %p cb %p fd %d\n", master.id, buffer->flags & HIN_SOCKET ? "sends" : "writs", buffer, buffer->callback, buffer->fd);
+    if (buffer->debug & DEBUG_URING) printf ("req%d %s buf %p cb %p fd %d\n", master.id, buffer->flags & HIN_SOCKET ? "sends" : "writs", buffer, buffer->callback, buffer->fd);
     hin_ssl_request_write (buffer);
     return 0;
   }
@@ -31,13 +31,13 @@ int hin_request_write (hin_buffer_t * buffer) {
     io_uring_prep_write (sqe, buffer->fd, buffer->ptr, buffer->count, buffer->pos);
   }
   io_uring_sqe_set_data (sqe, buffer);
-  if (master.debug & DEBUG_URING) printf ("req%d %s buf %p cb %p fd %d\n", master.id, buffer->flags & HIN_SOCKET ? "send" : "writ", buffer, buffer->callback, buffer->fd);
+  if (buffer->debug & DEBUG_URING) printf ("req%d %s buf %p cb %p fd %d\n", master.id, buffer->flags & HIN_SOCKET ? "send" : "writ", buffer, buffer->callback, buffer->fd);
   return 0;
 }
 
 int hin_request_read (hin_buffer_t * buffer) {
   if (buffer->flags & HIN_SSL) {
-    if (master.debug & DEBUG_URING) printf ("req%d %s buf %p cb %p fd %d\n", master.id, buffer->flags & HIN_SOCKET ? "recvs" : "reads", buffer, buffer->callback, buffer->fd);
+    if (buffer->debug & DEBUG_URING) printf ("req%d %s buf %p cb %p fd %d\n", master.id, buffer->flags & HIN_SOCKET ? "recvs" : "reads", buffer, buffer->callback, buffer->fd);
     hin_ssl_request_read (buffer);
     return 0;
   }
@@ -49,7 +49,7 @@ int hin_request_read (hin_buffer_t * buffer) {
     io_uring_prep_read (sqe, buffer->fd, buffer->ptr, buffer->count, buffer->pos);
   }
   io_uring_sqe_set_data (sqe, buffer);
-  if (master.debug & DEBUG_URING) printf ("req%d %s buf %p cb %p fd %d\n", master.id, buffer->flags & HIN_SOCKET ? "recv" : "read", buffer, buffer->callback, buffer->fd);
+  if (buffer->debug & DEBUG_URING) printf ("req%d %s buf %p cb %p fd %d\n", master.id, buffer->flags & HIN_SOCKET ? "recv" : "read", buffer, buffer->callback, buffer->fd);
   return 0;
 }
 
@@ -62,7 +62,7 @@ int hin_request_write_fixed (hin_buffer_t * buffer) {
     io_uring_prep_write_fixed (sqe, buffer->fd, buffer->ptr, buffer->count, buffer->pos, buffer->buf_index);
   }
   io_uring_sqe_set_data (sqe, buffer);
-  if (master.debug & DEBUG_URING) printf ("req%d %s buf %p cb %p fd %d\n", master.id, "fwrite", buffer, buffer->callback, buffer->fd);
+  if (buffer->debug & DEBUG_URING) printf ("req%d %s buf %p cb %p fd %d\n", master.id, "fwrite", buffer, buffer->callback, buffer->fd);
   return 0;
 }
 
@@ -75,7 +75,7 @@ int hin_request_read_fixed (hin_buffer_t * buffer) {
     io_uring_prep_read_fixed (sqe, buffer->fd, buffer->ptr, buffer->count, buffer->pos, buffer->buf_index);
   }
   io_uring_sqe_set_data (sqe, buffer);
-  if (master.debug & DEBUG_URING) printf ("req%d %s buf %p cb %p fd %d\n", master.id, "fread ", buffer, buffer->callback, buffer->fd);
+  if (buffer->debug & DEBUG_URING) printf ("req%d %s buf %p cb %p fd %d\n", master.id, "fread ", buffer, buffer->callback, buffer->fd);
   return 0;
 }
 
@@ -88,7 +88,7 @@ int hin_request_accept (hin_buffer_t * buffer, int flags) {
   struct io_uring_sqe *sqe = io_uring_get_sqe (&ring);
   io_uring_prep_accept (sqe, server->sockfd, &client->in_addr, &client->in_len, flags);
   io_uring_sqe_set_data (sqe, buffer);
-  if (master.debug & DEBUG_URING) printf ("req%d accept buf %p cb %p\n", master.id, buffer, buffer->callback);
+  if (buffer->debug & DEBUG_URING) printf ("req%d accept buf %p cb %p\n", master.id, buffer, buffer->callback);
   return 0;
 }
 
@@ -98,7 +98,7 @@ int hin_request_connect (hin_buffer_t * buffer) {
   struct io_uring_sqe *sqe = io_uring_get_sqe (&ring);
   io_uring_prep_connect (sqe, buffer->fd, &client->in_addr, client->in_len);
   io_uring_sqe_set_data (sqe, buffer);
-  if (master.debug & DEBUG_URING) printf ("req%d connect buf %p cb %p\n", master.id, buffer, buffer->callback);
+  if (buffer->debug & DEBUG_URING) printf ("req%d connect buf %p cb %p\n", master.id, buffer, buffer->callback);
   return 0;
 }
 
@@ -106,7 +106,7 @@ int hin_request_close (hin_buffer_t * buffer) {
   struct io_uring_sqe *sqe = io_uring_get_sqe (&ring);
   io_uring_prep_close (sqe, buffer->fd);
   io_uring_sqe_set_data (sqe, buffer);
-  if (master.debug & DEBUG_URING) printf ("req%d close buf %p cb %p fd %d\n", master.id, buffer, buffer->callback, buffer->fd);
+  if (buffer->debug & DEBUG_URING) printf ("req%d close buf %p cb %p fd %d\n", master.id, buffer, buffer->callback, buffer->fd);
   return 0;
 }
 
@@ -114,7 +114,7 @@ int hin_request_openat (hin_buffer_t * buffer, int dfd, const char * path, int f
   struct io_uring_sqe *sqe = io_uring_get_sqe (&ring);
   io_uring_prep_openat (sqe, dfd, path, flags, mode);
   io_uring_sqe_set_data (sqe, buffer);
-  if (master.debug & DEBUG_URING) printf ("req%d open buf %p cb %p\n", master.id, buffer, buffer->callback);
+  if (buffer->debug & DEBUG_URING) printf ("req%d open buf %p cb %p\n", master.id, buffer, buffer->callback);
   return 0;
 }
 
@@ -122,7 +122,7 @@ int hin_request_timeout (hin_buffer_t * buffer, struct timespec * ts, int count,
   struct io_uring_sqe *sqe = io_uring_get_sqe (&ring);
   io_uring_prep_timeout (sqe, ts, count, flags);
   io_uring_sqe_set_data (sqe, buffer);
-  if (master.debug & DEBUG_URING && (buffer->flags & HIN_HIDE) == 0) printf ("req%d time buf %p cb %p\n", master.id, buffer, buffer->callback);
+  if (buffer->debug & DEBUG_URING) printf ("req%d time buf %p cb %p\n", master.id, buffer, buffer->callback);
   return 0;
 }
 
@@ -132,7 +132,7 @@ int hin_request_statx (hin_buffer_t * buffer, int dfd, const char * path, int fl
   //if (buffer->count < sizeof (struct statx)) { printf ("need more space inside buffer to statx\n"); return -1; }
   io_uring_prep_statx (sqe, dfd, path, flags, mask, (struct statx *)buffer->ptr);
   io_uring_sqe_set_data (sqe, buffer);
-  if (master.debug & DEBUG_URING) printf ("req%d stat buf %p cb %p\n", master.id, buffer, buffer->callback);
+  if (buffer->debug & DEBUG_URING) printf ("req%d stat buf %p cb %p\n", master.id, buffer, buffer->callback);
   return 0;
 }
 
@@ -217,7 +217,7 @@ int hin_event_loop () {
     }
 
     hin_buffer_t * buffer = (hin_buffer_t *)cqe->user_data;
-    if (master.debug & DEBUG_URING && (buffer->flags & HIN_HIDE) == 0) printf ("req%d done buf %p cb %p\n", master.id, buffer, buffer->callback);
+    if (buffer->debug & DEBUG_URING) printf ("req%d done buf %p cb %p\n", master.id, buffer, buffer->callback);
 
     io_uring_cqe_seen (&ring, cqe);
     err = buffer->callback (buffer, cqe->res);

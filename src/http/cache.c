@@ -33,7 +33,7 @@ hin_cache_store_t * hin_cache_create () {
 
 void hin_cache_item_clean (hin_cache_item_t * item) {
   if (item->fd > 0) close (item->fd);
-  if (master.debug & DEBUG_CACHE) printf ("cache item %lx_%lx freed\n", item->cache_key1, item->cache_key2);
+  if (master.debug & DEBUG_CACHE) printf ("cache %lx_%lx free\n", item->cache_key1, item->cache_key2);
 
   if (HIN_HTTPD_CACHE_CLEAN_ON_EXIT) {
     char buffer[sizeof (HIN_HTTPD_CACHE_DIRECTORY) + 70];
@@ -53,12 +53,11 @@ void hin_cache_item_clean (hin_cache_item_t * item) {
 void hin_cache_unref (hin_cache_item_t * item) {
   item->refcount--;
   if (item->refcount == 0) {
-    if (master.debug & DEBUG_CACHE) printf ("cache free %lx_%lx\n", item->cache_key1, item->cache_key2);
     hin_cache_item_clean (item);
   } else if (item->refcount < 0) {
     printf ("cache error refcount < 0\n");
   } else {
-    if (master.debug & DEBUG_CACHE) printf ("cache refcount --%d %lx_%lx\n", item->refcount, item->cache_key1, item->cache_key2);
+    if (master.debug & DEBUG_CACHE) printf ("cache %lx_%lx refcount --%d\n", item->cache_key1, item->cache_key2, item->refcount);
   }
 }
 
@@ -206,7 +205,6 @@ int httpd_send_file (httpd_client_t * http, hin_cache_item_t * item, hin_buffer_
 
 void hin_cache_serve_client (httpd_client_t * http, hin_cache_item_t * item) {
   http->peer_flags &= ~(HIN_HTTP_CHUNKED);
-  //http->state &= ~HIN_REQ_DATA;
   http->status = 200;
   void hin_cache_set_number (httpd_client_t * http, time_t num);
   hin_cache_set_number (http, item->lifetime);
@@ -224,7 +222,7 @@ int hin_cache_finish (httpd_client_t * client, hin_pipe_t * pipe) {
   item->etag = pipe->hash;
   item->flags |= HIN_CACHE_DONE;
   time (&item->modified);
-  if (master.debug & DEBUG_CACHE) printf ("cache %lx_%lx finish sz %ld etag %lx\n", item->cache_key1, item->cache_key2, item->size, item->etag);
+  if (master.debug & DEBUG_CACHE) printf ("cache %lx_%lx ready sz %ld etag %lx\n", item->cache_key1, item->cache_key2, item->size, item->etag);
 
   hin_cache_store_t * store = item->parent;
   store->size += item->size;

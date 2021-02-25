@@ -1,4 +1,8 @@
 
+* improved per request debug logging
+* improved some error messages
+
+commit a7bf9191fd3e01cb2bf1bfa935b39bf821b1148e
 * bugfix: post errors causing crashes
 * option to limit chunked upload for cgi
 * chunked decode edge cases handling

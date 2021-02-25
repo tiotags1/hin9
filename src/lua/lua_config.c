@@ -37,6 +37,7 @@ static int l_hin_create_httpd (lua_State *L) {
   server->L = L;
   server->magic = HIN_SERVER_MAGIC;
   server->timeout = HIN_HTTPD_TIMEOUT;
+  server->debug = master.debug;
   lua_pushlightuserdata (L, server);
 
   hin_server_data_t * prev = master.servers;

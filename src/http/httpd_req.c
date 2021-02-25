@@ -16,7 +16,8 @@
 #include "conf.h"
 
 static hin_buffer_t * new_buffer (hin_buffer_t * buffer) {
-  printf ("header needed to make new buffer\n");
+  if (buffer->debug & DEBUG_RW)
+    printf ("header needed to make new buffer\n");
   hin_buffer_t * buf = calloc (1, sizeof (hin_buffer_t) + READ_SZ);
   buf->sz = READ_SZ;
   buf->fd = buffer->fd;
@@ -28,6 +29,7 @@ static hin_buffer_t * new_buffer (hin_buffer_t * buffer) {
   buf->count = 0;
   buffer->next = buf;
   buf->prev = buffer;
+  buf->debug = buffer->debug;
   return buf;
 }
 
@@ -155,6 +157,7 @@ int httpd_respond_text (httpd_client_t * http, int status, const char * body) {
   buf->ptr = buf->buffer;
   buf->parent = client;
   buf->ssl = &client->ssl;
+  buf->debug = http->debug;
 
   int freeable = 0;
   if (body == NULL) {
@@ -172,7 +175,7 @@ int httpd_respond_text (httpd_client_t * http, int status, const char * body) {
     header (buf, "%s", body);
   }
   if (freeable) free ((char*)body);
-  if (http->debug & DEBUG_RW) printf ("raw response %d '\n%.*s'\n", http->c.sockfd, buf->count, buf->ptr);
+  if (http->debug & DEBUG_RW) printf ("httpd %d raw response %d '\n%.*s'\n", http->c.sockfd, buf->count, buf->count, buf->ptr);
   hin_request_write (buf);
   return 0;
 }

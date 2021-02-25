@@ -70,6 +70,7 @@ typedef struct {
   int save_fd;
   off_t sz;
 
+  uint32_t debug;
   hin_buffer_t * read_buffer;
 } http_client_t;
 

@@ -24,6 +24,7 @@ hin_buffer_t * hin_pipe_get_buffer (hin_pipe_t * pipe, int sz) {
   buf->flags = 0;
   buf->ptr = buf->buffer;
   buf->count = buf->sz = sz;
+  buf->debug = pipe->debug;
   return buf;
 }
 
@@ -48,7 +49,7 @@ int hin_pipe_append (hin_pipe_t * pipe, hin_buffer_t * buffer) {
   int flush = (pipe->in.flags & HIN_DONE) ? 1 : 0;
   int ret1 = 0;
 
-  if (master.debug & DEBUG_PIPE) printf ("pipe %d>%d append %d bytes %s\n", pipe->in.fd, pipe->out.fd, buffer->count, flush ? "flush" : "cont");
+  if (pipe->debug & DEBUG_PIPE) printf ("pipe %d>%d append %d bytes %s\n", pipe->in.fd, pipe->out.fd, buffer->count, flush ? "flush" : "cont");
 
   if (pipe->decode_callback) {
     ret1 = pipe->decode_callback (pipe, buffer, buffer->count, flush);
@@ -126,12 +127,12 @@ int hin_pipe_advance (hin_pipe_t * pipe) {
   if ((pipe->in.flags & HIN_COUNT) && pipe->left <= 0) pipe->in.flags |= HIN_DONE;
 
   if (pipe->write == NULL && (pipe->in.flags & HIN_DONE)) {
-    if (master.debug & DEBUG_PIPE) printf ("pipe %d>%d close read %d write %d\n", pipe->in.fd, pipe->out.fd, (pipe->in.flags & HIN_DONE), pipe->write ? 1 : 0);
+    if (pipe->debug & DEBUG_PIPE) printf ("pipe %d>%d close read %d write %d\n", pipe->in.fd, pipe->out.fd, (pipe->in.flags & HIN_DONE), pipe->write ? 1 : 0);
     hin_pipe_close (pipe);
     return 0;
   }
 
-  if (master.debug & DEBUG_PIPE) printf ("pipe %d>%d advance done %d read %d write %d\n", pipe->in.fd, pipe->out.fd, pipe->in.flags & HIN_DONE, pipe->num_read, pipe->num_write);
+  if (pipe->debug & DEBUG_PIPE) printf ("pipe %d>%d advance done %d read %d write %d\n", pipe->in.fd, pipe->out.fd, pipe->in.flags & HIN_DONE, pipe->num_read, pipe->num_write);
   if ((pipe->in.flags & HIN_DONE) == 0 && pipe->num_read < 1 && pipe->num_write < 1) {
     hin_buffer_t * new = pipe->buffer_callback (pipe, READ_SZ);
     hin_pipe_read_next (new);
@@ -154,7 +155,7 @@ int hin_pipe_write_callback (hin_buffer_t * buffer, int ret) {
     hin_pipe_close (pipe);
     return -1;
   }
-  if (master.debug & DEBUG_PIPE) printf ("pipe %d>%d write %d/%d pos %ld left %ld\n", pipe->in.fd, pipe->out.fd, ret, buffer->count, pipe->out.pos, pipe->left);
+  if (pipe->debug & DEBUG_PIPE) printf ("pipe %d>%d write %d/%d pos %ld left %ld\n", pipe->in.fd, pipe->out.fd, ret, buffer->count, pipe->out.pos, pipe->left);
   pipe->count += ret;
   if (pipe->flags & HIN_HASH) {
     uint8_t * start = buffer->ptr;
@@ -188,7 +189,7 @@ int hin_pipe_write_callback (hin_buffer_t * buffer, int ret) {
 int hin_pipe_read_callback (hin_buffer_t * buffer, int ret) {
   hin_pipe_t * pipe = (hin_pipe_t*)buffer->parent;
   if (ret <= 0) {
-    if (ret == 0 && master.debug & DEBUG_PIPE) {
+    if (ret == 0 && (pipe->debug & DEBUG_PIPE)) {
       printf ("pipe %d>%d read EOF\n", pipe->in.fd, pipe->out.fd);
     } else if (ret < 0) {
       printf ("pipe %d>%d read error '%s'\n", pipe->in.fd, pipe->out.fd, strerror (-ret));
@@ -202,7 +203,7 @@ int hin_pipe_read_callback (hin_buffer_t * buffer, int ret) {
 
   pipe->num_read--;
 
-  if (master.debug & DEBUG_PIPE) printf ("pipe %d>%d read  %d/%d pos %ld left %ld %s\n",
+  if (pipe->debug & DEBUG_PIPE) printf ("pipe %d>%d read  %d/%d pos %ld left %ld %s\n",
     pipe->in.fd, pipe->out.fd, ret, buffer->count, pipe->in.pos, pipe->left, pipe->in.flags & HIN_DONE ? "flush" : "cont");
 
   if (pipe->in.flags & HIN_OFFSETS) {
@@ -211,7 +212,7 @@ int hin_pipe_read_callback (hin_buffer_t * buffer, int ret) {
   if (pipe->in.flags & HIN_COUNT) {
     pipe->left -= ret;
     if (pipe->left <= 0) {
-      if (master.debug & DEBUG_PIPE) printf ("pipe %d>%d read finished\n", pipe->in.fd, pipe->out.fd);
+      if (pipe->debug & DEBUG_PIPE) printf ("pipe %d>%d read finished\n", pipe->in.fd, pipe->out.fd);
       pipe->in.flags |= HIN_DONE;
     }
   }

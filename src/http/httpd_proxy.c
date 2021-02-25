@@ -15,14 +15,14 @@ static int httpd_proxy_close (http_client_t * http) {
   httpd_client_t * parent = (httpd_client_t*)http->c.parent;
 
   if (parent) {
-    if (master.debug & DEBUG_PROXY) printf ("proxy close %d>%d\n", http->c.sockfd, parent->c.sockfd);
+    if (http->debug & DEBUG_PROXY) printf ("proxy close %d>%d\n", http->c.sockfd, parent->c.sockfd);
     parent->state &= ~HIN_REQ_PROXY;
     if ((parent->state & HIN_REQ_ERROR) == 0) {
       parent->state &= ~(HIN_REQ_PROXY | HIN_REQ_DATA);
       httpd_client_finish_request (parent);
     }
   } else {
-    if (master.debug & DEBUG_PROXY) printf ("proxy close %d\n", http->c.sockfd);
+    if (http->debug & DEBUG_PROXY) printf ("proxy close %d\n", http->c.sockfd);
   }
 
   if (http->c.sockfd >= 0) {
@@ -32,7 +32,7 @@ static int httpd_proxy_close (http_client_t * http) {
 }
 
 static int httpd_proxy_pipe_close (hin_pipe_t * pipe) {
-  if (master.debug & DEBUG_PROXY) printf ("proxy pipe close\n");
+  if (pipe->debug & DEBUG_PROXY) printf ("pipe %d>%d proxy pipe close\n", pipe->in.fd, pipe->out.fd);
   http_client_t * http = pipe->parent1;
   http->io_state &= ~HIN_REQ_DATA;
 
@@ -50,7 +50,7 @@ static int httpd_proxy_pipe_close (hin_pipe_t * pipe) {
 }
 
 static int httpd_proxy_pipe_post_close (hin_pipe_t * pipe) {
-  if (master.debug & DEBUG_PROXY) printf ("proxy pipe close post data\n");
+  if (pipe->debug & DEBUG_PROXY) printf ("pipe %d>%d proxy close post data\n", pipe->in.fd, pipe->out.fd);
   http_client_t * http = pipe->parent1;
   http->io_state &= ~HIN_REQ_POST;
   if (http->io_state & HIN_REQ_DATA) return 0;
@@ -58,19 +58,19 @@ static int httpd_proxy_pipe_post_close (hin_pipe_t * pipe) {
 }
 
 static int httpd_proxy_pipe_in_error (hin_pipe_t * pipe) {
-  if (master.debug & DEBUG_PROXY) printf ("proxy proxied server connection error\n");
+  if (pipe->debug & DEBUG_PROXY) printf ("pipe %d>%d proxy server connection error\n", pipe->in.fd, pipe->out.fd);
   int http_client_shutdown (http_client_t * http);
   return http_client_shutdown (pipe->parent1);
 }
 
 static int httpd_proxy_pipe_out_error (hin_pipe_t * pipe) {
-  if (master.debug & DEBUG_PROXY) printf ("proxy requester error\n");
+  if (pipe->debug & DEBUG_PROXY) printf ("pipe %d>%d proxy requester error\n", pipe->in.fd, pipe->out.fd);
   return 0;
 }
 
 static int httpd_proxy_buffer_close (hin_buffer_t * buffer) {
-  if (master.debug & DEBUG_PROXY) printf ("proxy connection close %d\n", buffer->fd);
   http_client_t * http = (http_client_t*)buffer->parent;
+  if (http->debug & DEBUG_PROXY) printf ("proxy connection close %d\n", buffer->fd);
   if (http->c.parent)
     httpd_proxy_close (http);
   return http_client_shutdown (http);
@@ -106,18 +106,17 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer) {
 
   if (*param1.ptr == '0') flags |= HIN_HTTP_VER0;
   http->status = atoi (param2.ptr);
-  if (master.debug & DEBUG_PROXY) printf ("proxy: status %d\n", http->status);
+  if (http->debug & DEBUG_PROXY) printf ("httpd %d proxy headers %d status %d\n", http->c.sockfd, http1->c.sockfd, http->status);
 
   while (1) {
     if (find_line (&source, &line) == 0) { return 0; }
     if (line.len == 0) break;
-    if (master.debug & DEBUG_PROXY)
-      printf ("proxy: header1 '%.*s'\n", (int)line.len, line.ptr);
-    if (matchi_string_equal (&line, "Content%-Length: (%d+)", &param1) > 0) {
+    if (http->debug & DEBUG_PROXY)
+      printf (" %ld '%.*s'\n", line.len, (int)line.len, line.ptr);
+    if (matchi_string_equal (&line, "Content-Length: (%d+)", &param1) > 0) {
       sz = atoi (param1.ptr);
-      if (master.debug & DEBUG_PROXY)
-      printf ("proxy:   size is %ld\n", sz);
-    } else if (matchi_string_equal (&line, "Transfer%-Encoding: (%w+)", &param1) > 0) {
+      if (http->debug & DEBUG_PROXY) printf ("  size is %ld\n", sz);
+    } else if (matchi_string_equal (&line, "Transfer-Encoding: (%w+)", &param1) > 0) {
       if (matchi_string_equal (&param1, "chunked") > 0) {
         http1->flags |= HIN_HTTP_CHUNKED;
       } else {
@@ -125,7 +124,7 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer) {
         httpd_respond_fatal (http, 502, NULL);
         return 0;
       }
-    } else if (match_string (&line, "Cache%-Control:") > 0) {
+    } else if (match_string (&line, "Cache-Control:") > 0) {
       httpd_parse_cache_str (line.ptr, line.len, &http->cache_flags, &http->cache);
     }
   }
@@ -150,6 +149,7 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer) {
   pipe->finish_callback = httpd_proxy_pipe_close;
   pipe->in_error_callback = httpd_proxy_pipe_in_error;
   pipe->out_error_callback = httpd_proxy_pipe_out_error;
+  pipe->debug = http->debug;
 
   if (http1->flags & HIN_HTTP_CHUNKED) {
     int hin_pipe_decode_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush);
@@ -186,6 +186,7 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer) {
   buf->sz = READ_SZ;
   buf->ptr = buf->buffer;
   buf->parent = pipe;
+  buf->debug = http->debug;
 
   header (buf, "HTTP/1.%d %d %s\r\n", http->peer_flags & HIN_HTTP_VER0 ? 0 : 1, http->status, http_status_name (http->status));
   httpd_write_common_headers (http, buf);
@@ -193,7 +194,7 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer) {
     header (buf, "Content-Length: %ld\r\n", sz);
   header (buf, "\r\n");
 
-  if (master.debug & DEBUG_RW) printf ("proxy response '\n%.*s'\n", buf->count, buf->ptr);
+  if (http->debug & DEBUG_RW) printf ("httpd %d proxy response %d '\n%.*s'\n", http->c.sockfd, buf->count, buf->count, buf->ptr);
 
   hin_pipe_write (pipe, buf);
 
@@ -230,7 +231,7 @@ static int http_client_sent_callback (hin_buffer_t * buffer, int ret) {
     if (line.len == 0) break;
   }
 
-  if (master.debug & DEBUG_PROXY) printf ("proxy post %d>%d sz is %ld\n", http->c.sockfd, proxy->c.sockfd, http->post_sz);
+  if (http->debug & (DEBUG_PROXY|DEBUG_POST)) printf ("proxy post %d>%d sz is %ld\n", http->c.sockfd, proxy->c.sockfd, http->post_sz);
 
   off_t sz = http->post_sz;
   int len = source.len;
@@ -253,6 +254,8 @@ static int http_client_sent_callback (hin_buffer_t * buffer, int ret) {
   pipe->finish_callback = httpd_proxy_pipe_post_close;
   //pipe->out_error_callback = httpd_proxy_pipe_in_error;
   //pipe->in_error_callback = httpd_proxy_pipe_out_error;
+  pipe->debug = http->debug;
+
   if (http->peer_flags & HIN_HTTP_CHUNKED_UPLOAD) {
     int httpd_pipe_upload_chunked (httpd_client_t * http, hin_pipe_t * pipe);
     httpd_pipe_upload_chunked (http, pipe);
@@ -275,7 +278,7 @@ int http_proxy_start_request (http_client_t * http, int ret) {
     return -1;
   }
 
-  if (master.debug & DEBUG_PROTO) printf ("proxy request begin on socket %d\n", ret);
+  if (http->debug & (DEBUG_HTTP|DEBUG_PROXY)) printf ("httpd %d proxy request begin on socket %d\n", parent->c.sockfd, ret);
 
   hin_lines_t * lines = (hin_lines_t*)&http->read_buffer->buffer;
   lines->read_callback = httpd_proxy_headers_read_callback;
@@ -291,6 +294,7 @@ int http_proxy_start_request (http_client_t * http, int ret) {
   buf->ptr = buf->buffer;
   buf->parent = http;
   buf->ssl = &client->ssl;
+  buf->debug = http->debug;
 
   char * path = http->uri.path.ptr;
   char * path_max = path + http->uri.path.len;
@@ -337,7 +341,7 @@ int http_proxy_start_request (http_client_t * http, int ret) {
     if (len > parent->post_sz) len = parent->post_sz;
     header_raw (buf, source.ptr, len);
   }
-  if (master.debug & DEBUG_RW) printf ("proxy request is '\n%.*s'\n", buf->count, buf->ptr);
+  if (http->debug & DEBUG_RW) printf ("httpd %d proxy request %d '\n%.*s'\n", parent->c.sockfd, buf->count, buf->count, buf->ptr);
   hin_request_write (buf);
   return 0;
 }
@@ -366,6 +370,7 @@ http_client_t * hin_proxy (hin_client_t * parent_c, const char * url1) {
   http_client_t * http = calloc (1, sizeof (*http));
   http->c.parent = parent;
   http->uri = info;
+  http->debug = parent->debug;
 
   http->host = strndup (info.host.ptr, info.host.len);
   if (info.port.len > 0) {

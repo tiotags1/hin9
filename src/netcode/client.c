@@ -11,7 +11,7 @@
 #include "http.h"
 
 void hin_client_unlink (hin_client_t * client) {
-  if (master.debug & DEBUG_SOCKET) printf ("socket unlink %d\n", client->sockfd);
+  if (master.debug & DEBUG_SOCKET) printf ("socket %d unlink\n", client->sockfd);
 
   hin_client_t * server = (hin_client_t*)client->parent;
   hin_server_blueprint_t * bp = (hin_server_blueprint_t*)server;
@@ -30,7 +30,7 @@ void hin_server_clean (hin_client_t * server) {
   free (bp->accept_client);
   hin_buffer_clean (bp->accept_buffer);
   if (master.debug & DEBUG_SOCKET)
-    printf ("closing server sockfd %d\n", server->sockfd);
+    printf ("server sockfd %d close\n", server->sockfd);
   close (server->sockfd);
   free (server);
 }

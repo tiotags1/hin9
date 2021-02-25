@@ -41,7 +41,7 @@ int hin_server_accept (hin_buffer_t * buffer, int ret) {
   }
 
   client->sockfd = ret;
-  if (master.debug & DEBUG_SOCKET) printf ("socket accept %d\n", ret);
+  if (master.debug & DEBUG_SOCKET) printf ("socket %d accept\n", ret);
   if (handle_client (client) < 0) {
     if (master.quit) return 1;
     hin_request_accept (buffer, bp->accept_flags);

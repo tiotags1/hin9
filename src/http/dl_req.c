@@ -11,13 +11,15 @@
 #include "conf.h"
 
 static int hin_http_pipe_finish_callback (hin_pipe_t * pipe) {
-  if (master.debug & DEBUG_PIPE) printf ("download file transfer finished infd %d outfd %d\n", pipe->in.fd, pipe->out.fd);
   http_client_t * http = (http_client_t*)pipe->parent;
+  if (pipe->debug & DEBUG_PIPE) printf ("http %d download file transfer finished infd %d outfd %d\n", http->c.sockfd, pipe->in.fd, pipe->out.fd);
+
   if (HIN_HTTPD_PROXY_CONNECTION_REUSE) {
     hin_client_list_add (&master.connection_list, &http->c);
   } else {
     http_client_shutdown (http);
   }
+
   int http_client_finish_request (http_client_t * http);
   http_client_finish_request (http);
   return 0;
@@ -50,6 +52,7 @@ int http_client_send_data (hin_client_t * client, string_t * source) {
   pipe->out.pos = 0;
   pipe->parent = client;
   pipe->finish_callback = hin_http_pipe_finish_callback;
+  pipe->debug = http->debug;
 
   if (http->flags & HIN_HTTP_CHUNKED) {
     int hin_pipe_decode_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush);
@@ -89,11 +92,10 @@ int http_client_headers_read_callback (hin_buffer_t * buffer) {
 
 static int http_client_sent_callback (hin_buffer_t * buffer, int ret) {
   if (ret < 0) {
-    printf ("http header send failed %s\n", strerror (-ret));
+    printf ("http %d header send failed %s\n", buffer->fd, strerror (-ret));
     http_client_shutdown (buffer->parent);
     return 1;
   }
-  printf ("sent done\n");
   return 1;
 }
 
@@ -110,6 +112,7 @@ int http_send_request (hin_client_t * client) {
   buf->ptr = buf->buffer;
   buf->parent = client;
   buf->ssl = &client->ssl;
+  buf->debug = http->debug;
 
   char * path = http->uri.path.ptr;
   char * path_max = path + http->uri.path.len;
@@ -129,7 +132,7 @@ int http_send_request (hin_client_t * client) {
     header (buf, "Connection: close\r\n");
   }
   header (buf, "\r\n");
-  if (master.debug & DEBUG_RW) printf ("http request '%.*s'\n", buf->count, buf->ptr);
+  if (http->debug & DEBUG_RW) printf ("http %d request '\n%.*s'\n", http->c.sockfd, buf->count, buf->ptr);
   hin_request_write (buf);
   return 0;
 }

@@ -24,15 +24,16 @@ typedef struct hin_pipe_struct hin_pipe_t;
 #define HIN_SERVER_MAGIC 0xfcadc123
 
 enum { HIN_DONE = 0x1, HIN_SOCKET = 0x2, HIN_FILE = 0x4, HIN_OFFSETS = 0x8,
-       HIN_SSL = 0x10, HIN_COUNT = 0x20, HIN_HIDE = 0x40, HIN_HASH = 0x80 };
+       HIN_SSL = 0x10, HIN_COUNT = 0x20, HIN_HASH = 0x40 };
 
 enum { HIN_CLIENT = 1, HIN_DYN_BUFFER, HIN_SERVER, HIN_DOWNLOAD, HIN_CACHE_OBJECT };
 
-enum { DEBUG_OTHER = 0x1, DEBUG_PIPE = 0x2, DEBUG_HEADERS = 0x4, DEBUG_RW = 0x8,
-  DEBUG_SSL = 0x10, DEBUG_PROTO = 0x20, DEBUG_URING = 0x40, DEBUG_SOCKET = 0x80,
-  DEBUG_CGI = 0x100, DEBUG_POST = 0x200, DEBUG_CONFIG = 0x400, DEBUG_TIMER = 0x800,
-  DEBUG_PROXY = 0x1000, DEBUG_DEFLATE = 0x2000, DEBUG_CHILD = 0x4000, DEBUG_CHUNK = 0x8000,
-  DEBUG_SYSCALL = 0x10000, DEBUG_MEMORY = 0x20000, DEBUG_CACHE = 0x40000 };
+enum {
+DEBUG_CONFIG=0x1, DEBUG_RW=0x2, DEBUG_PIPE=0x4, DEBUG_SOCKET=0x8,
+DEBUG_URING=0x10, DEBUG_SSL=0x20, DEBUG_SYSCALL=0x40, DEBUG_MEMORY=0x80,
+DEBUG_HTTP=0x100, DEBUG_CGI=0x200, DEBUG_PROXY=0x400, DEBUG_HTTP_FILTER=0x800,
+DEBUG_POST=0x1000, DEBUG_CHILD=0x2000, DEBUG_CACHE=0x4000, DEBUG_TIMEOUT=0x8000,
+};
 
 typedef int (*hin_callback_t) (hin_buffer_t * buffer, int ret);
 
@@ -41,6 +42,7 @@ struct hin_buffer_struct {
   int fd;
   int buf_index;
   uint32_t flags;
+  uint32_t debug;
   hin_callback_t callback;
   off_t pos;
   int count, sz;
@@ -72,6 +74,7 @@ struct hin_pipe_struct {
   hin_buffer_t * (*buffer_callback) (hin_pipe_t * pipe, int sz);
 
   uint32_t flags;
+  uint32_t debug;
   uint64_t hash;
   void * extra;
 };

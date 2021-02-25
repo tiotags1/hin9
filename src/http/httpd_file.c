@@ -18,7 +18,7 @@
 
 static int httpd_close_filefd (httpd_client_t * http) {
   if (http->file_fd <= 0) return 0;
-  if (master.debug & DEBUG_SYSCALL) printf ("close filefd %d\n", http->file_fd);
+  if (http->debug & DEBUG_SYSCALL) printf ("close filefd %d\n", http->file_fd);
   close (http->file_fd);
   http->file_fd = 0;
   return 0;
@@ -31,7 +31,7 @@ static int httpd_pipe_error_callback (hin_pipe_t * pipe) {
 }
 
 static int done_file (hin_pipe_t * pipe) {
-  if (master.debug & DEBUG_PIPE) printf ("pipe file transfer finished infd %d outfd %d\n", pipe->in.fd, pipe->out.fd);
+  if (pipe->debug & DEBUG_PIPE) printf ("pipe %d>%d file transfer finished bytes %ld\n", pipe->in.fd, pipe->out.fd, pipe->count);
   httpd_client_finish_request (pipe->parent);
   void hin_cache_unref (void *);
   if (pipe->parent1) hin_cache_unref (pipe->parent1);
@@ -70,7 +70,7 @@ int httpd_send_file (httpd_client_t * http, hin_cache_item_t * item, hin_buffer_
     return 0;
   }
 
-  if (master.debug & DEBUG_PIPE) {
+  if (http->debug & DEBUG_PIPE) {
     printf ("sending file '%s' size %ld sockfd %d filefd %d\n", http->file_path, sz, http->c.sockfd, item->fd);
   }
 
@@ -107,6 +107,7 @@ int httpd_send_file (httpd_client_t * http, hin_cache_item_t * item, hin_buffer_
   pipe->parent = http;
   pipe->finish_callback = done_file;
   pipe->out_error_callback = httpd_pipe_error_callback;
+  pipe->debug = http->debug;
 
   buf->parent = pipe;
   if (item->type) { pipe->parent1 = item; }
@@ -147,7 +148,7 @@ int httpd_send_file (httpd_client_t * http, hin_cache_item_t * item, hin_buffer_
 
   header (buf, "\r\n");
 
-  if (http->debug & DEBUG_RW) printf ("responding %d '\n%.*s'\n", http->c.sockfd, buf->count, buf->ptr);
+  if (http->debug & DEBUG_RW) printf ("httpd %d file response %d '\n%.*s'\n", http->c.sockfd, buf->count, buf->count, buf->ptr);
 
   hin_pipe_write (pipe, buf);
   hin_pipe_start (pipe);
@@ -236,6 +237,7 @@ int httpd_handle_file_request (hin_client_t * client, const char * path, off_t p
   buf->ptr = buf->buffer;
   buf->parent = client;
   buf->ssl = &client->ssl;
+  buf->debug = http->debug;
 
   if (HIN_HTTPD_ASYNC_OPEN) {
     buf->callback = httpd_open_filefd_callback;

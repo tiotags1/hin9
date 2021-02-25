@@ -1,6 +1,6 @@
 
 --redirect_log ("/tmp/log1.txt")
---redirect_log (NULL, "ffffffff")
+redirect_log (NULL, "ffffffff")
 
 function create_log (path)
   local fp = io.open (path, "w")
@@ -26,6 +26,8 @@ content_type = {html="text/html", jpg="image/jpeg", png="image/png", gif="image/
 svg="image/svg+xml"}
 
 local server = create_httpd (function (server, req)
+  --set_option (req, "debug", "0")
+
   local path, query, method, version = parse_path (req)
   --local h = parse_headers (req)
   local ip, port = remote_address (req)
@@ -81,7 +83,7 @@ listen (server, "localhost", "8080", "ipv4")
 --listen (server, nil, "8080", "any")
 
 set_server_option (server, "timeout", 15)
-set_server_option (server, "hostname", "local")
+set_server_option (server, "hostname", "localhost")
 --set_server_option (server, "disable", "keepalive")
 --set_server_option (server, "disable", "deflate")
 
