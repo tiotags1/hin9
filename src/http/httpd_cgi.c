@@ -194,7 +194,7 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
     if (line.len == 0) break;
     if (http->debug & (DEBUG_CGI|DEBUG_RW))
       fprintf (stderr, " %ld '%.*s'\n", line.len, (int)line.len, line.ptr);
-    if (matchi_string (&line, "  Status:") > 0) {
+    if (matchi_string (&line, "Status:") > 0) {
     } else if ((http->peer_flags & HIN_HTTP_CHUNKED) && matchi_string (&line, "Content%-Length:") > 0) {
     } else if (HIN_HTTPD_DISABLE_POWERED_BY && matchi_string (&line, "X%-Powered%-By:") > 0) {
     } else {
@@ -286,6 +286,9 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
     return out_pipe[0];
   }
 
+  int hin_signal_clean ();
+  hin_signal_clean ();
+
   void httpd_close_socket ();
   httpd_close_socket ();
   int hin_event_clean ();
@@ -331,10 +334,11 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
   if (1) {
     var (&env, "REDIRECT_URI=%.*s", path.len, path.ptr);
   }
-  var (&env, "SCRIPT_NAME=%s", script_path);
+  int tmp = strlen (root_path);
+  var (&env, "SCRIPT_NAME=%s", script_path+tmp);
   var (&env, "QUERY_STRING=%.*s", uri.query.len, uri.query.ptr);
-  var (&env, "SCRIPT_FILENAME=%s", script_path);
-  var (&env, "DOCUMENT_ROOT=%s", root_path);
+  var (&env, "SCRIPT_FILENAME=%s", realpath (script_path, NULL));
+  var (&env, "DOCUMENT_ROOT=%s", realpath (root_path, NULL));
 
   var (&env, "REQUEST_METHOD=%.*s", method.len, method.ptr);
   var (&env, "CONTENT_LENGTH=%ld", http->post_sz);
@@ -342,7 +346,7 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
   var (&env, "REDIRECT_STATUS=%d", http->status);
   var (&env, "REQUEST_SCHEME=http");
   var (&env, "SERVER_PROTOCOL=HTTP/1.%d", http->peer_flags & HIN_HTTP_VER0 ? 0 : 1);
-  var (&env, "SERVER_SOFTWARE=hin");
+  var (&env, "SERVER_SOFTWARE=" HIN_HTTPD_SERVER_BANNER);
 
   char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
   int err;

@@ -102,7 +102,7 @@ void hin_timer_init () {
   buf->flags = 0;
   buf->fd = 0;
   buf->callback = hin_timer_callback;
-  buf->count = buf->sz = sizeof (struct timespec);
+  buf->count = buf->sz = sizeof (hin_timeout_t);
   buf->ptr = buf->buffer;
   timeout_buffer = buf;
 

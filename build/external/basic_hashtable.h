@@ -32,6 +32,7 @@ void basic_ht_clean (basic_ht_t * ht);
 void basic_ht_free (basic_ht_t * ht);
 
 basic_ht_hash_t basic_ht_hash (const char * str, size_t size, basic_ht_hash_t * h1, basic_ht_hash_t * h2);
+basic_ht_hash_t basic_ht_hash_continue (const char * str, size_t size, basic_ht_hash_t * h1, basic_ht_hash_t * h2);
 
 // base
 basic_ht_pair_t * basic_ht_get_pair (basic_ht_t * ht, basic_ht_hash_t key1, basic_ht_hash_t key2);

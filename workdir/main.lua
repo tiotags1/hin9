@@ -1,6 +1,6 @@
 
 --redirect_log ("/tmp/log1.txt")
-redirect_log (NULL, "ffffffff")
+--redirect_log (NULL, "ffffffff")
 
 function create_log (path)
   local fp = io.open (path, "w")
@@ -32,7 +32,7 @@ local server = create_httpd (function (server, req)
   --local h = parse_headers (req)
   local ip, port = remote_address (req)
   local id = get_option (req, "id")
-  set_option (req, "cache_key", path)
+  set_option (req, "cache_key", path, "?", query)
   access ("%x %s %s %s %s\n", id, ip, method, path, query)
 
   local root = "htdocs"
@@ -65,6 +65,7 @@ local server = create_httpd (function (server, req)
   if (content_type[ext]) then
     set_content_type (req, content_type[ext])
   end
+  set_option (req, "debug", "0")
   send_file (req, file_path)
 
 end, function (server, req, status, err)

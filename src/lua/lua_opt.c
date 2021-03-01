@@ -181,6 +181,10 @@ static int l_hin_set_option (lua_State *L) {
     size_t len = 0;
     const char * str = lua_tolstring (L, 3, &len);
     basic_ht_hash (str, len, &http->cache_key1, &http->cache_key2);
+    for (int i=4; i <= lua_gettop (L); i++) {
+      str = lua_tolstring (L, i, &len);
+      basic_ht_hash_continue (str, len, &http->cache_key1, &http->cache_key2);
+    }
     return 0;
   } else if (strcmp (name, "cache") == 0) {
     if (lua_isnumber (L, 3)) {

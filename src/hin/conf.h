@@ -7,6 +7,8 @@
 #define HIN_URING_QUEUE_DEPTH 256
 #define HIN_URING_DONT_FORK 0
 
+#define HIN_SOCKET_REUSEADDR 1
+
 #define HIN_HTTPD_TIMEOUT 10
 // in miliseconds
 #define HIN_HTTPD_TIME_DT 2000

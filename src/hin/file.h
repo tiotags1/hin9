@@ -10,11 +10,6 @@ enum { HIN_CACHE_DONE = 0x1, HIN_CACHE_ERROR = 0x2, HIN_CACHE_PUBLIC = 0x4, HIN_
  HIN_CACHE_NO_CACHE = 0x10, HIN_CACHE_NO_STORE = 0x20, HIN_CACHE_NO_TRANSFORM = 0x40, HIN_CACHE_IMMUTABLE = 0x80,
  HIN_CACHE_MUST_REVALIDATE = 0x100, HIN_CACHE_PROXY_REVALIDATE = 0x200, HIN_CACHE_MAX_AGE = 0x400 };
 
-typedef struct {
-  uint32_t flags;
-  time_t max_age;
-} hin_cache_data_t;
-
 typedef struct hin_cache_client_struct {
   void * ptr;
   struct hin_cache_client_struct * next;
@@ -22,10 +17,13 @@ typedef struct hin_cache_client_struct {
 
 typedef struct hin_cache_item_struct {
   int type;
-  int refcount;
-  uint32_t flags;
-
   int fd;
+  uint32_t flags;
+  uint32_t magic;
+  void * parent;
+
+  int refcount;
+
   basic_ht_hash_t cache_key1, cache_key2;
   time_t lifetime;
 
@@ -33,7 +31,6 @@ typedef struct hin_cache_item_struct {
   off_t size;
   uint64_t etag;
 
-  void * parent;
   hin_cache_client_queue_t * client_queue;
 } hin_cache_item_t;
 

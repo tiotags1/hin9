@@ -76,6 +76,21 @@ basic_ht_hash_t basic_ht_hash (const char * str, size_t size, basic_ht_hash_t * 
   return hash1;
 }
 
+basic_ht_hash_t basic_ht_hash_continue (const char * str, size_t size, basic_ht_hash_t * h1, basic_ht_hash_t * h2) {
+  basic_ht_hash_t hash1 = *h1;
+  basic_ht_hash_t hash2 = *h2;
+  int c;
+  const char * max = str+size;
+  while (str < max) {
+    c = *str++;
+    hash1 = ((hash1 << 5) + hash1) + c; // hash * 33 + c
+    hash2 = ((hash2 << 3) + hash2) + c;
+  }
+  if (h2) *h2 = hash2;
+  if (h1) *h1 = hash1;
+  return hash1;
+}
+
 basic_ht_pair_t * basic_ht_get_pair (basic_ht_t *hashtable, basic_ht_hash_t key1, basic_ht_hash_t key2) {
   basic_ht_hash_t bin = key1 & hashtable->mask;
   basic_ht_pair_t * pair;

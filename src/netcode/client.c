@@ -27,8 +27,13 @@ void hin_server_clean (hin_client_t * server) {
   for (hin_client_t * elem = bp->active_client; elem; elem = elem->next) {
     //hin_client_shutdown (elem);
   }
+
   free (bp->accept_client);
   hin_buffer_clean (bp->accept_buffer);
+  if (bp->ssl_ctx) {
+    SSL_CTX_free (bp->ssl_ctx);
+  }
+
   if (master.debug & DEBUG_SOCKET)
     printf ("server sockfd %d close\n", server->sockfd);
   close (server->sockfd);

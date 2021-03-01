@@ -126,22 +126,28 @@ int lua_init () {
   int err;
 
   lua_State *L = luaL_newstate ();
+  if (L == NULL) return -1;
   luaL_openlibs (L);
 
   int hin_lua_req_init (lua_State * L);
-  hin_lua_req_init (L);
+  err |= hin_lua_req_init (L);
   int hin_lua_opt_init (lua_State * L);
-  hin_lua_opt_init (L);
+  err |= hin_lua_opt_init (L);
   int hin_lua_config_init (lua_State * L);
-  hin_lua_config_init (L);
+  err |= hin_lua_config_init (L);
 
-  if (run_file (L, HIN_CONF_PATH)) {
-    printf ("internal error\n");
-    return -1;
-  }
+  if (err < 0) return err;
 
   internal_lua = L;
 
+  return 0;
+}
+
+int hin_conf_load (const char * path) {
+  if (run_file (internal_lua, path)) {
+    printf ("can't load config at '%s'\n", path);
+    return -1;
+  }
   return 0;
 }
 

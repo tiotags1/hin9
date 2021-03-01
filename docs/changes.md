@@ -1,4 +1,13 @@
 
+* slightly better cgi environment
+* added so_reuseaddr by default
+* can load config file from the command prompt
+* bugfix: a space broke cgi return status
+* bugfix: cache key not taking query string into account
+* os signal fixes
+* added a simpler sample config and other documentation changes
+
+commit 641bc14b61b65eae6a9102df8c88b3ea4ad347df
 * improved per request debug logging
 * improved some error messages
 

@@ -8,6 +8,7 @@
 
 #include "hin.h"
 #include "utils.h"
+#include "conf.h"
 
 int handle_client (hin_client_t * client);
 
@@ -103,6 +104,12 @@ static int create_and_bind (const char * addr, const char *port, const char * so
       sockfd = socket (rp->ai_family, rp->ai_socktype, rp->ai_protocol);
       if (sockfd == -1)
         continue;
+
+      #if HIN_SOCKET_REUSEADDR
+      int enable = 1;
+      if (setsockopt (sockfd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof (int)) < 0)
+        perror ("setsockopt (SO_REUSEADDR) failed");
+      #endif
 
       s = bind (sockfd, rp->ai_addr, rp->ai_addrlen);
       if (s == 0) {

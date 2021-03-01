@@ -9,6 +9,7 @@
 #include <basic_pattern.h>
 
 #include "hin.h"
+#include "conf.h"
 #include "http.h"
 
 hin_master_t master;
@@ -28,6 +29,8 @@ void hin_clean () {
   hin_sharedmem_clean ();
   void hin_cache_clean ();
   hin_cache_clean ();
+  int hin_signal_clean ();
+  hin_signal_clean ();
 
   //close (0); close (1); close (2);
 
@@ -38,20 +41,10 @@ void hin_clean () {
   #endif
 }
 
-static void sigint_handler (int signo) {
-  printf("^C pressed. Shutting down.\n");
-  hin_clean ();
-  exit (0);
-}
-
 int main (int argc, const char * argv[]) {
   printf ("hin start ...\n");
-  signal (SIGINT, sigint_handler);
-  //signal (SIGPIPE, SIG_IGN);
 
   master.exe_path = (char*)argv[0];
-  void install_sighandler ();
-  install_sighandler ();
 
   for (int i = 0; i<argc; i++) {
     string_t line, param;
@@ -73,11 +66,27 @@ int main (int argc, const char * argv[]) {
   hin_console_init ();
   void hin_timer_init ();
   hin_timer_init ();
+  int hin_signal_install ();
+  hin_signal_install ();
 
   int lua_init ();
   if (lua_init () < 0) {
     printf ("could not load config file\n");
     return -1;
+  }
+
+  int hin_conf_load (const char * path);
+  int err, loaded = 0;
+  for (int i = 1; i < argc; i++) {
+    if (strcmp (argv[i], "--version") == 0) {
+      printf ("%s\n", HIN_HTTPD_SERVER_BANNER);
+      exit (0);
+    } else if (hin_conf_load (argv[i]) >= 0) {
+      loaded = 1;
+    }
+  }
+
+  if (loaded == 0 && hin_conf_load (HIN_CONF_PATH) < 0) {
   }
 
   #if HIN_HTTPD_WORKER_PREFORKED

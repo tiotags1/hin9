@@ -1,6 +1,6 @@
 
 * bugs
-  * ?
+  * wordpress fails in many places
 
 
 * reverse proxy
