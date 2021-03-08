@@ -1,5 +1,5 @@
 
-compiler=clang
+compiler=gcc
 
 rule cc
   command = $compiler $gcc_preference $cflags $includes -MMD -MF $out.d -c $in -o $out
@@ -15,79 +15,74 @@ rule link
   command = $compiler -o $out $in $ldflags
   description = LINK "" $out
 
-includes= -I../src/ -I../src/hin/ -Iexternal/
+includes= -I/home/Projects/active/libs/src -I/home/Projects/active/hin9/src/hin -I/home/Projects/active/libs/other -I/home/Projects/active/hin9/src/
 gcc_preference=-fdiagnostics-color=always -g
 
 # hin9
 build obj/hin9/src/http/cache.c.o: cc ../src/http/cache.c
- cflags= -D_GNU_SOURCE -O2 -fno-omit-frame-pointer -g
+ cflags= -D_GNU_SOURCE -O2 -fno-omit-frame-pointer -g -DBASIC_USE_MALLOC_DEBUG -include "debug_malloc.h"
 build obj/hin9/src/http/dl_client.c.o: cc ../src/http/dl_client.c
- cflags= -D_GNU_SOURCE
+ cflags= -D_GNU_SOURCE -O2 -fno-omit-frame-pointer -g -DBASIC_USE_MALLOC_DEBUG -include "debug_malloc.h"
 build obj/hin9/src/http/dl_head.c.o: cc ../src/http/dl_head.c
- cflags= -D_GNU_SOURCE
+ cflags= -D_GNU_SOURCE -O2 -fno-omit-frame-pointer -g -DBASIC_USE_MALLOC_DEBUG -include "debug_malloc.h"
 build obj/hin9/src/http/dl_req.c.o: cc ../src/http/dl_req.c
- cflags= -D_GNU_SOURCE
+ cflags= -D_GNU_SOURCE -O2 -fno-omit-frame-pointer -g -DBASIC_USE_MALLOC_DEBUG -include "debug_malloc.h"
 build obj/hin9/src/http/httpd.c.o: cc ../src/http/httpd.c
- cflags= -D_GNU_SOURCE
+ cflags= -D_GNU_SOURCE -O2 -fno-omit-frame-pointer -g -DBASIC_USE_MALLOC_DEBUG -include "debug_malloc.h"
 build obj/hin9/src/http/httpd_cgi.c.o: cc ../src/http/httpd_cgi.c
- cflags= -D_GNU_SOURCE
+ cflags= -D_GNU_SOURCE -O2 -fno-omit-frame-pointer -g -DBASIC_USE_MALLOC_DEBUG -include "debug_malloc.h"
 build obj/hin9/src/http/httpd_file.c.o: cc ../src/http/httpd_file.c
- cflags= -D_GNU_SOURCE -O2 -fno-omit-frame-pointer -g
+ cflags= -D_GNU_SOURCE -O2 -fno-omit-frame-pointer -g -DBASIC_USE_MALLOC_DEBUG -include "debug_malloc.h"
 build obj/hin9/src/http/httpd_head.c.o: cc ../src/http/httpd_head.c
- cflags= -D_GNU_SOURCE
+ cflags= -D_GNU_SOURCE -O2 -fno-omit-frame-pointer -g -DBASIC_USE_MALLOC_DEBUG -include "debug_malloc.h"
 build obj/hin9/src/http/httpd_misc.c.o: cc ../src/http/httpd_misc.c
- cflags= -D_GNU_SOURCE
+ cflags= -D_GNU_SOURCE -O2 -fno-omit-frame-pointer -g -DBASIC_USE_MALLOC_DEBUG -include "debug_malloc.h"
 build obj/hin9/src/http/httpd_post.c.o: cc ../src/http/httpd_post.c
- cflags= -D_GNU_SOURCE
+ cflags= -D_GNU_SOURCE -O2 -fno-omit-frame-pointer -g -DBASIC_USE_MALLOC_DEBUG -include "debug_malloc.h"
 build obj/hin9/src/http/httpd_proxy.c.o: cc ../src/http/httpd_proxy.c
- cflags= -D_GNU_SOURCE
+ cflags= -D_GNU_SOURCE -O2 -fno-omit-frame-pointer -g -DBASIC_USE_MALLOC_DEBUG -include "debug_malloc.h"
 build obj/hin9/src/http/httpd_read.c.o: cc ../src/http/httpd_read.c
- cflags= -D_GNU_SOURCE
+ cflags= -D_GNU_SOURCE -O2 -fno-omit-frame-pointer -g -DBASIC_USE_MALLOC_DEBUG -include "debug_malloc.h"
 build obj/hin9/src/http/httpd_req.c.o: cc ../src/http/httpd_req.c
- cflags= -D_GNU_SOURCE
+ cflags= -D_GNU_SOURCE -O2 -fno-omit-frame-pointer -g -DBASIC_USE_MALLOC_DEBUG -include "debug_malloc.h"
 build obj/hin9/src/http/sendfile.c.o: cc ../src/http/sendfile.c
- cflags= -D_GNU_SOURCE
+ cflags= -D_GNU_SOURCE -O2 -fno-omit-frame-pointer -g -DBASIC_USE_MALLOC_DEBUG -include "debug_malloc.h"
 build obj/hin9/src/http/utils.c.o: cc ../src/http/utils.c
- cflags= -D_GNU_SOURCE
+ cflags= -D_GNU_SOURCE -O2 -fno-omit-frame-pointer -g -DBASIC_USE_MALLOC_DEBUG -include "debug_malloc.h"
 build obj/hin9/src/lua/lua.c.o: cc ../src/lua/lua.c
- cflags= -D_GNU_SOURCE
+ cflags= -D_GNU_SOURCE -O2 -fno-omit-frame-pointer -g -DBASIC_USE_MALLOC_DEBUG -include "debug_malloc.h"
 build obj/hin9/src/lua/lua_config.c.o: cc ../src/lua/lua_config.c
- cflags= -D_GNU_SOURCE
+ cflags= -D_GNU_SOURCE -O2 -fno-omit-frame-pointer -g -DBASIC_USE_MALLOC_DEBUG -include "debug_malloc.h"
 build obj/hin9/src/lua/lua_opt.c.o: cc ../src/lua/lua_opt.c
- cflags= -D_GNU_SOURCE
+ cflags= -D_GNU_SOURCE -O2 -fno-omit-frame-pointer -g -DBASIC_USE_MALLOC_DEBUG -include "debug_malloc.h"
 build obj/hin9/src/lua/lua_req.c.o: cc ../src/lua/lua_req.c
- cflags= -D_GNU_SOURCE
+ cflags= -D_GNU_SOURCE -O2 -fno-omit-frame-pointer -g -DBASIC_USE_MALLOC_DEBUG -include "debug_malloc.h"
 build obj/hin9/src/lua/lua_utils.c.o: cc ../src/lua/lua_utils.c
- cflags= -D_GNU_SOURCE
+ cflags= -D_GNU_SOURCE -O2 -fno-omit-frame-pointer -g -DBASIC_USE_MALLOC_DEBUG -include "debug_malloc.h"
 build obj/hin9/src/netcode/buffer.c.o: cc ../src/netcode/buffer.c
- cflags= -D_GNU_SOURCE
+ cflags= -D_GNU_SOURCE -O2 -fno-omit-frame-pointer -g -DBASIC_USE_MALLOC_DEBUG -include "debug_malloc.h"
 build obj/hin9/src/netcode/client.c.o: cc ../src/netcode/client.c
- cflags= -D_GNU_SOURCE
+ cflags= -D_GNU_SOURCE -O2 -fno-omit-frame-pointer -g -DBASIC_USE_MALLOC_DEBUG -include "debug_malloc.h"
 build obj/hin9/src/netcode/connect.c.o: cc ../src/netcode/connect.c
- cflags= -D_GNU_SOURCE
+ cflags= -D_GNU_SOURCE -O2 -fno-omit-frame-pointer -g -DBASIC_USE_MALLOC_DEBUG -include "debug_malloc.h"
 build obj/hin9/src/netcode/listen.c.o: cc ../src/netcode/listen.c
- cflags= -D_GNU_SOURCE
+ cflags= -D_GNU_SOURCE -O2 -fno-omit-frame-pointer -g -DBASIC_USE_MALLOC_DEBUG -include "debug_malloc.h"
 build obj/hin9/src/netcode/pipe.c.o: cc ../src/netcode/pipe.c
- cflags= -D_GNU_SOURCE
+ cflags= -D_GNU_SOURCE -O2 -fno-omit-frame-pointer -g -DBASIC_USE_MALLOC_DEBUG -include "debug_malloc.h"
 build obj/hin9/src/netcode/ssl.c.o: cc ../src/netcode/ssl.c
- cflags= -D_GNU_SOURCE
+ cflags= -D_GNU_SOURCE -O2 -fno-omit-frame-pointer -g -DBASIC_USE_MALLOC_DEBUG -include "debug_malloc.h"
 build obj/hin9/src/netcode/uring.c.o: cc ../src/netcode/uring.c
- cflags= -D_GNU_SOURCE
+ cflags= -D_GNU_SOURCE -O2 -fno-omit-frame-pointer -g -DBASIC_USE_MALLOC_DEBUG -include "debug_malloc.h"
 build obj/hin9/src/system/console.c.o: cc ../src/system/console.c
- cflags= -D_GNU_SOURCE
+ cflags= -D_GNU_SOURCE -O2 -fno-omit-frame-pointer -g -DBASIC_USE_MALLOC_DEBUG -include "debug_malloc.h"
 build obj/hin9/src/system/main.c.o: cc ../src/system/main.c
- cflags= -D_GNU_SOURCE
+ cflags= -D_GNU_SOURCE -O2 -fno-omit-frame-pointer -g -DBASIC_USE_MALLOC_DEBUG -include "debug_malloc.h"
 build obj/hin9/src/system/restart.c.o: cc ../src/system/restart.c
- cflags= -D_GNU_SOURCE
+ cflags= -D_GNU_SOURCE -O2 -fno-omit-frame-pointer -g -DBASIC_USE_MALLOC_DEBUG -include "debug_malloc.h"
 build obj/hin9/src/system/ssl_init.c.o: cc ../src/system/ssl_init.c
- cflags= -D_GNU_SOURCE
-build obj/external/basic_pattern.c.o: cc external/basic_pattern.c
- cflags= -D_GNU_SOURCE
-build obj/external/basic_timer.c.o: cc external/basic_timer.c
- cflags= -D_GNU_SOURCE
-build obj/external/basic_hashtable.c.o: cc external/basic_hashtable.c
- cflags= -D_GNU_SOURCE
-
-build hin9: link obj/hin9/src/http/cache.c.o obj/hin9/src/http/dl_client.c.o obj/hin9/src/http/dl_head.c.o obj/hin9/src/http/dl_req.c.o obj/hin9/src/http/httpd.c.o obj/hin9/src/http/httpd_cgi.c.o obj/hin9/src/http/httpd_file.c.o obj/hin9/src/http/httpd_head.c.o obj/hin9/src/http/httpd_post.c.o obj/hin9/src/http/httpd_proxy.c.o obj/hin9/src/http/httpd_read.c.o obj/hin9/src/http/httpd_misc.c.o obj/hin9/src/http/httpd_req.c.o obj/hin9/src/http/sendfile.c.o obj/hin9/src/http/utils.c.o obj/hin9/src/lua/lua.c.o obj/hin9/src/lua/lua_config.c.o obj/hin9/src/lua/lua_opt.c.o obj/hin9/src/lua/lua_req.c.o obj/hin9/src/lua/lua_utils.c.o obj/hin9/src/netcode/buffer.c.o obj/hin9/src/netcode/client.c.o obj/hin9/src/netcode/connect.c.o obj/hin9/src/netcode/listen.c.o obj/hin9/src/netcode/pipe.c.o obj/hin9/src/netcode/ssl.c.o obj/hin9/src/netcode/uring.c.o obj/hin9/src/system/console.c.o obj/hin9/src/system/main.c.o obj/hin9/src/system/restart.c.o obj/hin9/src/system/ssl_init.c.o obj/external/basic_pattern.c.o obj/external/basic_timer.c.o obj/external/basic_hashtable.c.o
- ldflags= -lm -luring -lz -lcrypto -lssl -llua5.1
+ cflags= -D_GNU_SOURCE -O2 -fno-omit-frame-pointer -g -DBASIC_USE_MALLOC_DEBUG -include "debug_malloc.h"
+build obj/hin9/src/system/tmpfile.c.o: cc ../src/system/tmpfile.c
+ cflags= -D_GNU_SOURCE -O2 -fno-omit-frame-pointer -g -DBASIC_USE_MALLOC_DEBUG -include "debug_malloc.h"
+build hin9: link obj/hin9/src/http/cache.c.o obj/hin9/src/http/dl_client.c.o obj/hin9/src/http/dl_head.c.o obj/hin9/src/http/dl_req.c.o obj/hin9/src/http/httpd.c.o obj/hin9/src/http/httpd_cgi.c.o obj/hin9/src/http/httpd_file.c.o obj/hin9/src/http/httpd_head.c.o obj/hin9/src/http/httpd_misc.c.o obj/hin9/src/http/httpd_post.c.o obj/hin9/src/http/httpd_proxy.c.o obj/hin9/src/http/httpd_read.c.o obj/hin9/src/http/httpd_req.c.o obj/hin9/src/http/sendfile.c.o obj/hin9/src/http/utils.c.o obj/hin9/src/lua/lua.c.o obj/hin9/src/lua/lua_config.c.o obj/hin9/src/lua/lua_opt.c.o obj/hin9/src/lua/lua_req.c.o obj/hin9/src/lua/lua_utils.c.o obj/hin9/src/netcode/buffer.c.o obj/hin9/src/netcode/client.c.o obj/hin9/src/netcode/connect.c.o obj/hin9/src/netcode/listen.c.o obj/hin9/src/netcode/pipe.c.o obj/hin9/src/netcode/ssl.c.o obj/hin9/src/netcode/uring.c.o obj/hin9/src/system/console.c.o obj/hin9/src/system/main.c.o obj/hin9/src/system/restart.c.o obj/hin9/src/system/ssl_init.c.o obj/hin9/src/system/tmpfile.c.o /home/Projects/active/libs/build/basic_pattern.a /home/Projects/active/libs/build/basic_timer.a /home/Projects/active/libs/build/basic_hashtable.a /home/Projects/active/libs/build/debug_malloc.a 
+ ldflags= -lm -luring -lz -lcrypto -lssl -llua5.1 -g -ldl
 

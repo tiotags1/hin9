@@ -41,19 +41,48 @@ void hin_clean () {
   #endif
 }
 
+void print_help () {
+  printf ("help info\n");
+}
+
+int hin_process_argv (int argc, const char * argv[]) {
+  for (int i = 1; i < argc; i++) {
+    if (strcmp (argv[i], "--version") == 0) {
+      printf ("%s\n", HIN_HTTPD_SERVER_BANNER);
+      return -1;
+    } else if (strcmp (argv[i], "--help") == 0) {
+      print_help ();
+      return -1;
+    } else if (strcmp (argv[i], "--config") == 0) {
+      i++;
+      if (i >= argc) {
+        printf ("missing config path\n");
+        print_help ();
+        return -1;
+      }
+      master.conf_path = (char *)argv[i];
+    } else if (strcmp (argv[i], "--reuse") == 0) {
+      i++;
+      if (i >= argc) {
+        printf ("missing reuse fd\n");
+        print_help ();
+        return -1;
+      }
+      master.sharefd = atoi (argv[i]);
+    }
+  }
+  return 0;
+}
+
 int main (int argc, const char * argv[]) {
+  master.conf_path = HIN_CONF_PATH;
+  if (hin_process_argv (argc, argv) < 0)
+    return -1;
+
   printf ("hin start ...\n");
 
   master.exe_path = (char*)argv[0];
 
-  for (int i = 0; i<argc; i++) {
-    string_t line, param;
-    line.ptr = (char*)argv[i];
-    line.len = strlen (line.ptr);
-    if (match_string (&line, "%-%-reuse=(%d+)", &param) > 0) {
-      master.sharefd = atoi (param.ptr);
-    }
-  }
   master.debug = 0xffffffff;
   master.debug = 0;
   //master.debug |= DEBUG_SOCKET;
@@ -63,7 +92,9 @@ int main (int argc, const char * argv[]) {
   void hin_event_init ();
   hin_event_init ();
   void hin_console_init ();
+  #ifndef HIN_LINUX_BUG_5_11_3
   hin_console_init ();
+  #endif
   void hin_timer_init ();
   hin_timer_init ();
   int hin_signal_install ();
@@ -71,22 +102,13 @@ int main (int argc, const char * argv[]) {
 
   int lua_init ();
   if (lua_init () < 0) {
-    printf ("could not load config file\n");
+    printf ("could not init lua\n");
     return -1;
   }
 
   int hin_conf_load (const char * path);
-  int err, loaded = 0;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp (argv[i], "--version") == 0) {
-      printf ("%s\n", HIN_HTTPD_SERVER_BANNER);
-      exit (0);
-    } else if (hin_conf_load (argv[i]) >= 0) {
-      loaded = 1;
-    }
-  }
-
-  if (loaded == 0 && hin_conf_load (HIN_CONF_PATH) < 0) {
+  if (master.debug & DEBUG_CONFIG) printf ("conf path '%s'\n", master.conf_path);
+  if (hin_conf_load (master.conf_path) < 0) {
   }
 
   #if HIN_HTTPD_WORKER_PREFORKED

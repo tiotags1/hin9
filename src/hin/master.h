@@ -24,6 +24,7 @@ typedef struct {
   int id;
   uint32_t debug;
   char * exe_path;
+  char * conf_path;
   int sharefd;
   int quit;
   int restart_pid;

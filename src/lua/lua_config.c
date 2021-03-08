@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <fcntl.h>
+
 #include "hin.h"
 #include "http.h"
 #include "lua.h"
@@ -38,6 +40,7 @@ static int l_hin_create_httpd (lua_State *L) {
   server->magic = HIN_SERVER_MAGIC;
   server->timeout = HIN_HTTPD_TIMEOUT;
   server->debug = master.debug;
+  server->cwd_fd = AT_FDCWD;
   lua_pushlightuserdata (L, server);
 
   hin_server_data_t * prev = master.servers;

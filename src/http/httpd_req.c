@@ -84,7 +84,9 @@ int header_raw (hin_buffer_t * buffer, const char * data, int len) {
 
 int header_date (hin_buffer_t * buf, const char * name, time_t time) {
   char buffer[80];
-  struct tm *info = gmtime (&time);
+  struct tm data;
+  struct tm *info = gmtime_r (&time, &data);
+  if (info == NULL) { perror ("gmtime_r"); return 0; }
   strftime (buffer, sizeof buffer, "%a, %d %b %Y %X GMT", info);
   return header (buf, "%s: %s\r\n", name, buffer);
 }

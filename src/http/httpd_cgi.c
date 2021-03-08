@@ -88,6 +88,17 @@ int hin_pipe_cgi_server_read_callback (hin_pipe_t * pipe, hin_buffer_t * buffer,
   return 0;
 }
 
+static int hin_cgi_location (httpd_client_t * http, hin_buffer_t * buf, string_t * origin) {
+  string_t source = *origin;
+  if (match_string (&source, "http") > 0) {
+    header (buf, "Location: %.*s\r\n", origin->len, origin->ptr);
+    return 0;
+  }
+  fprintf (stderr, "cgi %d location %.*s\n", http->c.sockfd, (int)source.len, source.ptr);
+  header (buf, "Location: %.*s\r\n", origin->len, origin->ptr);
+  return 0;
+}
+
 static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
   hin_worker_t * worker = (hin_worker_t *)buffer->parent;
   hin_client_t * client = (hin_client_t*)worker->data;
@@ -197,6 +208,9 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
     if (matchi_string (&line, "Status:") > 0) {
     } else if ((http->peer_flags & HIN_HTTP_CHUNKED) && matchi_string (&line, "Content%-Length:") > 0) {
     } else if (HIN_HTTPD_DISABLE_POWERED_BY && matchi_string (&line, "X%-Powered%-By:") > 0) {
+    } else if (matchi_string (&line, "Location:") > 0) {
+      hin_cgi_location (http, buf, &line);
+    } else if (match_string (&line, "X-CGI-") > 0) {
     } else {
       header (buf, "%.*s\r\n", line.len, line.ptr);
     }
@@ -390,12 +404,17 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
   }
 
   hin_server_data_t * server_data = (hin_server_data_t*)server->parent;
-  if (server_data->hostname) {
-    var (&env, "SERVER_NAME=%s", server_data->hostname);
-  } else if (hostname.ptr) {
+  if (hostname.ptr) {
     var (&env, "SERVER_NAME=%.*s", hostname.len, hostname.ptr);
+  } else if (server_data->hostname) {
+    var (&env, "SERVER_NAME=%s", server_data->hostname);
   } else {
     var (&env, "SERVER_NAME=unknown");
+  }
+
+  if (fchdir (server_data->cwd_fd)) {
+    perror ("fchdir");
+    exit (1);
   }
 
   char * const argv[] = {(char*)exe_path, (char*)script_path, NULL};

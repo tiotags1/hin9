@@ -1,4 +1,11 @@
 
+* servers now have a current working dir independent of program cwd
+* headers function returns nested tables for duplicate http headers
+* new command prompt arguments --help, --version, --config
+* cgi ignore X-CGI- headers
+* gmtime_r replaces gmtime
+
+commit 5c81f09e5ec9fef2bc5b71eaa1868e9654ff6e7f
 * slightly better cgi environment
 * added so_reuseaddr by default
 * can load config file from the command prompt

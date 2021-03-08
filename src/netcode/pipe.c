@@ -158,7 +158,7 @@ int hin_pipe_write_callback (hin_buffer_t * buffer, int ret) {
   if (pipe->debug & DEBUG_PIPE) printf ("pipe %d>%d write %d/%d pos %ld left %ld\n", pipe->in.fd, pipe->out.fd, ret, buffer->count, pipe->out.pos, pipe->left);
   pipe->count += ret;
   if (pipe->flags & HIN_HASH) {
-    uint8_t * start = buffer->ptr;
+    uint8_t * start = (uint8_t*)buffer->ptr;
     uint8_t * max = start + ret;
     while (start < max) {
       int c = *start++;

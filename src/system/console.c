@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
+#include <unistd.h>
 
 #include <basic_pattern.h>
 
@@ -11,7 +12,7 @@
 #include "utils.h"
 #include "conf.h"
 
-static hin_buffer_t * buffer = NULL;
+static hin_buffer_t * console_buffer = NULL;
 static hin_buffer_t * timeout_buffer = NULL;
 
 void hin_stop ();
@@ -47,8 +48,8 @@ static int hin_console_read_callback (hin_buffer_t * buf, int ret) {
 }
 
 void hin_console_clean () {
-  if (buffer)
-    hin_buffer_clean (buffer);
+  if (console_buffer)
+    hin_buffer_clean (console_buffer);
   if (timeout_buffer)
     hin_buffer_clean (timeout_buffer);
 }
@@ -57,12 +58,13 @@ void hin_console_init () {
   hin_buffer_t * buf = malloc (sizeof (*buf) + READ_SZ);
   memset (buf, 0, sizeof (*buf));
   buf->flags = 0;
-  buf->fd = 0;
+  buf->fd = STDIN_FILENO;
   buf->callback = hin_console_read_callback;
   buf->count = buf->sz = READ_SZ;
   buf->ptr = buf->buffer;
+  buf->debug = master.debug;
   hin_request_read (buf);
-  buffer = buf;
+  console_buffer = buf;
 }
 
 #include <basic_timer.h>

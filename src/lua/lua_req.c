@@ -58,14 +58,50 @@ static int l_hin_parse_headers (lua_State *L) {
   while (find_line (&temp, &line)) {
     if (line.len == 0) break;
     int used = match_string (&line, "([%w%-_]+):%s*", &param);
-    if (used > 0) {
-      lua_pushlstring (L, param.ptr, param.len);
-      lua_pushlstring (L, line.ptr, line.len);
-      lua_settable (L, -3);
-    } else {
+    if (used <= 0) {
       lua_pushnumber (L, n++);
       lua_pushlstring (L, line.ptr, line.len);
       lua_settable (L, -3);
+      continue;
+    }
+    lua_pushlstring (L, param.ptr, param.len);
+    lua_gettable (L, 2);
+    switch (lua_type (L, -1)) {
+    case LUA_TNIL:
+      lua_pop (L, 1);
+
+      lua_pushlstring (L, param.ptr, param.len);
+      lua_pushlstring (L, line.ptr, line.len);
+      lua_settable (L, -3);
+    break;
+    case LUA_TSTRING:
+      lua_newtable (L);
+
+      lua_pushnumber (L, 1);
+      lua_pushvalue (L, -3);
+      lua_settable (L, -3);
+
+      lua_pushnumber (L, 2);
+      lua_pushlstring (L, line.ptr, line.len);
+      lua_settable (L, -3);
+
+      lua_pushlstring (L, param.ptr, param.len);
+      lua_pushvalue (L, -2);
+      lua_settable (L, -5);
+
+      lua_pop (L, 2);
+    break;
+    case LUA_TTABLE:
+      lua_pushnumber (L, lua_objlen (L, -1) + 1);
+      lua_pushlstring (L, line.ptr, line.len);
+      lua_settable (L, -3);
+
+      lua_pop (L, 1);
+    break;
+    default:
+      printf ("lua headers parsing error\n");
+      lua_pop (L, 1);
+    break;
     }
   }
   return 1;
@@ -141,7 +177,6 @@ static int l_hin_respond (lua_State *L) {
 }
 
 static int temp_cat (char * dest, const char * source, int sz) {
-  if (sz == 0) sz = strlen (source);
   memcpy (dest, source, sz);
   dest[sz] = '\0';
   return sz;
@@ -153,13 +188,16 @@ static int l_hin_sanitize_path (lua_State *L) {
     printf ("lua hin_sanitize_path need a valid client\n");
     return 0;
   }
-  const char * base = lua_tostring (L, 2);
-  if (base == NULL) { printf ("base is nil\n"); return 0; }
 
-  int len1, len2, len3, used;
-  len1 = strlen (base);
-  len2 = 0;
-  len3 = 1;
+  size_t len1 = 0, len2 = 0, len3 = 1, used;
+
+  const char * base = lua_tolstring (L, 2, &len1);
+  if (base && len1 > 0) {
+    if (base[len1-1] == '/') len1--;
+  } else {
+    base = ".";
+    len1 = 1;
+  }
 
   string_t raw, path, name;
   raw.ptr = (char*)lua_tolstring (L, 3, &raw.len);
@@ -188,10 +226,10 @@ static int l_hin_sanitize_path (lua_State *L) {
 
   char * new = malloc (len1 + len2 + len3);
   char * ptr = new;
-  ptr += temp_cat (ptr, base, strlen (base));
+  ptr += temp_cat (ptr, base, len1);
   ptr += temp_cat (ptr, raw.ptr, len2);
   if (len3 > 1) {
-    ptr += temp_cat (ptr, index_file, strlen (index_file));
+    ptr += temp_cat (ptr, index_file, len3);
   }
   lua_pushstring (L, new);
   lua_pushlstring (L, name.ptr, name.len);

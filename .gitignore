@@ -2,6 +2,7 @@ docs/*
 !docs/*.md
 !docs/*.txt
 build/*
+!build/external
 !build/build.ninja
 htdocs/*
 !htdocs/index.html

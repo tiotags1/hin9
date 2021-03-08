@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <fcntl.h>
+
 #include "hin.h"
 #include "lua.h"
 #include "conf.h"
@@ -104,8 +106,12 @@ void lua_server_clean (hin_server_data_t * server) {
   luaL_unref (L, LUA_REGISTRYINDEX, server->request_callback);
   if (server->finish_callback)
     luaL_unref (L, LUA_REGISTRYINDEX, server->finish_callback);
+  if (server->error_callback)
+    luaL_unref (L, LUA_REGISTRYINDEX, server->error_callback);
 
   if (server->hostname) free (server->hostname);
+  if (server->cwd_path) free (server->cwd_path);
+  if (server->cwd_fd && server->cwd_fd != AT_FDCWD) close (server->cwd_fd);
   free (server);
 }
 

@@ -66,11 +66,11 @@ static void hin_restart_new () {
   hin_event_clean ();
   printf ("restart exe file '%s'\n", master.exe_path);
   char * buf = NULL;
-  if (asprintf (&buf, "--reuse=%d", master.sharefd) < 0)
+  if (asprintf (&buf, "%d", master.sharefd) < 0)
     perror ("asprintf");
-  char * argv[] = {master.exe_path, buf, NULL};
+  char * argv[] = {master.exe_path, "--reuse", buf, NULL};
   execvp (master.exe_path, argv);
-  printf ("crash\n");
+  perror ("execvp");
   exit (-1);
 }
 
@@ -136,6 +136,8 @@ static void hin_sig_int_handler (int signo, siginfo_t * info, void * ucontext) {
   exit (0);
 }
 
+#if (HIN_USE_SIGNAL_FD == 0)
+
 int hin_signal_clean () {
   signal(SIGINT, SIG_DFL);
   signal(SIGUSR1, SIG_DFL);
@@ -167,7 +169,7 @@ int hin_signal_install () {
   return 0;
 }
 
-#if 0
+#else
 
 static sigset_t mask;
 static hin_buffer_t * signal_buffer = NULL;

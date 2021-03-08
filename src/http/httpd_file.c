@@ -15,6 +15,7 @@
 #include "http.h"
 #include "file.h"
 #include "conf.h"
+#include "lua.h"
 
 static int httpd_close_filefd (httpd_client_t * http) {
   if (http->file_fd <= 0) return 0;
@@ -239,12 +240,15 @@ int httpd_handle_file_request (hin_client_t * client, const char * path, off_t p
   buf->ssl = &client->ssl;
   buf->debug = http->debug;
 
+  hin_server_blueprint_t * socket = http->c.parent;
+  hin_server_data_t * data = socket->c.parent;
+
   if (HIN_HTTPD_ASYNC_OPEN) {
     buf->callback = httpd_open_filefd_callback;
-    hin_request_openat (buf, AT_FDCWD, path, O_RDONLY | O_CLOEXEC, 0);
+    hin_request_openat (buf, data->cwd_fd, path, O_RDONLY | O_CLOEXEC, 0);
     return 0;
   } else {
-    int ret1 = openat (AT_FDCWD, path, O_RDONLY | O_CLOEXEC, 0);
+    int ret1 = openat (data->cwd_fd, path, O_RDONLY | O_CLOEXEC, 0);
     if (ret1 < 0) ret1 = -errno;
     return httpd_open_filefd_callback (buf, ret1);
   }

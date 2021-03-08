@@ -82,7 +82,6 @@ int hin_request_read_fixed (hin_buffer_t * buffer) {
 int hin_request_accept (hin_buffer_t * buffer, int flags) {
   hin_client_t * client = (hin_client_t*)buffer->parent;
   hin_client_t * server = (hin_client_t*)client->parent;
-
   client->in_len = sizeof (client->in_addr);
 
   struct io_uring_sqe *sqe = io_uring_get_sqe (&ring);

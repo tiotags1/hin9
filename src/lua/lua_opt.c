@@ -4,6 +4,10 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
 #include "hin.h"
 #include "http.h"
 #include "lua.h"
@@ -114,6 +118,16 @@ static int l_hin_set_server_option (lua_State *L) {
   } else if (strcmp (name, "debug") == 0) {
     if (hin_lua_mask_from_str (L, 3, &client->debug) >= 0) {
     }
+    return 0;
+  } else if (strcmp (name, "cwd") == 0) {
+    const char * path = lua_tostring (L, 3);
+    int fd = openat (AT_FDCWD, path, O_DIRECTORY | O_CLOEXEC);
+    if (client->debug & DEBUG_CONFIG) printf ("lua server cwd set to %s\n", path);
+    if (fd < 0) { perror ("cwd openat"); return 0; }
+    if (client->cwd_path) { free (client->cwd_path); }
+    if (client->cwd_fd && client->cwd_fd != AT_FDCWD) { close (client->cwd_fd); }
+    client->cwd_path = strdup (path);
+    client->cwd_fd = fd;
     return 0;
   } else {
     printf ("set_otion unknown option '%s'\n", name);

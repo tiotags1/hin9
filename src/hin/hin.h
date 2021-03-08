@@ -8,6 +8,8 @@
 #include <sys/socket.h>
 #include <sys/uio.h>
 
+#include <basic_banned.h>
+
 typedef struct hin_buffer_struct hin_buffer_t;
 typedef struct hin_client_struct hin_client_t;
 typedef struct hin_pipe_struct hin_pipe_t;
@@ -157,4 +159,3 @@ int hin_lines_reread (hin_client_t * client);
 hin_buffer_t * hin_lines_create_raw ();
 
 #endif
-
