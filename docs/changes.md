@@ -1,4 +1,7 @@
 
+* bugfixes to cgi introduced by previous commit
+
+commit a09f51255515223a98a5db3b74ef545308f92af9
 * servers now have a current working dir independent of program cwd
 * headers function returns nested tables for duplicate http headers
 * new command prompt arguments --help, --version, --config

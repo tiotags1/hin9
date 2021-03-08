@@ -94,7 +94,8 @@ static int hin_cgi_location (httpd_client_t * http, hin_buffer_t * buf, string_t
     header (buf, "Location: %.*s\r\n", origin->len, origin->ptr);
     return 0;
   }
-  fprintf (stderr, "cgi %d location %.*s\n", http->c.sockfd, (int)source.len, source.ptr);
+  //if (master.debug & DEBUG_CGI)
+    fprintf (stderr, "cgi %d location %.*s\n", http->c.sockfd, (int)source.len, source.ptr);
   header (buf, "Location: %.*s\r\n", origin->len, origin->ptr);
   return 0;
 }
@@ -265,6 +266,8 @@ int httpd_request_chunked (httpd_client_t * http);
 
 int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_path, const char * script_path) {
   hin_client_t * client = &http->c;
+  hin_client_t * server = (hin_client_t*)client->parent;
+  hin_server_data_t * server_data = (hin_server_data_t*)server->parent;
 
   if (http->state & HIN_REQ_DATA) return -1;
   http->state |= (HIN_REQ_DATA | HIN_REQ_CGI);
@@ -291,12 +294,20 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
     httpd_respond_error (http, 500, NULL);
     return -1;
   }
+  int cwd_fd = dup (server_data->cwd_fd);
+  if (cwd_fd < 0) {
+    perror ("dup");
+    httpd_respond_error (http, 500, NULL);
+    return -1;
+  }
+
   int pid = fork ();
   if (pid != 0) {
     // this is root
     if (http->debug & (DEBUG_CGI|DEBUG_SYSCALL)) printf ("cgi %d pipe read fd %d write fd %d pid %d\n", http->c.sockfd, out_pipe[0], out_pipe[1], pid);
     hin_cgi_send (http, worker, out_pipe[0]);
     close (out_pipe[1]);
+    close (cwd_fd);
     return out_pipe[0];
   }
 
@@ -348,7 +359,19 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
   if (1) {
     var (&env, "REDIRECT_URI=%.*s", path.len, path.ptr);
   }
-  int tmp = strlen (root_path);
+  int tmp = 0;
+  if (root_path) {
+    tmp = strlen (root_path);
+  } else {
+    root_path = ".";
+  }
+
+  if (fchdir (cwd_fd)) {
+    perror ("fchdir");
+    exit (1);
+  }
+  close (cwd_fd);
+
   var (&env, "SCRIPT_NAME=%s", script_path+tmp);
   var (&env, "QUERY_STRING=%.*s", uri.query.len, uri.query.ptr);
   var (&env, "SCRIPT_FILENAME=%s", realpath (script_path, NULL));
@@ -374,7 +397,6 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
   } else {
     fprintf (stderr, "getnameinfo2 err '%s'\n", gai_strerror (err));
   }
-  hin_client_t * server = (hin_client_t*)client->parent;
   err = getnameinfo (&server->in_addr, server->in_len,
         hbuf, sizeof hbuf,
         sbuf, sizeof sbuf,
@@ -403,7 +425,6 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
     }
   }
 
-  hin_server_data_t * server_data = (hin_server_data_t*)server->parent;
   if (hostname.ptr) {
     var (&env, "SERVER_NAME=%.*s", hostname.len, hostname.ptr);
   } else if (server_data->hostname) {
@@ -412,17 +433,12 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
     var (&env, "SERVER_NAME=unknown");
   }
 
-  if (fchdir (server_data->cwd_fd)) {
-    perror ("fchdir");
-    exit (1);
-  }
-
   char * const argv[] = {(char*)exe_path, (char*)script_path, NULL};
   if (execvpe (argv[0], argv, env.env) < 0) {
     perror ("execv");
   }
-  fprintf (stderr, "unexpected\n");
-  exit (1);
+  perror ("execvpe");
+  exit (-1);
 }
 
 

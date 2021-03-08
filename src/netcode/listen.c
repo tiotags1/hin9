@@ -165,10 +165,12 @@ int hin_socket_search (const char * addr, const char *port, const char * sock_ty
     for (rp = result; rp != NULL; rp = rp->ai_next) {
       for (int i=0; i < master.share->nsocket; i++) {
         socket = &master.share->sockets[i];
-        char buf1[256], buf2[256];
-        hin_client_addr (buf1, sizeof buf1, &socket->in_addr, socket->in_len);
-        hin_client_addr (buf2, sizeof buf2, rp->ai_addr, rp->ai_addrlen);
-        printf ("comparing %d %s %s\n", i, buf1, buf2);
+        if (master.debug & DEBUG_SOCKET) {
+          char buf1[256], buf2[256];
+          hin_client_addr (buf1, sizeof buf1, &socket->in_addr, socket->in_len);
+          hin_client_addr (buf2, sizeof buf2, rp->ai_addr, rp->ai_addrlen);
+          printf (" comparing %d %s %s\n", i, buf1, buf2);
+        }
         if (memcmp (&socket->in_addr, rp->ai_addr, rp->ai_addrlen) != 0) { socket = NULL; continue; }
         sockfd = socket->sockfd;
         break;
