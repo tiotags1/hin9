@@ -89,7 +89,7 @@ int hin_buffer_eat (hin_buffer_t * buffer, int num) {
 static int hin_lines_read_callback (hin_buffer_t * buffer, int ret);
 
 int hin_lines_request (hin_buffer_t * buffer) {
-  int sz;
+  int sz = buffer->sz;
   int new_pos = buffer->ptr - buffer->data;
   int left = buffer->sz - new_pos;
   if (left < (sz / 2)) { sz = READ_SZ; }

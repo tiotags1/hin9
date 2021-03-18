@@ -84,8 +84,6 @@ static int hin_connect_try_next (hin_buffer_t * buffer) {
 }
 
 static int hin_connect_recheck (hin_buffer_t * buffer, int ret) {
-  hin_client_t * client = (hin_client_t*)buffer->parent;
-
   if (ret == 0) {
     return complete (buffer, buffer->fd);
   }
@@ -102,9 +100,8 @@ static int hin_connect_recheck (hin_buffer_t * buffer, int ret) {
 int hin_connect (hin_client_t * client, const char * host, const char * port, int (*callback) (hin_client_t * client, int ret)) {
   if (master.debug & DEBUG_SOCKET) printf ("connect%s start %s:%s\n", client->flags & HIN_SSL ? "(s)" : "", host, port);
   struct addrinfo hints;
-  struct addrinfo *result, *rp;
-  int sfd, s, j;
-  size_t len;
+  struct addrinfo *result;
+  int s;
   if (client == NULL || callback == NULL) {
     fprintf (stderr, "can't connect without a callback ?\n");
     return -1;

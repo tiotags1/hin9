@@ -11,6 +11,7 @@
 #include "hin.h"
 #include "http.h"
 #include "lua.h"
+#include "file.h"
 
 #include <basic_hashtable.h>
 
@@ -120,14 +121,7 @@ static int l_hin_set_server_option (lua_State *L) {
     }
     return 0;
   } else if (strcmp (name, "cwd") == 0) {
-    const char * path = lua_tostring (L, 3);
-    int fd = openat (AT_FDCWD, path, O_DIRECTORY | O_CLOEXEC);
-    if (client->debug & DEBUG_CONFIG) printf ("lua server cwd set to %s\n", path);
-    if (fd < 0) { perror ("cwd openat"); return 0; }
-    if (client->cwd_path) { free (client->cwd_path); }
-    if (client->cwd_fd && client->cwd_fd != AT_FDCWD) { close (client->cwd_fd); }
-    client->cwd_path = strdup (path);
-    client->cwd_fd = fd;
+    hin_server_set_work_dir (client, lua_tostring (L, 3));
     return 0;
   } else {
     printf ("set_otion unknown option '%s'\n", name);
@@ -194,7 +188,9 @@ static int l_hin_set_option (lua_State *L) {
     }
     size_t len = 0;
     const char * str = lua_tolstring (L, 3, &len);
-    basic_ht_hash (str, len, &http->cache_key1, &http->cache_key2);
+    uintptr_t hin_cache_seed ();
+    uintptr_t seed = hin_cache_seed ();
+    basic_ht_hash (str, len, seed, &http->cache_key1, &http->cache_key2);
     for (int i=4; i <= lua_gettop (L); i++) {
       str = lua_tolstring (L, i, &len);
       basic_ht_hash_continue (str, len, &http->cache_key1, &http->cache_key2);

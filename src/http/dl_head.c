@@ -7,7 +7,7 @@
 #include "http.h"
 
 int http_parse_headers_line (http_client_t * http, string_t * line) {
-  string_t param, param1, param2;
+  string_t param;
   if (matchi_string_equal (line, "Content-Length: (%d+)", &param) > 0) {
     http->sz = atoi (param.ptr);
     if (http->debug & DEBUG_HTTP_FILTER) printf ("  content length is %ld\n", http->sz);
@@ -25,7 +25,7 @@ int http_parse_headers_line (http_client_t * http, string_t * line) {
 }
 
 int http_parse_headers (hin_client_t * client, string_t * source) {
-  string_t line, method, path, param, param1, param2;
+  string_t line, param1;
   string_t orig = *source;
 
   while (1) {

@@ -129,7 +129,7 @@ void hin_lua_clean () {
 }
 
 int lua_init () {
-  int err;
+  int err = 0;
 
   lua_State *L = luaL_newstate ();
   if (L == NULL) return -1;

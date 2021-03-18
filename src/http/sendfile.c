@@ -36,7 +36,7 @@ int hin_pipe_decode_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, 
     decode = calloc (1, sizeof (*decode));
     pipe->extra = decode;
   }
-  string_t source, orig, param1, param2;
+  string_t source, orig, param1;
   orig.ptr = buffer->ptr - decode->left_over;
   orig.len = num + decode->left_over;
   source = orig;
@@ -83,6 +83,7 @@ int hin_pipe_decode_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, 
     if (decode->chunk_sz == 0 && param1.len > 0) {
       int ret = pipe->read_callback (pipe, buffer, 0, 1);
       pipe->in.flags |= HIN_DONE;
+      if (ret) {}
       return 1;
     }
   }
@@ -93,7 +94,7 @@ int hin_pipe_copy_deflate (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, in
   hin_client_t * client = (hin_client_t*)pipe->parent;
   httpd_client_t * http = (httpd_client_t*)client;
 
-  int have, err;
+  int have;
   http->z.avail_in = num;
   http->z.next_in = (Bytef *)buffer->buffer;
   buffer->count = num;
@@ -110,7 +111,7 @@ int hin_pipe_copy_deflate (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, in
     }
     http->z.avail_out = new->sz;
     http->z.next_out = (Bytef *)&new->buffer[new->count];
-    int ret1 = deflate (&http->z, flush);
+    deflate (&http->z, flush);
     have = new->sz - http->z.avail_out;
 
     if (have > 0) {

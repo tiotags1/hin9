@@ -19,9 +19,51 @@ typedef struct {
 
 static hin_cache_store_t * default_store = NULL;
 
+uintptr_t hin_cache_seed () {
+  return default_store->ht.seed;
+}
+
+// from https://github.com/robertdavidgraham/sockdoc/blob/e1a6fe43389f1033c126e52e8015e30bd26bed6b/src/util-entropy.c
+static int hin_random (uint8_t * buf, int sz) {
+  int fd;
+
+  do {
+    fd = open("/dev/urandom", O_RDONLY, 0);
+  } while (fd < 0 && errno == EINTR);
+
+  if (fd < 0) {
+    do {
+      fd = open("/dev/random", O_RDONLY, 0);
+    } while (fd < 0 && errno == EINTR);
+  }
+
+  if (fd < 0) {
+    printf ("random couldn't open /dev/urandom\n");
+    return -1;
+  }
+
+  /* Read this a byte at a time. This is because in theory,
+   * a single read of 64 bytes may result only in a smaller
+   * chunk of data. This makes testing when this rarely
+   * occurs difficult, so instead just force the case of
+   * a byte-at-a-time */
+  for (int i = 0; i < sz; i++) {
+    int x = read (fd, buf + i, 1);
+    if (x != 1) {
+      printf ("random couldn't read /dev/urandom '%s'\n", strerror (errno));
+      return -1;
+    }
+  }
+
+  return 0;
+}
+
 hin_cache_store_t * hin_cache_create () {
   hin_cache_store_t * store = calloc (1, sizeof (hin_cache_store_t));
-  if (basic_ht_init (&store->ht, 1024) < 0) {
+  uintptr_t seed;
+  hin_random ((uint8_t*)&seed, sizeof (seed));
+  if (master.debug & DEBUG_CONFIG) printf ("hashtable seed is %lx\n", seed);
+  if (basic_ht_init (&store->ht, 1024, seed) < 0) {
     printf ("error in hashtable init\n");
   }
   if (default_store == NULL)

@@ -42,8 +42,11 @@ static int var (env_list_t * env, const char * fmt, ...) {
     env->env = realloc (env->env, env->num * sizeof (char *));
   }
   env->env[env->pos] = NULL;
-  int len = vasprintf (&env->env[p], fmt, ap);
-  if (env->debug & DEBUG_CGI) fprintf (stderr, " '%s'\n", env->env[p]);
+  char * new = NULL;
+  int ret = vasprintf (&new, fmt, ap);
+  if (env->debug & DEBUG_CGI) fprintf (stderr, " '%s'\n", new);
+  if (ret < 0) { if (new) free (new); return -1; }
+  env->env[p] = new;
 
   va_end (ap);
   return 0;
@@ -90,12 +93,14 @@ int hin_pipe_cgi_server_read_callback (hin_pipe_t * pipe, hin_buffer_t * buffer,
 
 static int hin_cgi_location (httpd_client_t * http, hin_buffer_t * buf, string_t * origin) {
   string_t source = *origin;
+  //if (http->status == 200) http->status = 302; // bad idea ?
   if (match_string (&source, "http") > 0) {
     header (buf, "Location: %.*s\r\n", origin->len, origin->ptr);
     return 0;
   }
   //if (master.debug & DEBUG_CGI)
-    fprintf (stderr, "cgi %d location %.*s\n", http->c.sockfd, (int)source.len, source.ptr);
+    //fprintf (stderr, "cgi %d location1 %.*s\n", http->c.sockfd, (int)source.len, source.ptr);
+    fprintf (stderr, "cgi %d location2 %.*s\n", http->c.sockfd, (int)origin->len, origin->ptr);
   header (buf, "Location: %.*s\r\n", origin->len, origin->ptr);
   return 0;
 }
@@ -108,7 +113,7 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
   source->ptr = buffer->data;
   source->len = buffer->ptr - buffer->data;
 
-  string_t line, orig=*source, param1, param2;
+  string_t line, orig=*source, param1;
   http->status = 200;
   off_t sz = 0;
   uint32_t disable = 0;
@@ -239,17 +244,10 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
 }
 
 static int hin_cgi_headers_close_callback (hin_buffer_t * buffer) {
-  hin_client_t * client = (hin_client_t*)buffer->parent;
-  hin_lines_t * lines = (hin_lines_t*)&buffer->buffer;
-  //buffer->callback = hin_lines_close_callback;
-  //hin_request_close (buffer);
-  //printf ("cgi close headers\n");
   return 1;
 }
 
 int hin_cgi_send (httpd_client_t * http, hin_worker_t * worker, int fd) {
-  hin_client_t * client = &http->c;
-
   hin_buffer_t * buf = hin_lines_create_raw ();
   buf->fd = fd;
   buf->parent = (hin_client_t*)worker;
@@ -355,15 +353,12 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
   }
 
   if (http->debug & DEBUG_CGI) fprintf (stderr, "cgi %d\n", http->c.sockfd);
-  var (&env, "REQUEST_URI=%.*s", path.len, path.ptr);
-  if (1) {
-    var (&env, "REDIRECT_URI=%.*s", path.len, path.ptr);
-  }
   int tmp = 0;
   if (root_path) {
     tmp = strlen (root_path);
   } else {
     root_path = ".";
+    tmp++;
   }
 
   if (fchdir (cwd_fd)) {
@@ -372,21 +367,37 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
   }
   close (cwd_fd);
 
-  var (&env, "SCRIPT_NAME=%s", script_path+tmp);
+  var (&env, "CONTENT_LENGTH=%ld", http->post_sz);
   var (&env, "QUERY_STRING=%.*s", uri.query.len, uri.query.ptr);
+  var (&env, "REQUEST_URI=%.*s", path.len, path.ptr);
+  if (1) {
+    var (&env, "REDIRECT_URI=%.*s", path.len, path.ptr);
+  }
+
+  var (&env, "REDIRECT_STATUS=%d", http->status);
+  var (&env, "SCRIPT_NAME=%s", script_path+tmp);
   var (&env, "SCRIPT_FILENAME=%s", realpath (script_path, NULL));
   var (&env, "DOCUMENT_ROOT=%s", realpath (root_path, NULL));
 
   var (&env, "REQUEST_METHOD=%.*s", method.len, method.ptr);
-  var (&env, "CONTENT_LENGTH=%ld", http->post_sz);
-  var (&env, "GATEWAY_INTERFACE=CGI/1.1");
-  var (&env, "REDIRECT_STATUS=%d", http->status);
-  var (&env, "REQUEST_SCHEME=http");
   var (&env, "SERVER_PROTOCOL=HTTP/1.%d", http->peer_flags & HIN_HTTP_VER0 ? 0 : 1);
   var (&env, "SERVER_SOFTWARE=" HIN_HTTPD_SERVER_BANNER);
+  var (&env, "GATEWAY_INTERFACE=CGI/1.1");
+  var (&env, "REQUEST_SCHEME=http");
 
   char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
   int err;
+  err = getnameinfo (&server->in_addr, server->in_len,
+        hbuf, sizeof hbuf,
+        sbuf, sizeof sbuf,
+        NI_NUMERICHOST | NI_NUMERICSERV);
+  if (err == 0) {
+    var (&env, "SERVER_PORT=%s", sbuf);
+    var (&env, "SERVER_ADDR=%s", hbuf);
+  } else {
+    fprintf (stderr, "getnameinfo2 err '%s'\n", gai_strerror (err));
+  }
+
   err = getnameinfo (&client->in_addr, client->in_len,
         hbuf, sizeof hbuf,
         sbuf, sizeof sbuf,
@@ -394,16 +405,6 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
   if (err == 0) {
     var (&env, "REMOTE_ADDR=%s", hbuf);
     var (&env, "REMOTE_PORT=%s", sbuf);
-  } else {
-    fprintf (stderr, "getnameinfo2 err '%s'\n", gai_strerror (err));
-  }
-  err = getnameinfo (&server->in_addr, server->in_len,
-        hbuf, sizeof hbuf,
-        sbuf, sizeof sbuf,
-        NI_NUMERICHOST | NI_NUMERICSERV);
-  if (err == 0) {
-    var (&env, "SERVER_ADDR=%s", hbuf);
-    var (&env, "SERVER_PORT=%s", sbuf);
   } else {
     fprintf (stderr, "getnameinfo2 err '%s'\n", gai_strerror (err));
   }

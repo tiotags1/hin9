@@ -1,4 +1,8 @@
 
+* added random seed to cache hashtable
+* removed more warnings
+
+commit e44ae8a24d2ca783ec5c9c73d58853e17487899e
 * bugfixes to cgi introduced by previous commit
 
 commit a09f51255515223a98a5db3b74ef545308f92af9

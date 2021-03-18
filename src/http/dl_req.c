@@ -25,9 +25,7 @@ static int hin_http_pipe_finish_callback (hin_pipe_t * pipe) {
   return 0;
 }
 
-int http_client_send_data (hin_client_t * client, string_t * source) {
-  http_client_t * http = (http_client_t*)client;
-
+int http_client_send_data (http_client_t * http, string_t * source) {
   off_t len = source->len;
   off_t sz = http->sz;
   if (sz && sz < len) {
@@ -43,14 +41,14 @@ int http_client_send_data (hin_client_t * client, string_t * source) {
 
   hin_pipe_t * pipe = calloc (1, sizeof (*pipe));
   hin_pipe_init (pipe);
-  pipe->in.fd = client->sockfd;
-  pipe->in.flags = HIN_SOCKET | (client->flags & HIN_SSL);
-  pipe->in.ssl = &client->ssl;
+  pipe->in.fd = http->c.sockfd;
+  pipe->in.flags = HIN_SOCKET | (http->c.flags & HIN_SSL);
+  pipe->in.ssl = &http->c.ssl;
   pipe->in.pos = 0;
   pipe->out.fd = http->save_fd;
   pipe->out.flags = HIN_FILE | HIN_OFFSETS;
   pipe->out.pos = 0;
-  pipe->parent = client;
+  pipe->parent = http;
   pipe->finish_callback = hin_http_pipe_finish_callback;
   pipe->debug = http->debug;
 
@@ -76,16 +74,15 @@ int http_client_send_data (hin_client_t * client, string_t * source) {
 }
 
 int http_client_headers_read_callback (hin_buffer_t * buffer) {
-  hin_client_t * client = (hin_client_t*)buffer->parent;
-  http_client_t * http = (http_client_t*)client;
+  http_client_t * http = (http_client_t*)buffer->parent;
   string_t data;
   data.ptr = buffer->data;
   data.len = buffer->ptr - buffer->data;
 
-  int http_parse_headers (hin_client_t * client, string_t * source);
-  int used = http_parse_headers (client, &data);
+  int http_parse_headers (http_client_t * client, string_t * source);
+  int used = http_parse_headers (http, &data);
 
-  if (used > 0) http_client_send_data (client, &data);
+  if (used > 0) http_client_send_data (http, &data);
 
   return used;
 }

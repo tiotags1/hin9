@@ -57,7 +57,6 @@ void httpd_timer_flush () {
 
 void httpd_close_socket () {
   for (hin_client_t * server = master.server_list; server; server = server->next) {
-    hin_server_blueprint_t * bp = (hin_server_blueprint_t*)server;
     close (server->sockfd);
   }
 }
@@ -99,7 +98,7 @@ int httpd_parse_cache_str (const char * str, size_t len, uint32_t * flags_out, t
 }
 
 int header_cache_control (hin_buffer_t * buf, uint32_t flags, time_t max_age) {
-  int num = 0, used;
+  int num = 0;
   num += header (buf, "Cache-Control: ");
   if (flags & HIN_CACHE_PRIVATE) num += header (buf, "private, ");
   else if (flags & HIN_CACHE_PUBLIC) num += header (buf, "public, ");

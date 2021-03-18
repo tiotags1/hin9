@@ -223,7 +223,7 @@ static int http_client_sent_callback (hin_buffer_t * buffer, int ret) {
 
   if (http->method != HIN_HTTP_POST) return 1;
 
-  string_t source = http->headers, line, param1, param2;
+  string_t source = http->headers, line;
   if (find_line (&source, &line) == 0) { return -1; }
 
   while (1) {
@@ -302,7 +302,7 @@ int http_proxy_start_request (http_client_t * http, int ret) {
     path_max = http->uri.query.ptr + http->uri.query.len;
   }
 
-  string_t source = parent->headers, line, param1, param2;
+  string_t source = parent->headers, line;
   if (find_line (&source, &line) == 0) { return -1; }
 
   while (1) {

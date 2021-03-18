@@ -158,7 +158,6 @@ int temp_callback1 (hin_buffer_t * buf, int ret) {
     printf ("null server %d error read '%s'\n", buf->fd, strerror (-ret));
   }
 
-  httpd_client_t * http = buf->parent;
   buf->callback = temp_callback2;
   buf->count = 0;
 

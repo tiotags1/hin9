@@ -77,7 +77,7 @@ int httpd_parse_headers_line (httpd_client_t * http, string_t * line) {
 }
 
 int httpd_parse_headers (httpd_client_t * http, string_t * source) {
-  string_t line, method, path, param, param1, param2;
+  string_t line, method, path, param;
   string_t orig = *source;
 
   while (1) {
@@ -87,7 +87,6 @@ int httpd_parse_headers (httpd_client_t * http, string_t * source) {
   }
 
   *source = orig;
-  hin_client_t * client = &http->c;
 
   line.len = 0;
   if (find_line (source, &line) == 0 || match_string (&line, "(%a+) ("HIN_HTTP_PATH_ACCEPT") HTTP/1.([01])", &method, &path, &param) <= 0) {
@@ -144,8 +143,6 @@ int httpd_parse_headers (httpd_client_t * http, string_t * source) {
 }
 
 int httpd_parse_req (httpd_client_t * http, string_t * source) {
-  string_t orig = *source;
-
   int used = httpd_parse_headers (http, source);
   if (used <= 0) return used;
 

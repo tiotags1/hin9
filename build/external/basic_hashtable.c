@@ -19,13 +19,14 @@ static int isPowerOfTwo (int number) {
   return 0;
 }
 
-int basic_ht_init (basic_ht_t * ht, int size) {
+int basic_ht_init (basic_ht_t * ht, int size, basic_ht_hash_t seed) {
   if (size < 1) return -1;
   if (size > 0xffff) printf ("warning hashtable is too large\n");
 
   if (!isPowerOfTwo (size)) { printf ("ERROR hashtable init, %d not power of 2\n", size); return -1; }
   ht->size = size;
   ht->mask = size-1;
+  ht->seed = seed;
 
   // Allocate pointers to the head nodes.
   if ((ht->table = calloc (1, sizeof (basic_ht_pair_t *) * size)) == NULL) {
@@ -35,10 +36,10 @@ int basic_ht_init (basic_ht_t * ht, int size) {
 }
 
 // Create a new hashtable.
-basic_ht_t * basic_ht_create (int size) {
+basic_ht_t * basic_ht_create (int size, basic_ht_hash_t seed) {
   basic_ht_t * ht = calloc (1, sizeof (*ht));
 
-  if (basic_ht_init (ht, size) < 0) { free (ht); return NULL; }
+  if (basic_ht_init (ht, size, seed) < 0) { free (ht); return NULL; }
 
   return ht;
 }
@@ -61,9 +62,9 @@ void basic_ht_free (basic_ht_t * hashtable) {
   free (hashtable);
 }
 
-basic_ht_hash_t basic_ht_hash (const char * str, size_t size, basic_ht_hash_t * h1, basic_ht_hash_t * h2) {
-  basic_ht_hash_t hash1 = 5381;
-  basic_ht_hash_t hash2 = 6883;
+basic_ht_hash_t basic_ht_hash (const char * str, size_t size, basic_ht_hash_t seed, basic_ht_hash_t * h1, basic_ht_hash_t * h2) {
+  basic_ht_hash_t hash1 = 5381 * seed;
+  basic_ht_hash_t hash2 = 6883 * seed;
   int c;
   const char * max = str+size;
   while (str < max) {
