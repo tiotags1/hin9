@@ -73,7 +73,7 @@ basic_vfs_inode_t * basic_vfs_stat (basic_vfs_t * vfs, basic_vfs_node_t * node, 
   file->i.type = 0;
   file->parent = node;
 
-  return file;
+  return (basic_vfs_inode_t*)file;
 }
 
 basic_vfs_file_t * basic_vfs_get_file (basic_vfs_t * vfs, basic_vfs_node_t * node) {

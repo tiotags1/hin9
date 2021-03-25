@@ -1,4 +1,5 @@
 
+commit 6138add176d8a6d823b5c154302d586fe4e0316b
 * added virtual fs code to cache directory structure in ram
 * rewrote the way files are selected, now you need to use set_path
 * filling cgi path\_info and path\_translated

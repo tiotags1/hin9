@@ -8,60 +8,6 @@
 #include "basic_vfs.h"
 #include "internal.h"
 
-/*
-freeing resources by refcounting
-match large path on real path
-switch to epoll
-
-ref dirs prevents them from being deleted
-ref files prevents both them and the parent from being deleted
-
-get path also gives a ref
-
-*/
-
-basic_vfs_node_t * basic_vfs_ref_path (basic_vfs_t * vfs, basic_vfs_node_t * dir_node, string_t * path) {
-  basic_vfs_node_t * node = NULL, * next = NULL;
-  string_t source, param1;
-  source = *path;
-  basic_vfs_node_t * current = dir_node;
-  if (current == NULL) {
-    current = &vfs->rootent;
-  }
-  if (current->type != BASIC_ENT_DIR) {
-    return NULL;
-  }
-  if (path->len == 1 && *path->ptr == '/') {
-    path->len--;
-    path->ptr++;
-    basic_vfs_ref (vfs, current);
-    return current;
-  }
-  basic_vfs_dir_t * dir = basic_vfs_get_dir (vfs, current);
-  while (1) {
-    int used = match_string (&source, "/([%w%._-]*)", &param1);
-    if (used <= 0) return NULL;
-    if (param1.ptr[0] == '.') { return NULL; }
-    if (used == 1 && source.len == 0) { break; }
-    next = basic_vfs_search_dir (vfs, dir, param1.ptr, param1.len);
-    if (next == NULL) {
-      printf ("can't find path '%.*s' '%.*s'\n", (int)param1.len, param1.ptr, (int)path->len, path->ptr);
-      return NULL;
-    }
-    if (next->type != BASIC_ENT_DIR) {
-      *path = source;
-      basic_vfs_ref (vfs, next);
-      return next;
-    }
-    current = next;
-    if (source.len == 0) { break; }
-    dir = basic_vfs_get_dir (vfs, next);
-    if (dir == NULL) return NULL;
-  }
-  basic_vfs_ref (vfs, current);
-  return current;
-}
-
 int basic_vfs_init (basic_vfs_t * vfs) {
   basic_ht_init (&vfs->ht, 1024, 0);
 
