@@ -8,6 +8,7 @@
 #include "http.h"
 #include "lua.h"
 #include "uri.h"
+#include "file.h"
 
 static int l_hin_parse_path (lua_State *L) {
   hin_client_t *client = (hin_client_t*)lua_touserdata (L, 1);
@@ -115,9 +116,7 @@ static int l_hin_send_file (lua_State *L) {
     printf ("lua hin_send_file need a valid client\n");
     return 0;
   }
-  httpd_client_t * http = (httpd_client_t*)client;
   const char * path = lua_tostring (L, 2);
-  if (path == NULL) { printf ("no path supplied\n"); return 0; }
   off_t pos = 0, count = -1;
   if (lua_isnumber (L, 3)) pos = lua_tonumber (L, 3);
   if (lua_isnumber (L, 4)) count = lua_tonumber (L, 4);
@@ -133,7 +132,6 @@ static int l_hin_proxy (lua_State *L) {
     printf ("lua hin_proxy need a valid client\n");
     return 0;
   }
-  httpd_client_t * http = (httpd_client_t*)client;
   const char * url = lua_tostring (L, 2);
   if (url == NULL) { printf ("no path supplied\n"); return 0; }
 
@@ -149,15 +147,15 @@ static int l_hin_cgi (lua_State *L) {
     printf ("lua hin_cgi need a valid client\n");
     return 0;
   }
-  httpd_client_t * http = (httpd_client_t*)client;
 
   const char * exe_path = lua_tostring (L, 2);
   const char * root_path = lua_tostring (L, 3);
   const char * script_path = lua_tostring (L, 4);
+  const char * path_info = lua_tostring (L, 5);
   if (exe_path == NULL) return 0;
 
-  int hin_cgi (hin_client_t * client, const char * exe_path, const char * root, const char * path);
-  if (hin_cgi (client, exe_path, root_path, script_path) < 0) {
+  int hin_cgi (hin_client_t * client, const char * exe_path, const char * root, const char * path, const char * path_info);
+  if (hin_cgi (client, exe_path, root_path, script_path, path_info) < 0) {
   }
   return 0;
 }
@@ -291,6 +289,7 @@ static int l_hin_add_header (lua_State *L) {
   char * new = NULL;
   char * old = http->append_headers;
   int num = asprintf (&new, "%s: %s\r\n%s", name, data, old ? old : "");
+  if (num < 0) { if (new) free (new); return -1; }
 
   if (old) free (old);
   http->append_headers = new;
@@ -322,6 +321,8 @@ static int l_hin_set_content_type (lua_State *L) {
   return 0;
 }
 
+int l_hin_set_path (lua_State *L);
+
 static lua_function_t functs [] = {
 {"parse_path",		l_hin_parse_path },
 {"parse_headers",	l_hin_parse_headers },
@@ -334,6 +335,7 @@ static lua_function_t functs [] = {
 {"add_header",		l_hin_add_header },
 {"shutdown",		l_hin_shutdown },
 {"set_content_type",	l_hin_set_content_type },
+{"set_path",		l_hin_set_path },
 {NULL, NULL},
 };
 

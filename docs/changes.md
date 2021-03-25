@@ -1,4 +1,12 @@
 
+* added virtual fs code to cache directory structure in ram
+* rewrote the way files are selected, now you need to use set_path
+* filling cgi path\_info and path\_translated
+* wrote a c logging api so you don't have to rely on lua's io library
+* added a compile-time option for max header line sent
+* went from 11k to 17k reqs/sec
+
+commit 19362717a3354fc6d372d0f4b5b32ae2370e5df8
 * added random seed to cache hashtable
 * removed more warnings
 

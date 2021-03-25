@@ -44,21 +44,3 @@ int run_function (lua_State * L, const char * name) {
 }
 
 
-#include <fcntl.h>
-#include <unistd.h>
-
-int hin_server_set_work_dir (hin_server_data_t * server, const char * rel_path) {
-  char * abs_path = realpath (rel_path, NULL);
-  if (abs_path == NULL) { perror ("realpath"); return -1; }
-  int fd = openat (AT_FDCWD, abs_path, O_DIRECTORY | O_CLOEXEC);
-  if (server->debug & DEBUG_CONFIG) printf ("lua server cwd set to %s\n", abs_path);
-  if (fd < 0) { perror ("cwd openat"); return -1; }
-  if (server->cwd_path) { free (server->cwd_path); }
-  if (server->cwd_fd && server->cwd_fd != AT_FDCWD) { close (server->cwd_fd); }
-  server->cwd_path = abs_path;
-  server->cwd_fd = fd;
-
-  return 0;
-}
-
-

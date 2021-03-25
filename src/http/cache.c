@@ -62,7 +62,7 @@ hin_cache_store_t * hin_cache_create () {
   hin_cache_store_t * store = calloc (1, sizeof (hin_cache_store_t));
   uintptr_t seed;
   hin_random ((uint8_t*)&seed, sizeof (seed));
-  if (master.debug & DEBUG_CONFIG) printf ("hashtable seed is %lx\n", seed);
+  if (master.debug & DEBUG_CONFIG) printf ("cache seed is %lx\n", seed);
   if (basic_ht_init (&store->ht, 1024, seed) < 0) {
     printf ("error in hashtable init\n");
   }

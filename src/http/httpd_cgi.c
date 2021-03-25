@@ -9,6 +9,8 @@
 #include <netdb.h>
 #include <fcntl.h>
 
+#include <basic_vfs.h>
+
 #include "hin.h"
 #include "http.h"
 #include "uri.h"
@@ -262,10 +264,10 @@ int hin_cgi_send (httpd_client_t * http, hin_worker_t * worker, int fd) {
 
 int httpd_request_chunked (httpd_client_t * http);
 
-int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_path, const char * script_path) {
+int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_path, const char * script_path, const char * path_info) {
   hin_client_t * client = &http->c;
-  hin_client_t * server = (hin_client_t*)client->parent;
-  hin_server_data_t * server_data = (hin_server_data_t*)server->parent;
+  hin_client_t * socket = (hin_client_t*)client->parent;
+  hin_server_data_t * server = (hin_server_data_t*)socket->parent;
 
   if (http->state & HIN_REQ_DATA) return -1;
   http->state |= (HIN_REQ_DATA | HIN_REQ_CGI);
@@ -292,7 +294,7 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
     httpd_respond_error (http, 500, NULL);
     return -1;
   }
-  int cwd_fd = dup (server_data->cwd_fd);
+  int cwd_fd = dup (server->cwd_fd);
   if (cwd_fd < 0) {
     perror ("dup");
     httpd_respond_error (http, 500, NULL);
@@ -367,17 +369,53 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
   }
   close (cwd_fd);
 
+  // if file set then create script path
+  extern basic_vfs_t * vfs;
+  basic_vfs_node_t * cwd = server->cwd_dir;
+  basic_vfs_dir_t * cwd_dir = basic_vfs_get_dir (vfs, cwd);
+  if (cwd_dir == NULL) { fprintf (stderr, "vfs_get_dir err\n"); exit (1); }
+
+  basic_vfs_node_t * file = http->file;
+  basic_vfs_dir_t * dir;
+
+/*  if (script_path) {
+    //fprintf (stderr, "script path is %s\n", script_path);
+    string_t path;
+    path.ptr = (char*)script_path;
+    path.len = strlen (path.ptr);
+    file = basic_vfs_ref_path (vfs, NULL, &path);
+    if (file) {
+      file = basic_vfs_get_file (vfs, dir, script_path);
+    } else {
+      exit (1);
+    }
+  }*/
+
+  if (file == NULL) {
+    fprintf (stderr, "can't find path\n");
+    exit (1);
+  }
+  dir = file->parent;
+
   var (&env, "CONTENT_LENGTH=%ld", http->post_sz);
   var (&env, "QUERY_STRING=%.*s", uri.query.len, uri.query.ptr);
   var (&env, "REQUEST_URI=%.*s", path.len, path.ptr);
-  if (1) {
+  if (0) {
     var (&env, "REDIRECT_URI=%.*s", path.len, path.ptr);
   }
 
   var (&env, "REDIRECT_STATUS=%d", http->status);
-  var (&env, "SCRIPT_NAME=%s", script_path+tmp);
-  var (&env, "SCRIPT_FILENAME=%s", realpath (script_path, NULL));
-  var (&env, "DOCUMENT_ROOT=%s", realpath (root_path, NULL));
+  var (&env, "SCRIPT_NAME=%.*s", uri.path.len, uri.path.ptr);
+
+  if (path_info) {
+    var (&env, "PATH_INFO=%s", path_info);
+    char * ptr = (char*)path_info;
+    if (*ptr == '/') ptr++;
+    var (&env, "PATH_TRANSLATED=%s%s", cwd_dir->path, ptr);
+  }
+
+  var (&env, "SCRIPT_FILENAME=%s%s", dir->path, file->name);
+  var (&env, "DOCUMENT_ROOT=%.*s", cwd_dir->path_len-1, cwd_dir->path);
 
   var (&env, "REQUEST_METHOD=%.*s", method.len, method.ptr);
   var (&env, "SERVER_PROTOCOL=HTTP/1.%d", http->peer_flags & HIN_HTTP_VER0 ? 0 : 1);
@@ -387,7 +425,7 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
 
   char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
   int err;
-  err = getnameinfo (&server->in_addr, server->in_len,
+  err = getnameinfo (&socket->in_addr, socket->in_len,
         hbuf, sizeof hbuf,
         sbuf, sizeof sbuf,
         NI_NUMERICHOST | NI_NUMERICSERV);
@@ -428,16 +466,14 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
 
   if (hostname.ptr) {
     var (&env, "SERVER_NAME=%.*s", hostname.len, hostname.ptr);
-  } else if (server_data->hostname) {
-    var (&env, "SERVER_NAME=%s", server_data->hostname);
+  } else if (server->hostname) {
+    var (&env, "SERVER_NAME=%s", server->hostname);
   } else {
     var (&env, "SERVER_NAME=unknown");
   }
 
   char * const argv[] = {(char*)exe_path, (char*)script_path, NULL};
-  if (execvpe (argv[0], argv, env.env) < 0) {
-    perror ("execv");
-  }
+  execvpe (argv[0], argv, env.env);
   perror ("execvpe");
   exit (-1);
 }

@@ -36,6 +36,7 @@ typedef struct {
   int file_fd;
   char * file_path;
   off_t pos, count;
+  void * file;
 
   time_t cache;
   uint32_t cache_flags;

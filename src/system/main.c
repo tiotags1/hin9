@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 #include <basic_pattern.h>
+#include <basic_vfs.h>
 
 #include "hin.h"
 #include "conf.h"
@@ -15,6 +16,8 @@
 hin_master_t master;
 
 void hin_clean () {
+  int hin_log_flush ();
+  hin_log_flush ();
   void hin_lua_clean ();
   hin_lua_clean ();
   for (hin_client_t * elem = master.server_list; elem; elem = elem->next) {
@@ -31,6 +34,10 @@ void hin_clean () {
   hin_cache_clean ();
   int hin_signal_clean ();
   hin_signal_clean ();
+  int basic_vfs_clean (basic_vfs_t * vfs);
+  extern basic_vfs_t * vfs;
+  basic_vfs_clean (vfs);
+  free (vfs);
 
   //close (0); close (1); close (2);
 
@@ -42,7 +49,7 @@ void hin_clean () {
 }
 
 void print_help () {
-  printf ("help info\n");
+  printf ("help info\n --version\n --config <path>: sets config path\n --reuse: don't use\n");
 }
 
 int hin_process_argv (int argc, const char * argv[]) {
@@ -109,6 +116,8 @@ int main (int argc, const char * argv[]) {
   int hin_conf_load (const char * path);
   if (master.debug & DEBUG_CONFIG) printf ("conf path '%s'\n", master.conf_path);
   if (hin_conf_load (master.conf_path) < 0) {
+    printf ("can't load config file\n");
+    return -1;
   }
 
   #if HIN_HTTPD_WORKER_PREFORKED

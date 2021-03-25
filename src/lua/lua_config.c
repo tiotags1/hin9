@@ -90,20 +90,105 @@ static int l_hin_listen (lua_State *L) {
   return 1;
 }
 
+#include <fcntl.h>
+
+static int hin_log_flush_single (hin_buffer_t * buf) {
+  int ret = write (buf->fd, buf->buffer, buf->count);
+  if (ret < 0) { perror ("log write"); }
+  return 0;
+}
+
 static int l_log (lua_State *L) {
-  FILE * fp = lua_touserdata (L, lua_upvalueindex (1));
-  printf ("fp is %p\n", fp);
+  hin_buffer_t * buf = lua_touserdata (L, lua_upvalueindex (1));
+  size_t len = 0;
+  const char * fmt = lua_tolstring (L, 1, &len);
+  const char * max = fmt + len;
+  if (fmt == NULL) { printf ("fmt nil\n"); return 0; }
+
+  time_t t;
+  time (&t);
+
+  char buffer1[80];
+  struct tm data;
+  struct tm *info = gmtime_r (&t, &data);
+  if (info == NULL) { perror ("gmtime_r"); return 0; }
+  int ret1 = strftime (buffer1, sizeof buffer1, "%F %R ", info);
+  header_raw (buf, buffer1, ret1);
+
+  const char * last = fmt;
+  char buffer[30];
+  int ret = 2;
+  for (const char * ptr = fmt; ptr < max; ptr++) {
+    if (*ptr == '%') {
+      int prev_len = ptr - last;
+      header_raw (buf, last, prev_len);
+      ptr++;
+      switch (*ptr) {
+      case 's':
+        buffer[0] = '%';
+        buffer[1] = 's';
+        buffer[2] = '\0';
+        header (buf, buffer, lua_tostring (L, ret++));
+      break;
+      case 'd':
+      case 'x':
+      case 'p':
+      case 'D':
+      case 'X':
+        buffer[0] = '%';
+        buffer[1] = *ptr;
+        buffer[2] = '\0';
+        header (buf, buffer, lua_tointeger (L, ret++));
+      break;
+      default: header (buf, "%%%c", *ptr);
+      }
+      last = ptr+1;
+    }
+  }
+  header_raw (buf, last, max-last);
+
+  if (buf->next == NULL) { return 0; }
+
+  // do this for every new buffer
+
+  // send write
+  hin_log_flush_single (buf);
+
+  lua_pushlightuserdata (L, buf->next);
+  lua_replace (L, lua_upvalueindex (1));
+
+  hin_buffer_clean (buf);
+  return 0;
+}
+
+hin_buffer_t * logs = NULL;
+
+int hin_log_flush () {
+  hin_log_flush_single (logs);
+  close (logs->fd);
   return 0;
 }
 
 static int l_hin_create_log (lua_State *L) {
   const char * path = lua_tostring (L, 1);
-  FILE * fp = fopen (path, "w");
-  if (fp == NULL) { printf ("can't open '%s'\n", path); return 0; }
+  int fd = openat (AT_FDCWD, path, O_WRONLY | O_CREAT | O_CLOEXEC | O_TRUNC, S_IRWXU);
+  if (fd < 0) {
+    printf ("can't open '%s' %s\n", path, strerror (errno));
+    return 0;
+  }
 
-  printf ("fp create %p\n", fp);
-  lua_pushlightuserdata (L, fp);
+  printf ("create log on %d '%s'\n", fd, path);
+  int sz = 65000;
+  hin_buffer_t * buf = malloc (sizeof (hin_buffer_t) + sz);
+  memset (buf, 0, sizeof (hin_buffer_t));
+  buf->fd = fd;
+  buf->sz = sz;
+  buf->pos = 0;
+  buf->ptr = buf->buffer;
+  lua_pushlightuserdata (L, buf);
   lua_pushcclosure (L, l_log, 1);
+
+  logs = buf;
 
   return 1;
 }

@@ -10,6 +10,7 @@
 #include <fcntl.h>
 
 #include <basic_pattern.h>
+#include <basic_vfs.h>
 
 #include "hin.h"
 #include "http.h"
@@ -31,11 +32,14 @@ static int httpd_pipe_error_callback (hin_pipe_t * pipe) {
   return 0;
 }
 
+extern basic_vfs_t * vfs;
+
 static int done_file (hin_pipe_t * pipe) {
   if (pipe->debug & DEBUG_PIPE) printf ("pipe %d>%d file transfer finished bytes %ld\n", pipe->in.fd, pipe->out.fd, pipe->count);
   httpd_client_finish_request (pipe->parent);
   void hin_cache_unref (void *);
   if (pipe->parent1) hin_cache_unref (pipe->parent1);
+
   return 0;
 }
 
@@ -221,6 +225,26 @@ int httpd_handle_file_request (hin_client_t * client, const char * path, off_t p
   if (http->method == HIN_HTTP_POST) {
     printf ("httpd 405 post on a file resource\n");
     httpd_respond_fatal (http, 405, NULL);
+    return 0;
+  }
+
+  if (http->file) {
+    basic_vfs_node_t * node = http->file;
+    basic_vfs_file_t * file = basic_vfs_get_file (vfs, node);
+
+    hin_cache_item_t item;
+    memset (&item, 0, sizeof (item));
+    item.type = 0;
+    item.fd = file->fd;
+    item.modified = file->modified;
+    item.size = file->size;
+    item.etag = file->etag;
+
+    httpd_send_file (http, &item, NULL);
+    return 0;
+  } else if (path == NULL) {
+    printf ("httpd 404 no file path given\n");
+    httpd_respond_fatal (http, 404, NULL);
     return 0;
   }
 

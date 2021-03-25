@@ -3,6 +3,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include <basic_vfs.h>
+
 #include "hin.h"
 #include "http.h"
 #include "lua.h"
@@ -37,6 +39,7 @@ void httpd_client_clean (httpd_client_t * http) {
   http->cache_flags = 0;
   http->etag = http->post_sz = 0;
   http->post_sep = http->file_path = http->append_headers = http->content_type = NULL;
+  http->file = NULL;
 }
 
 int httpd_client_start_request (httpd_client_t * http) {
@@ -70,6 +73,11 @@ int httpd_client_finish_request (httpd_client_t * http) {
 
   hin_buffer_eat (http->read_buffer, http->headers.len);
 
+  if (http->file) {
+    extern basic_vfs_t * vfs;
+    basic_vfs_unref (vfs, http->file);
+  }
+
   httpd_client_clean (http);
   if (keep) {
     httpd_client_start_request (http);
@@ -78,6 +86,7 @@ int httpd_client_finish_request (httpd_client_t * http) {
     http->state |= HIN_REQ_END;
     httpd_client_shutdown (http);
   }
+
   return 0;
 }
 

@@ -15,11 +15,12 @@
 #include "file.h"
 #include "conf.h"
 
-static hin_buffer_t * new_buffer (hin_buffer_t * buffer) {
+static hin_buffer_t * new_buffer (hin_buffer_t * buffer, int min_sz) {
   if (buffer->debug & DEBUG_RW)
     printf ("header needed to make new buffer\n");
-  hin_buffer_t * buf = calloc (1, sizeof (hin_buffer_t) + READ_SZ);
-  buf->sz = READ_SZ;
+  int sz = READ_SZ > min_sz ? READ_SZ : min_sz;
+  hin_buffer_t * buf = calloc (1, sizeof (hin_buffer_t) + sz);
+  buf->sz = sz;
   buf->fd = buffer->fd;
   buf->flags = buffer->flags;
   buf->callback = buffer->callback;
@@ -40,13 +41,13 @@ static int vheader (hin_buffer_t * buffer, const char * fmt, va_list ap) {
   va_list prev;
   va_copy (prev, ap);
   int len = vsnprintf (buffer->ptr + pos, sz, fmt, ap);
+  if (len > HIN_HTTPD_MAX_HEADER_LINE_SIZE) {
+    printf ("'header' failed to write more\n");
+    va_end (ap);
+    return 0;
+  }
   if (len > sz) {
-    if (len > READ_SZ) {
-      printf ("'header' failed to write more\n");
-      va_end (ap);
-      return 0;
-    }
-    hin_buffer_t * buf = new_buffer (buffer);
+    hin_buffer_t * buf = new_buffer (buffer, len);
     return vheader (buf, fmt, prev);
   }
   buffer->count += len;
@@ -68,12 +69,12 @@ int header_raw (hin_buffer_t * buffer, const char * data, int len) {
 
   int pos = buffer->count;
   int sz = buffer->sz - buffer->count;
+  if (len > HIN_HTTPD_MAX_HEADER_LINE_SIZE) {
+    printf ("'header_raw' failed to write more\n");
+    return 0;
+  }
   if (len > sz) {
-    if (len > READ_SZ) {
-      printf ("'header_raw' failed to write more\n");
-      return 0;
-    }
-    hin_buffer_t * buf = new_buffer (buffer);
+    hin_buffer_t * buf = new_buffer (buffer, len);
     return header_raw (buf, data, len);
   }
 
