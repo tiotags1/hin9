@@ -92,7 +92,26 @@ static int l_hin_listen (lua_State *L) {
 
 #include <fcntl.h>
 
+hin_buffer_t * logs = NULL;
+
+static int hin_log_write_callback (hin_buffer_t * buf, int ret) {
+  if (ret < 0) {
+    printf ("log write error '%s'\n", strerror (-ret));
+    return -1;
+  }
+  if (ret < buf->count) {
+    buf->ptr += ret;
+    buf->count -= ret;
+    if (buf->flags & HIN_OFFSETS)
+      buf->pos += ret;
+    hin_request_write (buf);
+    return 0;
+  }
+  return 1;
+}
+
 static int hin_log_flush_single (hin_buffer_t * buf) {
+  lseek (buf->fd, buf->pos, SEEK_SET);
   int ret = write (buf->fd, buf->buffer, buf->count);
   if (ret < 0) { perror ("log write"); }
   return 0;
@@ -149,23 +168,21 @@ static int l_log (lua_State *L) {
 
   if (buf->next == NULL) { return 0; }
 
-  // do this for every new buffer
-
-  // send write
-  hin_log_flush_single (buf);
-
   lua_pushlightuserdata (L, buf->next);
   lua_replace (L, lua_upvalueindex (1));
 
-  hin_buffer_clean (buf);
+  logs = buf->next;
+  buf->next->pos = buf->pos + buf->count;
+
+  hin_request_write (buf);
+
   return 0;
 }
-
-hin_buffer_t * logs = NULL;
 
 int hin_log_flush () {
   hin_log_flush_single (logs);
   close (logs->fd);
+  hin_buffer_clean (logs);
   return 0;
 }
 
@@ -177,14 +194,20 @@ static int l_hin_create_log (lua_State *L) {
     return 0;
   }
 
-  printf ("create log on %d '%s'\n", fd, path);
-  int sz = 65000;
+  if (master.debug & DEBUG_CONFIG)
+    printf ("create log on %d '%s'\n", fd, path);
+  int sz = READ_SZ;
   hin_buffer_t * buf = malloc (sizeof (hin_buffer_t) + sz);
   memset (buf, 0, sizeof (hin_buffer_t));
+  buf->flags = HIN_FILE | HIN_OFFSETS;
   buf->fd = fd;
+  buf->count = 0;
   buf->sz = sz;
   buf->pos = 0;
   buf->ptr = buf->buffer;
+  buf->debug = master.debug;
+  buf->callback = hin_log_write_callback;
+
   lua_pushlightuserdata (L, buf);
   lua_pushcclosure (L, l_log, 1);
 

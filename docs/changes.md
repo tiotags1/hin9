@@ -1,4 +1,9 @@
 
+* bugfixes to logging (still inserting random invalid characters)
+
+commit 1fef5dbbf5d1402303ca0bb34fa6d45b4cfa9977
+* separated http into multiple directories
+
 commit 6138add176d8a6d823b5c154302d586fe4e0316b
 * added virtual fs code to cache directory structure in ram
 * rewrote the way files are selected, now you need to use set_path

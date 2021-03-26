@@ -20,10 +20,10 @@ svg="image/svg+xml"}
 local server = create_httpd (function (server, req)
   local path, query, method, version = parse_path (req)
   local ip, port = remote_address (req)
-
   local id = get_option (req, "id")
-  set_option (req, "cache_key", path, "?", query)
   access ("%x %s %s %s %s\n", id, ip, method, path, query)
+
+  set_option (req, "cache_key", path, "?", query)
 
   local app_path, sub_path = string.match (path, '^/(%w+)/?(.*)')
   if (app_path == "proxy") then
