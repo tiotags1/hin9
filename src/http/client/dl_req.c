@@ -130,7 +130,10 @@ int http_send_request (hin_client_t * client) {
   }
   header (buf, "\r\n");
   if (http->debug & DEBUG_RW) printf ("http %d request '\n%.*s'\n", http->c.sockfd, buf->count, buf->ptr);
-  hin_request_write (buf);
+  if (hin_request_write (buf) < 0) {
+    http_client_shutdown (http);
+    return -1;
+  }
   return 0;
 }
 

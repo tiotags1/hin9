@@ -1,4 +1,7 @@
 
+* bugfix segfaults due to not enough sqe's
+
+commit 0e199d7abaa7afdee0375690328d94455bb6d42b
 * bugfixes to logging (still inserting random invalid characters)
 
 commit 1fef5dbbf5d1402303ca0bb34fa6d45b4cfa9977

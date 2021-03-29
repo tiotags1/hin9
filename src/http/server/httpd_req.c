@@ -201,5 +201,16 @@ int httpd_respond_fatal (httpd_client_t * http, int status, const char * body) {
   return 0;
 }
 
+int httpd_respond_fatal_and_full (httpd_client_t * http, int status, const char * body) {
+  if (http->state & HIN_REQ_ERROR) return 0;
+  http->state &= ~(HIN_REQ_DATA | HIN_REQ_POST);
+  http->state |= HIN_REQ_ERROR;
+  http->method = HIN_HTTP_GET;
+  httpd_respond_text (http, status, body);
+  httpd_client_shutdown (http);
+  return 0;
+}
+
+
 
 

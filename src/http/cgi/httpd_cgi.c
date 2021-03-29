@@ -258,7 +258,10 @@ int hin_cgi_send (httpd_client_t * http, hin_worker_t * worker, int fd) {
   hin_lines_t * lines = (hin_lines_t*)&buf->buffer;
   lines->read_callback = hin_cgi_headers_read_callback;
   lines->close_callback = hin_cgi_headers_close_callback;
-  hin_request_read (buf);
+  if (hin_request_read (buf) < 0) {
+    httpd_respond_fatal_and_full (http, 503, NULL);
+    return -1;
+  }
   return 0;
 }
 

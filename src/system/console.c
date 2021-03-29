@@ -33,7 +33,10 @@ int console_execute (string_t * source) {
 }
 
 static int hin_console_read_callback (hin_buffer_t * buf, int ret) {
-  if (ret == 0) {
+  if (ret <= 0) {
+    if (ret < 0) {
+      printf ("console error %s\n", strerror (-ret));
+    }
     if (master.debug & DEBUG_CONFIG) printf ("console EOF\n");
     hin_stop ();
     return 0;
@@ -42,8 +45,11 @@ static int hin_console_read_callback (hin_buffer_t * buf, int ret) {
   temp.ptr = buf->ptr;
   temp.len = ret;
   buf->ptr[ret] = '\0';
-  hin_request_read (buf);
   console_execute (&temp);
+  if (hin_request_read (buf) < 0) {
+    printf ("console failed to read\n");
+    return -1;
+  }
   return 0;
 }
 
@@ -54,7 +60,7 @@ void hin_console_clean () {
     hin_buffer_clean (timeout_buffer);
 }
 
-void hin_console_init () {
+int hin_console_init () {
   hin_buffer_t * buf = malloc (sizeof (*buf) + READ_SZ);
   memset (buf, 0, sizeof (*buf));
   buf->flags = 0;
@@ -63,7 +69,11 @@ void hin_console_init () {
   buf->count = buf->sz = READ_SZ;
   buf->ptr = buf->buffer;
   buf->debug = master.debug;
-  hin_request_read (buf);
+  if (hin_request_read (buf) < 0) {
+    printf ("console init failed\n");
+    hin_buffer_clean (buf);
+    return -1;
+  }
   console_buffer = buf;
 }
 
@@ -80,7 +90,10 @@ static int hin_timer_callback (hin_buffer_t * buffer, int ret) {
     printf ("timer callback error is %s\n", strerror (-ret));
   }
   hin_timeout_t * tm = (void*)&buffer->buffer;
-  hin_request_timeout (buffer, &tm->ts, 0, 0);
+  if (hin_request_timeout (buffer, &tm->ts, 0, 0) < 0) {
+    printf ("timeout callback failed\n");
+    return -1;
+  }
 
   void httpd_timer ();
   httpd_timer ();
@@ -98,7 +111,7 @@ static int hin_timer_callback (hin_buffer_t * buffer, int ret) {
   return 0;
 }
 
-void hin_timer_init () {
+int hin_timer_init () {
   hin_buffer_t * buf = malloc (sizeof (*buf) + sizeof (hin_timeout_t));
   memset (buf, 0, sizeof (*buf));
   buf->flags = 0;
@@ -111,7 +124,10 @@ void hin_timer_init () {
   hin_timeout_t * tm = (void*)&buf->buffer;
   tm->ts.tv_sec = HIN_HTTPD_TIME_DT / 1000;
   tm->ts.tv_nsec = (HIN_HTTPD_TIME_DT % 1000) * 1000000;
-  hin_request_timeout (buf, &tm->ts, 0, 0);
+  if (hin_request_timeout (buf, &tm->ts, 0, 0) < 0) {
+    printf ("timeout callback failed to init\n");
+    return -1;
+  }
 
   basic_timer_init (&tm->timer, 1);
 }

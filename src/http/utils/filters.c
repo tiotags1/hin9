@@ -27,7 +27,10 @@ static void hin_pipe_decode_prepare_half_read (hin_pipe_t * pipe, hin_buffer_t *
   printf ("left in buffer is '%.*s'\n", left, buffer->ptr);
   hin_pipe_handled_read (pipe);
   // offset should increase ?
-  hin_request_read (buffer);
+  if (hin_request_read (buffer) < 0) {
+    // TODO what's the proper way to handle failing here
+    return -1;
+  }
 }
 
 int hin_pipe_decode_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush) {

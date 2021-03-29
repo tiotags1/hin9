@@ -14,9 +14,9 @@ svg="image/svg+xml"}
 local server = create_httpd (function (server, req)
   local path, query, method, version = parse_path (req)
   local ip, port = remote_address (req)
+  local id = get_option (req, "id")
   access ("%x %s %s %s %s\n", id, ip, method, path, query)
 
-  local id = get_option (req, "id")
   set_option (req, "cache_key", path, "?", query)
 
   local dir_path, file_name, ext, path_info = set_path (req, path, "index.php", "index.html")

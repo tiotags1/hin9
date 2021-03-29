@@ -37,7 +37,11 @@ int hin_server_accept (hin_buffer_t * buffer, int ret) {
       return 0;
     default: break;
     }
-    hin_request_accept (buffer, bp->accept_flags);
+    if (hin_request_accept (buffer, bp->accept_flags) < 0) {
+      // TODO this should be handled properly
+      printf ("accept async failed\n");
+      return -1;
+    }
     return 0;
   }
 
@@ -45,7 +49,10 @@ int hin_server_accept (hin_buffer_t * buffer, int ret) {
   if (master.debug & DEBUG_SOCKET) printf ("socket %d accept\n", ret);
   if (handle_client (client) < 0) {
     if (master.quit) return 1;
-    hin_request_accept (buffer, bp->accept_flags);
+    if (hin_request_accept (buffer, bp->accept_flags) < 0) {
+      printf ("accept sync failed\n");
+      return -1;
+    }
     printf ("client rejected ?\n");
     return 0;
   }
@@ -59,7 +66,10 @@ int hin_server_accept (hin_buffer_t * buffer, int ret) {
   new->parent = client->parent;
   buffer->parent = new;
 
-  hin_request_accept (buffer, bp->accept_flags);
+  if (hin_request_accept (buffer, bp->accept_flags) < 0) {
+    printf ("accept sync failed\n");
+    return -1;
+  }
   bp->accept_client = new;
   return 0;
 }

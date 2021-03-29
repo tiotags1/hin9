@@ -104,7 +104,10 @@ static int hin_log_write_callback (hin_buffer_t * buf, int ret) {
     buf->count -= ret;
     if (buf->flags & HIN_OFFSETS)
       buf->pos += ret;
-    hin_request_write (buf);
+    if (hin_request_write (buf) < 0) {
+      buf->flags |= HIN_SYNC;
+      hin_request_write (buf);
+    }
     return 0;
   }
   return 1;
@@ -174,7 +177,10 @@ static int l_log (lua_State *L) {
   logs = buf->next;
   buf->next->pos = buf->pos + buf->count;
 
-  hin_request_write (buf);
+  if (hin_request_write (buf) < 0) {
+    buf->flags |= HIN_SYNC;
+    hin_request_write (buf);
+  }
 
   return 0;
 }

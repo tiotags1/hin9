@@ -205,14 +205,11 @@ static int httpd_open_filefd_callback (hin_buffer_t * buf, int ret) {
   memset (buf->ptr, 0, sizeof (struct statx));
 
   if (HIN_HTTPD_ASYNC_STATX) {
-    buf->callback = httpd_statx_callback;
-    hin_request_statx (buf, ret, "", AT_EMPTY_PATH, STATX_ALL);
-    return 0;
-  } else {
-    int ret1 = statx (ret, "", AT_EMPTY_PATH, STATX_ALL, (struct statx *)buf->ptr);
-    if (ret1 < 0) ret1 = -errno;
-    return httpd_statx_callback (buf, ret1);
+    buf->flags |= HIN_SYNC;
   }
+  buf->callback = httpd_statx_callback;
+  hin_request_statx (buf, ret, "", AT_EMPTY_PATH, STATX_ALL);
+  return 0;
 }
 
 int httpd_handle_file_request (hin_client_t * client, const char * path, off_t pos, off_t count, uintptr_t param) {
@@ -268,14 +265,11 @@ int httpd_handle_file_request (hin_client_t * client, const char * path, off_t p
   hin_server_data_t * data = socket->c.parent;
 
   if (HIN_HTTPD_ASYNC_OPEN) {
-    buf->callback = httpd_open_filefd_callback;
-    hin_request_openat (buf, data->cwd_fd, path, O_RDONLY | O_CLOEXEC, 0);
-    return 0;
-  } else {
-    int ret1 = openat (data->cwd_fd, path, O_RDONLY | O_CLOEXEC, 0);
-    if (ret1 < 0) ret1 = -errno;
-    return httpd_open_filefd_callback (buf, ret1);
+    buf->flags |= HIN_SYNC;
   }
+  buf->callback = httpd_open_filefd_callback;
+  hin_request_openat (buf, data->cwd_fd, path, O_RDONLY | O_CLOEXEC, 0);
+  return 0;
 }
 
 

@@ -80,7 +80,10 @@ static int hin_ssl_write_callback (hin_buffer_t * crypt, int ret) {
     if (ret < 0) { printf ("ssl write error '%s'\n", strerror (-ret)); return -1; }
     crypt->ptr += ret;
     crypt->count -= ret;
-    hin_request_write (crypt);
+    if (hin_request_write (crypt) < 0) {
+      hin_buffer_t * plain = (hin_buffer_t*)crypt->parent;
+      hin_ssl_callback (plain, -EPROTO);
+    }
     return 0;
   }
 
@@ -117,7 +120,11 @@ static int hin_ssl_do_read (hin_ssl_t * ssl, hin_buffer_t * crypt) {
   crypt->callback = hin_ssl_read_callback;
   plain->ssl_buffer = crypt;
 
-  hin_request_read (crypt);
+  if (hin_request_read (crypt) < 0) {
+    hin_ssl_callback (plain, -EPROTO);
+    return -1;
+  }
+
   return 1;
 }
 
@@ -152,7 +159,11 @@ static int hin_ssl_do_write (hin_ssl_t * ssl, hin_buffer_t * crypt) {
   crypt->callback = hin_ssl_write_callback;
   plain->ssl_buffer = crypt;
 
-  hin_request_write (crypt);
+  if (hin_request_write (crypt) < 0) {
+    plain->ssl_buffer = NULL;
+    hin_ssl_callback (plain, -EPROTO);
+    return -1;
+  }
   return 1;
 }
 
@@ -160,6 +171,7 @@ static int hin_ssl_check_data (hin_ssl_t * ssl, hin_buffer_t * crypt) {
   int n;
 
   n = SSL_do_handshake (ssl->ssl);
+  hin_buffer_t * plain = (hin_buffer_t*)crypt->parent;
 
   n = 0;
   if ((ssl->flags & HIN_SSL_WRITE) == 0)
@@ -169,7 +181,10 @@ static int hin_ssl_check_data (hin_ssl_t * ssl, hin_buffer_t * crypt) {
     ssl->flags |= HIN_SSL_WRITE;
     crypt->count = n;
     crypt->callback = hin_ssl_write_callback;
-    hin_request_write (crypt);
+
+    if (hin_request_write (crypt) < 0) {
+      hin_ssl_callback (plain, -EPROTO);
+    }
     return 1;
   } else if (n <= 0) {
     //printf ("ssl no bytes to queue\n");
@@ -191,7 +206,11 @@ static int hin_ssl_check_data (hin_ssl_t * ssl, hin_buffer_t * crypt) {
     ssl->flags |= HIN_SSL_READ;
     crypt->callback = hin_ssl_read_callback;
     crypt->count = crypt->sz;
-    hin_request_read (crypt);
+
+    if (hin_request_read (crypt) < 0) {
+      hin_ssl_callback (plain, -EPROTO);
+    }
+
     return 1;
   break;
   case SSL_STATUS_OK:

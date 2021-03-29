@@ -75,7 +75,10 @@ static int hin_connect_try_next (hin_buffer_t * buffer) {
     client->in_len = rp->ai_addrlen;
     buffer->ptr = (char*)rp->ai_next;
     buffer->callback = hin_connect_recheck;
-    hin_request_connect (buffer);
+    if (hin_request_connect (buffer) < 0) {
+      printf ("connect failed\n");
+      return -1;
+    }
     return 0;
   }
 

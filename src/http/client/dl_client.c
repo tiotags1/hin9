@@ -57,7 +57,10 @@ int http_client_shutdown (http_client_t * http) {
   buf->ssl = &http->c.ssl;
   buf->debug = http->debug;
 
-  hin_request_close (buf);
+  if (hin_request_close (buf) < 0) {
+    buf->flags |= HIN_SYNC;
+    hin_request_close (buf);
+  }
   hin_client_list_remove (&master.connection_list, &http->c);
   return 0;
 }
@@ -118,9 +121,12 @@ int http_client_start_request (http_client_t * http, int ret) {
 int http_client_finish_request (http_client_t * http) {
   if (http->debug & DEBUG_HTTP) printf ("http %d request done\n", http->c.sockfd);
   if (HIN_HTTPD_PROXY_CONNECTION_REUSE && http->read_buffer) {
-    hin_client_list_add (&master.connection_list, (hin_client_t*)http);
     http->c.parent = NULL;
-    hin_request_read (http->read_buffer);
+    if (hin_request_read (http->read_buffer) < 0) {
+      http_client_shutdown (http);
+      return 0;
+    }
+    hin_client_list_add (&master.connection_list, (hin_client_t*)http);
   } else {
     http_client_shutdown (http);
   }
@@ -157,7 +163,11 @@ static int connected (hin_client_t * client, int ret) {
   buf->debug = http->debug;
 
   http->read_buffer = buf;
-  hin_request_read (buf);
+  if (hin_request_read (buf) < 0) {
+    finish_callback (http, -EPROTO);
+    http_client_unlink (http);
+    return -1;
+  }
 
   finish_callback (http, http->c.sockfd);
   return 0;

@@ -101,7 +101,12 @@ static int hin_pipe_read_next (hin_buffer_t * buffer) {
 
   pipe->num_read++;
 
-  hin_request_read (buffer);
+  if (hin_request_read (buffer) < 0) {
+    if (pipe->in_error_callback)
+      pipe->in_error_callback (pipe);
+    hin_pipe_close (pipe);
+    return -1;
+  }
   return 0;
 }
 
@@ -119,7 +124,12 @@ static int hin_pipe_write_next (hin_buffer_t * buffer) {
     pipe->out.pos += buffer->count;
   }
 
-  hin_request_write (buffer);
+  if (hin_request_write (buffer) < 0) {
+    if (pipe->out_error_callback)
+      pipe->out_error_callback (pipe);
+    hin_pipe_close (pipe);
+    return -1;
+  }
   return 0;
 }
 
@@ -135,13 +145,13 @@ int hin_pipe_advance (hin_pipe_t * pipe) {
   if (pipe->debug & DEBUG_PIPE) printf ("pipe %d>%d advance done %d read %d write %d\n", pipe->in.fd, pipe->out.fd, pipe->in.flags & HIN_DONE, pipe->num_read, pipe->num_write);
   if ((pipe->in.flags & HIN_DONE) == 0 && pipe->num_read < 1 && pipe->num_write < 1) {
     hin_buffer_t * new = pipe->buffer_callback (pipe, READ_SZ);
-    hin_pipe_read_next (new);
+    if (hin_pipe_read_next (new) < 0) return -1;
   }
 
   if (pipe->write) {
     hin_buffer_t * buffer = pipe->write;
     hin_buffer_list_remove (&pipe->write, buffer);
-    hin_pipe_write_next (buffer);
+    if (hin_pipe_write_next (buffer) < 0) return -1;
   }
   return 0;
 }
@@ -171,7 +181,11 @@ int hin_pipe_write_callback (hin_buffer_t * buffer, int ret) {
     buffer->count -= ret;
     if (buffer->flags & HIN_OFFSETS)
       buffer->pos += ret;
-    hin_request_write (buffer);
+    if (hin_request_write (buffer) < 0) {
+      if (pipe->out_error_callback)
+        pipe->out_error_callback (pipe);
+      hin_pipe_close (pipe);
+    }
     return 0;
   }
   pipe->num_write--;

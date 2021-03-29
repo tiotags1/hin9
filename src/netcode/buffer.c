@@ -96,7 +96,10 @@ int hin_lines_request (hin_buffer_t * buffer) {
   else { sz = left; }
   hin_buffer_prepare (buffer, sz);
   buffer->callback = hin_lines_read_callback;
-  hin_request_read (buffer);
+  if (hin_request_read (buffer) < 0) {
+    printf ("lines request failed\n");
+    return -1;
+  }
   return 0;
 }
 

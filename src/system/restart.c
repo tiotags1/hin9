@@ -191,7 +191,10 @@ static int hin_signal_callback1 (hin_buffer_t * buf, int ret) {
 
   if (ret < 0) {
     printf ("signal error read '%s'\n", strerror (-ret));
-    hin_request_read (buf); // ?
+    if (hin_request_read (buf) < 0) {
+      printf ("signalfd failed\n");
+      return -1;
+    }
     return 0;
   }
 
@@ -214,7 +217,10 @@ static int hin_signal_callback1 (hin_buffer_t * buf, int ret) {
   break;
   }
 
-  hin_request_read (buf);
+  if (hin_request_read (buf) < 0) {
+    printf ("signalfd failed\n");
+    return -1;
+  }
 
   return 0;
 }
@@ -245,7 +251,10 @@ int hin_signal_install () {
 
   printf ("installed sighandler fd %d\n", sig_fd);
 
-  hin_request_read (buf);
+  if (hin_request_read (buf) < 0) {
+    printf ("signalfd failed\n");
+    return -1;
+  }
 
   return 0;
 }

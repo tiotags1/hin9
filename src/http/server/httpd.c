@@ -71,7 +71,8 @@ int httpd_client_finish_request (httpd_client_t * http) {
   int hin_server_finish_callback (httpd_client_t * client);
   hin_server_finish_callback (http);
 
-  hin_buffer_eat (http->read_buffer, http->headers.len);
+  if (http->read_buffer)
+    hin_buffer_eat (http->read_buffer, http->headers.len);
 
   if (http->file) {
     extern basic_vfs_t * vfs;
@@ -128,7 +129,10 @@ int httpd_client_shutdown (httpd_client_t * http) {
   buf->ssl = &http->c.ssl;
   buf->debug = http->debug;
 
-  hin_request_close (buf);
+  if (hin_request_close (buf) < 0) {
+    buf->flags |= HIN_SYNC;
+    hin_request_close (buf);
+  }
   return 0;
 }
 
@@ -209,7 +213,10 @@ int httpd_client_accept (hin_client_t * client) {
   lines->read_callback = httpd_client_read_callback;
   lines->close_callback = httpd_client_buffer_close_callback;
   lines->eat_callback = httpd_client_buffer_eat_callback;
-  hin_request_read (buf);
+  if (hin_request_read (buf) < 0) {
+    httpd_respond_fatal_and_full (http, 503, NULL);
+    return -1;
+  }
   return 0;
 #endif
 }
@@ -252,7 +259,10 @@ hin_client_t * httpd_create (const char * addr, const char * port, const char * 
   int hin_server_accept (hin_buffer_t * buffer, int ret);
   buffer->callback = hin_server_accept;
   bp->accept_buffer = buffer;
-  hin_request_accept (buffer, bp->accept_flags);
+  if (hin_request_accept (buffer, bp->accept_flags) < 0) {
+    printf ("conf error\n");
+    exit (1);
+  }
 
   hin_client_list_add (&master.server_list, server);
 
