@@ -1,4 +1,9 @@
 
+* wordpress finaly works
+* cgi proper http headers transforming '-' to '_' <- this was fun
+* cgi fixed script_name for directory indices
+
+commit 55df0083b7e705acb540eada8d98d006dc90b8f3
 * bugfix segfaults due to not enough sqe's
 
 commit 0e199d7abaa7afdee0375690328d94455bb6d42b

@@ -29,7 +29,10 @@ typedef struct {
 static void upcase (env_list_t * env) {
   int p = env->pos - 1;
   for (char * ptr=env->env[p]; *ptr && *ptr != '='; ptr++) {
-    *ptr = toupper (*ptr);
+    if (*ptr == '-') *ptr = '_';
+    else {
+      *ptr = toupper (*ptr);
+    }
   }
 }
 
@@ -408,9 +411,10 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
   }
 
   var (&env, "REDIRECT_STATUS=%d", http->status);
-  var (&env, "SCRIPT_NAME=%.*s", uri.path.len, uri.path.ptr);
+  int len = cwd_dir->path_len-1;
+  var (&env, "SCRIPT_NAME=%.*s%s", dir->path_len-len, dir->path+len, file->name);
 
-  if (path_info) {
+  if (path_info && *path_info != '\0') {
     var (&env, "PATH_INFO=%s", path_info);
     char * ptr = (char*)path_info;
     if (*ptr == '/') ptr++;
