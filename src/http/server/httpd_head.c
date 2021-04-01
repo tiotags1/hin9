@@ -88,6 +88,11 @@ int httpd_parse_headers (httpd_client_t * http, string_t * source) {
 
   *source = orig;
 
+  if (HIN_HTTPD_OVERLOAD_ERROR && hin_request_is_overloaded ()) {
+    httpd_respond_fatal (http, 503, NULL);
+    return -1;
+  }
+
   line.len = 0;
   if (find_line (source, &line) == 0 || match_string (&line, "(%a+) ("HIN_HTTP_PATH_ACCEPT") HTTP/1.([01])", &method, &path, &param) <= 0) {
     printf ("httpd 400 error parsing request line '%.*s' whole '%.*s'\n", (int)line.len, line.ptr, (int)source->len, source->ptr);

@@ -1,4 +1,6 @@
 
+* bugfix segfault due to high server load (insufficient sqe's v2)
+
 commit 49d237d36b543dbb66c8865fbf902e8f325c7f66
 * wordpress finally works
 * cgi proper http headers transforming '-' to '_' <- this was fun

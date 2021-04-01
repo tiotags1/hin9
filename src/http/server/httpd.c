@@ -214,8 +214,6 @@ int httpd_client_accept (hin_client_t * client) {
   lines->close_callback = httpd_client_buffer_close_callback;
   lines->eat_callback = httpd_client_buffer_eat_callback;
   if (hin_request_read (buf) < 0) {
-    httpd_respond_fatal_and_full (http, 503, NULL);
-    return -1;
   }
   return 0;
 #endif

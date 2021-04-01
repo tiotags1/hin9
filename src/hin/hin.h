@@ -135,6 +135,7 @@ int hin_request_close (hin_buffer_t * buffer);
 int hin_request_openat (hin_buffer_t * buffer, int dfd, const char * path, int flags, int mode);
 int hin_request_statx (hin_buffer_t * buffer, int dfd, const char * path, int flags, int mask);
 int hin_request_timeout (hin_buffer_t * buffer, struct timespec * ts, int count, int flags);
+int hin_request_is_overloaded ();
 
 hin_buffer_t * hin_pipe_get_buffer (hin_pipe_t * pipe, int sz);
 int hin_pipe_init (hin_pipe_t * pipe);
