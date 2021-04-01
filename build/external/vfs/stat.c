@@ -83,7 +83,8 @@ basic_vfs_file_t * basic_vfs_get_file (basic_vfs_t * vfs, basic_vfs_node_t * nod
   basic_vfs_dir_t * dir = node->parent;
 
   char * path = NULL;
-  asprintf (&path, "%s/%s", dir->path, node->name);
+  int ret = asprintf (&path, "%s/%s", dir->path, node->name);
+  if (ret < 0) { return NULL; }
   node->inode = basic_vfs_stat (vfs, node, path);
   free (path);
   return node->inode;

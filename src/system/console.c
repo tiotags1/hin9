@@ -75,6 +75,7 @@ int hin_console_init () {
     return -1;
   }
   console_buffer = buf;
+  return 0;
 }
 
 #include <basic_timer.h>
@@ -130,6 +131,7 @@ int hin_timer_init () {
   }
 
   basic_timer_init (&tm->timer, 1);
+  return 0;
 }
 
 

@@ -50,6 +50,7 @@ basic_vfs_node_t * basic_vfs_ref_path (basic_vfs_t * vfs, basic_vfs_node_t * dir
     dir = basic_vfs_get_dir (vfs, next);
     if (dir == NULL) return NULL;
   }
+  *path = source;
   basic_vfs_ref (vfs, current);
   return current;
 }
