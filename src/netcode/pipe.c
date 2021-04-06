@@ -176,7 +176,7 @@ int hin_pipe_write_callback (hin_buffer_t * buffer, int ret) {
     }
   }
   if (ret < buffer->count) {
-    printf ("pipe %d>%d write incomplete %d/%d\n", pipe->in.fd, pipe->out.fd, ret, buffer->count);
+    if (pipe->debug & DEBUG_PIPE) printf ("pipe %d>%d write incomplete %d/%d\n", pipe->in.fd, pipe->out.fd, ret, buffer->count);
     buffer->ptr += ret;
     buffer->count -= ret;
     if (buffer->flags & HIN_OFFSETS)

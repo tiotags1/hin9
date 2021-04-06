@@ -144,6 +144,11 @@ int lua_init () {
 
   if (err < 0) return err;
 
+  lua_pushstring (L, master.logdir_path);
+  lua_setglobal (L, "logdir");
+  lua_pushstring (L, master.cwd_path);
+  lua_setglobal (L, "cwd");
+
   internal_lua = L;
 
   return 0;

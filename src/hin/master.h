@@ -6,6 +6,8 @@
 #include <sys/socket.h>
 #include <sys/uio.h>
 
+enum { HIN_DAEMONIZE = 0x1 };
+
 typedef struct {
   int sockfd;
   int type;	// listen/connection, udp/tcp, etc
@@ -25,6 +27,10 @@ typedef struct {
   uint32_t debug;
   char * exe_path;
   char * conf_path;
+  const char * logdir_path;
+  const char * cwd_path;
+  const char * pid_path;
+  uint32_t flags;
   int sharefd;
   int quit;
   int restart_pid;

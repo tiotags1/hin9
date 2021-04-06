@@ -60,6 +60,33 @@ int hin_process_argv (int argc, const char * argv[]) {
     } else if (strcmp (argv[i], "--help") == 0) {
       print_help ();
       return -1;
+    } else if (strcmp (argv[i], "--pidfile") == 0) {
+      i++;
+      if (i >= argc) {
+        printf ("missing path\n");
+        print_help ();
+        return -1;
+      }
+      master.pid_path = argv[i];
+    } else if (strcmp (argv[i], "--daemonize") == 0) {
+      master.flags |= HIN_DAEMONIZE;
+    } else if (strcmp (argv[i], "--cwd") == 0) {
+      i++;
+      if (i >= argc) {
+        printf ("missing path\n");
+        print_help ();
+        return -1;
+      }
+      master.cwd_path = argv[i];
+      if (chdir (master.cwd_path) < 0) perror ("chdir");
+    } else if (strcmp (argv[i], "--logdir") == 0) {
+      i++;
+      if (i >= argc) {
+        printf ("missing path\n");
+        print_help ();
+        return -1;
+      }
+      master.logdir_path = argv[i];
     } else if (strcmp (argv[i], "--config") == 0) {
       i++;
       if (i >= argc) {
@@ -82,13 +109,16 @@ int hin_process_argv (int argc, const char * argv[]) {
 }
 
 int main (int argc, const char * argv[]) {
+  memset (&master, 0, sizeof master);
   master.conf_path = HIN_CONF_PATH;
+  master.exe_path = (char*)argv[0];
+  master.logdir_path = "build/";
+  master.cwd_path = "./";
+
   if (hin_process_argv (argc, argv) < 0)
     return -1;
 
   printf ("hin start ...\n");
-
-  master.exe_path = (char*)argv[0];
 
   master.debug = 0xffffffff;
   master.debug = 0;
@@ -124,6 +154,15 @@ int main (int argc, const char * argv[]) {
   int hin_worker_init ();
   hin_worker_init ();
   #endif
+
+  if (master.flags & HIN_DAEMONIZE) {
+    int hin_daemonize ();
+    if (hin_daemonize () < 0) { return -1; }
+  }
+  if (master.pid_path) {
+    int hin_pidfile (const char * path);
+    if (hin_pidfile (master.pid_path) < 0) { return -1; }
+  }
 
   printf ("hin serve ...\n");
   master.share->done = 1;

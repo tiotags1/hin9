@@ -40,7 +40,7 @@ static int l_hin_create_httpd (lua_State *L) {
   server->debug = master.debug;
   lua_pushlightuserdata (L, server);
 
-  hin_server_set_work_dir (server, ".");
+  hin_server_set_work_dir (server, master.cwd_path);
 
   hin_server_data_t * prev = master.servers;
   server->next = prev;

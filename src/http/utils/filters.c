@@ -29,7 +29,7 @@ static void hin_pipe_decode_prepare_half_read (hin_pipe_t * pipe, hin_buffer_t *
   // offset should increase ?
   if (hin_request_read (buffer) < 0) {
     // TODO what's the proper way to handle failing here
-    return -1;
+    return ;
   }
 }
 

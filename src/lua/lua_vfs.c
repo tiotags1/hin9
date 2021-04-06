@@ -88,7 +88,7 @@ int l_hin_set_path (lua_State *L) {
 
 int hin_server_set_work_dir (hin_server_data_t * server, const char * rel_path) {
   char * abs_path = realpath (rel_path, NULL);
-  if (abs_path == NULL) { perror ("realpath"); return -1; }
+  if (abs_path == NULL) { perror ("cwd realpath"); return -1; }
 
   int fd = openat (AT_FDCWD, abs_path, O_DIRECTORY | O_CLOEXEC);
   if (server->debug & DEBUG_CONFIG) printf ("lua server cwd '%s'\n", abs_path);

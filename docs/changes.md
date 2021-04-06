@@ -1,4 +1,10 @@
 
+* gentoo ebuild and openrc init.d file
+* option to set logdir path and starting cwd
+* option to daemonize
+* option to create pid file
+
+commit 0ab4b80fcbbcd3ddf0dc932210a19e5838509058
 * bugfix segfault due to high server load (insufficient sqe's v2)
 
 commit 49d237d36b543dbb66c8865fbf902e8f325c7f66

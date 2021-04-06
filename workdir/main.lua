@@ -1,5 +1,6 @@
 
---redirect_log ("/tmp/log1.txt")
+
+redirect_log (logdir.."/log.txt")
 --redirect_log (NULL, "ffffffff")
 
 function printf (...)
@@ -9,7 +10,7 @@ end
 function timeout_callback (dt)
 end
 
-access = create_log ("build/access.log")
+access = create_log (logdir .. "/access.log")
 access ("start server on %s\n", os.date ("%c"))
 
 to_cache = {ico=true, txt=true, js=true, jpg=true, png=true, css=true}
@@ -73,7 +74,7 @@ end, function (server, req)
 end)
 
 --listen (server, "localhost", "8081", nil, "workdir/cert.pem", "workdir/key.pem")
-listen (server, "localhost", "8080", "ipv4")
+listen (server, nil, "8080", "ipv4")
 
 set_server_option (server, "timeout", 15)
 set_server_option (server, "hostname", "localhost")
