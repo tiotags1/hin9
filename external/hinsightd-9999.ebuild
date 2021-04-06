@@ -3,15 +3,15 @@
 
 EAPI=7
 
+inherit git-r3
+
 DESCRIPTION="hinsightd is a http/1.1 webserver"
 HOMEPAGE="https://gitlab.com/tiotags/hin9"
-SRC_URI="https://gitlab.com/tiotags/hin9/-/archive/master/hin9-master.tar.gz"
+EGIT_REPO_URI="https://gitlab.com/tiotags/hin9.git"
 LICENSE=""
 SLOT="0"
-KEYWORDS="~amd64"
+KEYWORDS=""
 IUSE=""
-
-S="${WORKDIR}/hin9-master"
 
 # Run-time dependencies. Must be defined to whatever this depends on to run.
 # Example:
