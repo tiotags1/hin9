@@ -14,7 +14,7 @@ void hin_client_unlink (hin_client_t * client) {
   if (master.debug & DEBUG_SOCKET) printf ("socket %d unlink\n", client->sockfd);
 
   hin_client_t * server = (hin_client_t*)client->parent;
-  hin_server_blueprint_t * bp = (hin_server_blueprint_t*)server;
+  hin_server_t * bp = (hin_server_t*)server;
   hin_client_list_remove (&bp->active_client, client);
 
   free (client);
@@ -23,7 +23,7 @@ void hin_client_unlink (hin_client_t * client) {
 }
 
 void hin_server_clean (hin_client_t * server) {
-  hin_server_blueprint_t * bp = (hin_server_blueprint_t*)server;
+  hin_server_t * bp = (hin_server_t*)server;
   for (hin_client_t * elem = bp->active_client; elem; elem = elem->next) {
     //hin_client_shutdown (elem);
   }
@@ -60,23 +60,6 @@ void hin_client_list_add (hin_client_t ** list, hin_client_t * new) {
     (*list)->prev = new;
   }
   *list = new;
-}
-
-int handle_client (hin_client_t * client) {
-  hin_client_t * server = (hin_client_t*)client->parent;
-  hin_server_blueprint_t * bp = (hin_server_blueprint_t*)server;
-
-  if (bp->ssl_ctx) {
-    hin_ssl_accept_init (client);
-  }
-
-  if (bp->client_handle) {
-    bp->client_handle (client);
-  }
-
-  master.num_client++;
-
-  return 0;
 }
 
 int hin_client_addr (char * str, int len, struct sockaddr * ai_addr, socklen_t ai_addrlen) {

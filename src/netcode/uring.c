@@ -137,15 +137,15 @@ int hin_request_read_fixed (hin_buffer_t * buffer) {
 int hin_request_accept (hin_buffer_t * buffer, int flags) {
   hin_client_t * client = (hin_client_t*)buffer->parent;
   hin_client_t * server = (hin_client_t*)client->parent;
-  client->in_len = sizeof (client->in_addr);
+  client->ai_addrlen = sizeof (client->ai_addr);
 
   if (buffer->flags & HIN_SYNC) {
-    int ret = accept4 (server->sockfd, &client->in_addr, &client->in_len, flags);
+    int ret = accept4 (buffer->fd, &client->ai_addr, &client->ai_addrlen, flags);
     return hin_request_callback (buffer, ret);
   }
 
   struct io_uring_sqe *sqe = hin_request_sqe ();
-  io_uring_prep_accept (sqe, server->sockfd, &client->in_addr, &client->in_len, flags);
+  io_uring_prep_accept (sqe, server->sockfd, &client->ai_addr, &client->ai_addrlen, flags);
   io_uring_sqe_set_data (sqe, buffer);
   if (buffer->debug & DEBUG_URING) printf ("req%d accept buf %p cb %p\n", master.id, buffer, buffer->callback);
   return 0;
@@ -155,12 +155,12 @@ int hin_request_connect (hin_buffer_t * buffer) {
   hin_client_t * client = (hin_client_t*)buffer->parent;
 
   if (buffer->flags & HIN_SYNC) {
-    int ret = connect (buffer->fd, &client->in_addr, client->in_len);
+    int ret = connect (buffer->fd, &client->ai_addr, client->ai_addrlen);
     return hin_request_callback (buffer, ret);
   }
 
   struct io_uring_sqe *sqe = hin_request_sqe ();
-  io_uring_prep_connect (sqe, buffer->fd, &client->in_addr, client->in_len);
+  io_uring_prep_connect (sqe, buffer->fd, &client->ai_addr, client->ai_addrlen);
   io_uring_sqe_set_data (sqe, buffer);
   if (buffer->debug & DEBUG_URING) printf ("req%d connect buf %p cb %p\n", master.id, buffer, buffer->callback);
   return 0;

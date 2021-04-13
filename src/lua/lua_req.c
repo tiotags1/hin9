@@ -260,7 +260,7 @@ static int l_hin_remote_address (lua_State *L) {
 
   char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
   int err;
-  err = getnameinfo (&client->in_addr, client->in_len,
+  err = getnameinfo (&client->ai_addr, client->ai_addrlen,
         hbuf, sizeof hbuf,
         sbuf, sizeof sbuf,
         NI_NUMERICHOST | NI_NUMERICSERV);

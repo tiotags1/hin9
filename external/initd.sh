@@ -10,7 +10,7 @@ CFG_FILE=/etc/hinsightd/$NAME.lua
 RUN_FILE=/usr/bin/hinsightd
 RUN_USER="root"
 
-#extra_commands="checkconfig"
+extra_commands="checkconfig"
 
 command=$RUN_FILE
 command_args="--config $CFG_FILE --logdir $LOG_DIR --cwd $CWD_DIR"
@@ -25,7 +25,8 @@ start_pre() {
   checkpath --directory --owner $RUN_USER:$RUN_USER --mode 0775 $RUN_DIR $LOG_DIR
 }
 
-#checkconfig() {
-#}
+checkconfig() {
+  $command $command_args --pretend
+}
 
 

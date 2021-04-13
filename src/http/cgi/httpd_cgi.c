@@ -432,7 +432,7 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
 
   char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
   int err;
-  err = getnameinfo (&socket->in_addr, socket->in_len,
+  err = getnameinfo (&socket->ai_addr, socket->ai_addrlen,
         hbuf, sizeof hbuf,
         sbuf, sizeof sbuf,
         NI_NUMERICHOST | NI_NUMERICSERV);
@@ -443,7 +443,7 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
     fprintf (stderr, "getnameinfo2 err '%s'\n", gai_strerror (err));
   }
 
-  err = getnameinfo (&client->in_addr, client->in_len,
+  err = getnameinfo (&client->ai_addr, client->ai_addrlen,
         hbuf, sizeof hbuf,
         sbuf, sizeof sbuf,
         NI_NUMERICHOST | NI_NUMERICSERV);

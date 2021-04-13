@@ -219,50 +219,27 @@ int httpd_client_accept (hin_client_t * client) {
 #endif
 }
 
-hin_client_t * httpd_create (const char * addr, const char * port, const char * sock_type, void * ssl_ctx) {
-  hin_client_t * server = calloc (1, sizeof (hin_server_blueprint_t));
-  int sockfd;
-  sockfd = hin_socket_search (addr, port, sock_type, server);
-  if (sockfd < 0) {
-    sockfd = hin_socket_listen (addr, port, sock_type, server);
-  } else {
-    printf ("httpd server %d reuse sockfd\n", sockfd);
-  }
-  if (sockfd < 0) {
-    printf ("httpd server %d can't listen on %s:%s\n", sockfd, addr, port);
-    free (server);
+hin_server_t * httpd_create (const char * addr, const char * port, const char * sock_type, void * ssl_ctx) {
+  hin_server_t * server = calloc (1, sizeof (hin_server_t));
+
+  server->c.sockfd = -1;
+  server->c.type = HIN_SERVER;
+  server->c.magic = HIN_SERVER_MAGIC;
+  server->client_handle = httpd_client_accept;
+  server->user_data_size = sizeof (httpd_client_t);
+  server->ssl_ctx = ssl_ctx;
+  server->accept_flags = SOCK_CLOEXEC;
+
+  printf ("http%sd listening on '%s':'%s'\n", ssl_ctx ? "s" : "", addr ? addr : "all", port);
+
+  hin_client_list_add (&master.server_list, &server->c);
+
+  int err = hin_socket_request_listen (addr, port, sock_type, server);
+  if (err < 0) {
+    printf ("error requesting socket\n");
+    // free socket
     return NULL;
   }
-
-  printf ("http%sd listening on '%s':'%s' sockfd %d\n", ssl_ctx ? "s" : "", addr ? addr : "all", port, sockfd);
-
-  server->sockfd = sockfd;
-  server->type = HIN_SERVER;
-  server->magic = HIN_SERVER_MAGIC;
-  hin_server_blueprint_t * bp = (hin_server_blueprint_t *)server;
-  bp->client_handle = httpd_client_accept;
-  bp->user_data_size = sizeof (httpd_client_t);
-  bp->ssl_ctx = ssl_ctx;
-  bp->accept_flags = SOCK_CLOEXEC;
-
-  hin_client_t * client = calloc (1, sizeof (hin_client_t) + bp->user_data_size);
-  client->type = HIN_CLIENT;
-  client->magic = HIN_CLIENT_MAGIC;
-  client->parent = server;
-  bp->accept_client = client;
-
-  hin_buffer_t * buffer = calloc (1, sizeof *buffer);
-  //buffer->sockfd = 0; // gets filled by accept
-  buffer->parent = client;
-  int hin_server_accept (hin_buffer_t * buffer, int ret);
-  buffer->callback = hin_server_accept;
-  bp->accept_buffer = buffer;
-  if (hin_request_accept (buffer, bp->accept_flags) < 0) {
-    printf ("conf error\n");
-    exit (1);
-  }
-
-  hin_client_list_add (&master.server_list, server);
 
   return server;
 }

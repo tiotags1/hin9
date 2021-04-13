@@ -43,13 +43,12 @@ SSL_CTX * hin_ssl_default_init () {
 
 int hin_ssl_accept_init (hin_client_t * client) {
   hin_ssl_t * ssl = &client->ssl;
-  hin_client_t * server = (hin_client_t*)client->parent;
-  hin_server_blueprint_t * bp = (hin_server_blueprint_t*)server;
+  hin_server_t * server = (hin_server_t*)client->parent;
 
   ssl->rbio = BIO_new (BIO_s_mem ());
   ssl->wbio = BIO_new (BIO_s_mem ());
 
-  ssl->ssl = SSL_new (bp->ssl_ctx);
+  ssl->ssl = SSL_new (server->ssl_ctx);
 
   SSL_set_accept_state (ssl->ssl); // sets ssl to work in server mode.
   SSL_set_bio (ssl->ssl, ssl->rbio, ssl->wbio);

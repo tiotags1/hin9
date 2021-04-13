@@ -1,4 +1,9 @@
 
+* command line option to check config (--pretend)
+* initial graceful restart code
+* cleanup listen code
+
+commit 27c2c68780ab850321768bc3c6dce8a6a4cd8f9b
 * gentoo ebuild and openrc init.d file
 * option to set logdir path and starting cwd
 * option to daemonize

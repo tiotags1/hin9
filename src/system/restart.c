@@ -11,13 +11,13 @@
 #include "hin.h"
 
 int hin_check_alive () {
-  if (master.restarting) {
+  if (master.flags & HIN_RESTARTING) {
     if (master.share->done == 0) {
       printf ("not done\n");
     } else if (master.share->done > 0) {
       printf ("restart succesful\n");
       master.share->done = 0;
-      master.restarting = 0;
+      master.flags &= (~HIN_RESTARTING);
       hin_stop ();
     } else {
       printf ("failed to restart\n");
@@ -54,7 +54,7 @@ void hin_stop () {
 }
 
 static void hin_restart_old () {
-  master.restarting = 1;
+  master.flags |= HIN_RESTARTING;
 }
 
 static void hin_restart_new () {
@@ -64,7 +64,7 @@ static void hin_restart_new () {
   char * buf = NULL;
   if (asprintf (&buf, "%d", master.sharefd) < 0)
     perror ("asprintf");
-  char * argv[] = {master.exe_path, "--reuse", buf, NULL};
+  char * const argv[] = {(char*)master.exe_path, "--reuse", buf, NULL};
   execvp (master.exe_path, argv);
   perror ("execvp");
   exit (-1);
@@ -76,6 +76,10 @@ int hin_restart () {
   master.share->done = 0;
 
   int pid = fork ();
+  if (pid < 0) {
+    perror ("fork");
+    return -1;
+  }
   if (pid == 0) {
     hin_restart_new ();
     return 0;

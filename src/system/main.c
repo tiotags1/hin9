@@ -38,6 +38,8 @@ void hin_clean () {
   extern basic_vfs_t * vfs;
   basic_vfs_clean (vfs);
   free (vfs);
+  int hin_socket_clean ();
+  hin_socket_clean ();
 
   //close (0); close (1); close (2);
 
@@ -70,6 +72,8 @@ int hin_process_argv (int argc, const char * argv[]) {
       master.pid_path = argv[i];
     } else if (strcmp (argv[i], "--daemonize") == 0) {
       master.flags |= HIN_DAEMONIZE;
+    } else if (strcmp (argv[i], "--pretend") == 0) {
+      master.flags |= HIN_PRETEND;
     } else if (strcmp (argv[i], "--cwd") == 0) {
       i++;
       if (i >= argc) {
@@ -146,7 +150,6 @@ int main (int argc, const char * argv[]) {
   int hin_conf_load (const char * path);
   if (master.debug & DEBUG_CONFIG) printf ("conf path '%s'\n", master.conf_path);
   if (hin_conf_load (master.conf_path) < 0) {
-    printf ("can't load config file\n");
     return -1;
   }
 
@@ -155,13 +158,21 @@ int main (int argc, const char * argv[]) {
   hin_worker_init ();
   #endif
 
+  if (master.flags & HIN_PRETEND) {
+    return 0;
+  }
   if (master.flags & HIN_DAEMONIZE) {
     int hin_daemonize ();
     if (hin_daemonize () < 0) { return -1; }
   }
+  // pid file always goes after daemonize
   if (master.pid_path) {
     int hin_pidfile (const char * path);
     if (hin_pidfile (master.pid_path) < 0) { return -1; }
+  }
+  if (hin_socket_do_listen () < 0) {
+    printf ("error listening to sockets\n");
+    return -1;
   }
 
   printf ("hin serve ...\n");

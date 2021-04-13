@@ -107,7 +107,7 @@ int http_client_shutdown (http_client_t * http);
 //int hin_request_headers (hin_client_t * client);
 
 // download
-hin_client_t * httpd_create (const char * addr, const char * port, const char * sock_type, void * ssl_ctx);
+hin_server_t * httpd_create (const char * addr, const char * port, const char * sock_type, void * ssl_ctx);
 http_client_t * http_download (const char * url, const char * save_path, int (*read_callback) (hin_buffer_t * buffer, int num, int flush));
 
 #include "utils.h"

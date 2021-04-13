@@ -36,7 +36,7 @@ static inline void httpd_client_timer (httpd_client_t * http, basic_time_t * now
 void httpd_timer () {
   basic_time_t now = basic_time_get ();
   for (hin_client_t * server = master.server_list; server; server = server->next) {
-    hin_server_blueprint_t * bp = (hin_server_blueprint_t*)server;
+    hin_server_t * bp = (hin_server_t*)server;
     for (httpd_client_t * http = (httpd_client_t*)bp->active_client; http; http = (httpd_client_t*)http->c.next) {
       httpd_client_timer (http, &now);
     }
@@ -47,7 +47,7 @@ void httpd_timer_flush () {
   basic_time_t now = basic_time_get ();
   now.sec -= 1;
   for (hin_client_t * server = master.server_list; server; server = server->next) {
-    hin_server_blueprint_t * bp = (hin_server_blueprint_t*)server;
+    hin_server_t * bp = (hin_server_t*)server;
     for (hin_client_t * client = bp->active_client; client; client = client->next) {
       httpd_client_t * http = (httpd_client_t *)client;
       http->next_time = now;

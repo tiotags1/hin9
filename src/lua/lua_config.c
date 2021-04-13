@@ -83,8 +83,8 @@ static int l_hin_listen (lua_State *L) {
   void * ctx = NULL;
 #endif
 
-  hin_client_t * sock = httpd_create (addr, port, type, ctx);
-  sock->parent = server;
+  hin_server_t * sock = httpd_create (addr, port, type, ctx);
+  sock->c.parent = server;
   lua_pushlightuserdata (L, sock);
 
   return 1;

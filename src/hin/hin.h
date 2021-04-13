@@ -90,8 +90,8 @@ struct hin_client_struct {
   uint32_t flags;
   uint32_t magic;
   void * parent;
-  struct sockaddr in_addr;
-  socklen_t in_len;
+  struct sockaddr ai_addr;
+  socklen_t ai_addrlen;
   hin_ssl_t ssl;
   struct hin_client_struct * prev, * next;
 };
@@ -108,7 +108,7 @@ typedef struct hin_server_struct {
   hin_client_t * accept_client;
   hin_client_t * active_client;
   char extra[];
-} hin_server_blueprint_t;
+} hin_server_t;
 
 typedef struct {
   int (*read_callback) (hin_buffer_t * buffer);
@@ -118,11 +118,11 @@ typedef struct {
 
 int hin_connect (hin_client_t * client, const char * host, const char * port, int (*callback) (hin_client_t * client, int ret));
 int hin_socket_listen (const char * address, const char * port, const char * sock_type, hin_client_t * client);
-int hin_socket_search (const char * addr, const char *port, const char * sock_type, hin_client_t * client);
 
-void hin_client_unlink (hin_client_t * client);
-void hin_client_shutdown (hin_client_t * client);
-void hin_client_close (hin_client_t * client);
+int hin_socket_request_listen (const char * addr, const char *port, const char * sock_type, hin_server_t * client);
+int hin_socket_do_listen ();
+
+int hin_server_start_accept (hin_server_t * server);
 
 // uring
 int hin_request_write (hin_buffer_t * buffer);
@@ -137,12 +137,20 @@ int hin_request_statx (hin_buffer_t * buffer, int dfd, const char * path, int fl
 int hin_request_timeout (hin_buffer_t * buffer, struct timespec * ts, int count, int flags);
 int hin_request_is_overloaded ();
 
+void hin_client_unlink (hin_client_t * client);
+void hin_client_shutdown (hin_client_t * client);
+void hin_client_close (hin_client_t * client);
+
+void hin_client_list_remove (hin_client_t ** list, hin_client_t * new);
+void hin_client_list_add (hin_client_t ** list, hin_client_t * new);
+
 hin_buffer_t * hin_pipe_get_buffer (hin_pipe_t * pipe, int sz);
 int hin_pipe_init (hin_pipe_t * pipe);
 int hin_pipe_start (hin_pipe_t * pipe);
 int hin_pipe_advance (hin_pipe_t * pipe);
 int hin_pipe_finish (hin_pipe_t * pipe);
 int hin_pipe_append (hin_pipe_t * pipe, hin_buffer_t * buffer);
+int hin_pipe_write (hin_pipe_t * client, hin_buffer_t * buffer);
 
 hin_buffer_t * hin_buffer_create_from_data (void * parent, const char * ptr, int sz);
 void hin_buffer_clean (hin_buffer_t * buffer);
@@ -150,10 +158,6 @@ void hin_buffer_clean (hin_buffer_t * buffer);
 void hin_buffer_list_remove (hin_buffer_t ** list, hin_buffer_t * new);
 void hin_buffer_list_append (hin_buffer_t ** list, hin_buffer_t * new);
 void hin_buffer_list_add (hin_buffer_t ** list, hin_buffer_t * new);
-int hin_pipe_write (hin_pipe_t * client, hin_buffer_t * buffer);
-
-void hin_client_list_remove (hin_client_t ** list, hin_client_t * new);
-void hin_client_list_add (hin_client_t ** list, hin_client_t * new);
 
 int hin_buffer_prepare (hin_buffer_t * buffer, int num);
 int hin_buffer_eat (hin_buffer_t * buffer, int num);

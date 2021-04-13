@@ -18,7 +18,7 @@ typedef int (competion_callback_t) (hin_client_t * client, int ret);
 static int complete (hin_buffer_t * buffer, int fd) {
   hin_client_t * client = (hin_client_t*)buffer->parent;
   char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
-  int err = getnameinfo (&client->in_addr, client->in_len,
+  int err = getnameinfo (&client->ai_addr, client->ai_addrlen,
         hbuf, sizeof hbuf,
         sbuf, sizeof sbuf,
         NI_NUMERICHOST | NI_NUMERICSERV);
@@ -40,7 +40,7 @@ static int complete (hin_buffer_t * buffer, int fd) {
 static int fail (hin_buffer_t * buffer, int err) {
   hin_client_t * client = (hin_client_t*)buffer->parent;
   char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
-  int err1 = getnameinfo (&client->in_addr, client->in_len,
+  int err1 = getnameinfo (&client->ai_addr, client->ai_addrlen,
         hbuf, sizeof hbuf,
         sbuf, sizeof sbuf,
         NI_NUMERICHOST | NI_NUMERICSERV);
@@ -71,8 +71,8 @@ static int hin_connect_try_next (hin_buffer_t * buffer) {
       continue;
     }
 
-    client->in_addr = *rp->ai_addr;
-    client->in_len = rp->ai_addrlen;
+    client->ai_addr = *rp->ai_addr;
+    client->ai_addrlen = rp->ai_addrlen;
     buffer->ptr = (char*)rp->ai_next;
     buffer->callback = hin_connect_recheck;
     if (hin_request_connect (buffer) < 0) {
