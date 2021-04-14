@@ -21,12 +21,24 @@ depend() {
   need net
 }
 
-start_pre() {
-  checkpath --directory --owner $RUN_USER:$RUN_USER --mode 0775 $RUN_DIR $LOG_DIR
+checkconfig() {
+  $command $command_args --pretend > /dev/null
 }
 
-checkconfig() {
-  $command $command_args --pretend
+start_pre() {
+  checkpath --directory --owner $RUN_USER:$RUN_USER --mode 0775 $RUN_DIR $LOG_DIR
+  checkconfig || return 1
+}
+
+restart() {
+  if ! service_started "${SVCNAME}" ; then
+    eerror "${SVCNAME} isn't running"
+    return 1
+  fi
+
+  checkconfig || return 1
+  start-stop-daemon --quiet --signal USR1 --pidfile ${PID_FILE}
+  eend $?
 }
 
 

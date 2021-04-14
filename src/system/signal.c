@@ -65,6 +65,13 @@ int hin_signal_clean () {
 }
 
 int hin_signal_install () {
+  sigset_t mask;
+  sigemptyset (&mask);
+  sigaddset (&mask, SIGUSR1);
+
+  if (sigprocmask (SIG_UNBLOCK, &mask, NULL) < 0)
+    perror ("sigprocmask");
+
   // It's better to use sigaction() over signal().  You won't run into the
   // issue where BSD signal() acts one way and Linux or SysV acts another.
   struct sigaction sa;

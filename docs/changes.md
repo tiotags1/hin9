@@ -1,4 +1,9 @@
 
+* bugfix graceful restart should work now
+* added restart to ebuild
+* minor fixes
+
+commit e425349e03940bdc607d048c7b35061f836d75ef
 * command line option to check config (--pretend)
 * initial graceful restart code
 * cleanup listen code

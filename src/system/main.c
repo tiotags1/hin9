@@ -51,7 +51,16 @@ void hin_clean () {
 }
 
 void print_help () {
-  printf ("help info\n --version\n --config <path>: sets config path\n --reuse: don't use\n");
+  printf ("usage hinsightd [OPTION]...\n\
+ --version: prints version information\n\
+ --config <path>: sets config path\n\
+ --pretend: checks config file and exits\n\
+ --logdir <path>: sets log dir path\n\
+ --cwd <path>: sets current directory\n\
+ --pidfile <path>: prints pid to file, used for daemons\n\
+ --daemonize: used for daemons\n\
+ --reuse <nr>: used for graceful restart, should never be used otherwise\n\
+");
 }
 
 int hin_process_argv (int argc, const char * argv[]) {
