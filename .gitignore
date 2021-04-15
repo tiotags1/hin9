@@ -1,11 +1,19 @@
 docs/*
 !docs/*.md
 !docs/*.txt
+
 build/*
-!build/external
 !build/build.ninja
+
 htdocs/*
 !htdocs/index.html
+
+src/*
+!src/hin
+!src/http
+!src/lua
+!src/netcode
+!src/system
 
 *.pem
 *.key

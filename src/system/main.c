@@ -40,6 +40,7 @@ void hin_clean () {
   free (vfs);
   int hin_socket_clean ();
   hin_socket_clean ();
+  // shouldn't clean pidfile it can incur a race condition
 
   //close (0); close (1); close (2);
 
@@ -78,7 +79,9 @@ int hin_process_argv (int argc, const char * argv[]) {
         print_help ();
         return -1;
       }
-      master.pid_path = argv[i];
+      if (argv[i][0]) {
+        master.pid_path = argv[i];
+      }
     } else if (strcmp (argv[i], "--daemonize") == 0) {
       master.flags |= HIN_DAEMONIZE;
     } else if (strcmp (argv[i], "--pretend") == 0) {

@@ -10,6 +10,8 @@
 
 #include "hin.h"
 
+#define RESTART_SIGNAL SIGUSR1
+
 static void hin_sig_restart_handler (int signo, siginfo_t * info, void * ucontext) {
   hin_restart ();
 }
@@ -58,7 +60,7 @@ static void hin_sig_int_handler (int signo, siginfo_t * info, void * ucontext) {
 
 int hin_signal_clean () {
   signal(SIGINT, SIG_DFL);
-  signal(SIGUSR1, SIG_DFL);
+  signal(RESTART_SIGNAL, SIG_DFL);
   signal(SIGPIPE, SIG_DFL);
   signal(SIGCHLD, SIG_DFL);
   return 0;
@@ -67,7 +69,7 @@ int hin_signal_clean () {
 int hin_signal_install () {
   sigset_t mask;
   sigemptyset (&mask);
-  sigaddset (&mask, SIGUSR1);
+  sigaddset (&mask, RESTART_SIGNAL);
 
   if (sigprocmask (SIG_UNBLOCK, &mask, NULL) < 0)
     perror ("sigprocmask");
@@ -86,7 +88,7 @@ int hin_signal_install () {
   sigaction (SIGPIPE, &sa, NULL);
 
   sa.sa_sigaction = hin_sig_restart_handler;
-  sigaction (SIGUSR1, &sa, NULL);
+  sigaction (RESTART_SIGNAL, &sa, NULL);
 
   sa.sa_sigaction = hin_sig_child_handler;
   sigaction (SIGCHLD, &sa, NULL);
@@ -127,7 +129,7 @@ static int hin_signal_callback1 (hin_buffer_t * buf, int ret) {
   case SIGINT:
     hin_sig_int_handler (info->ssi_signo, info, NULL);
   break;
-  case SIGUSR1:
+  case RESTART_SIGNAL:
     hin_sig_restart_handler (info->ssi_signo, info, NULL);
   break;
   case SIGPIPE:
@@ -153,7 +155,7 @@ static int hin_signal_callback1 (hin_buffer_t * buf, int ret) {
 int hin_signal_install () {
   sigemptyset (&mask);
   sigaddset (&mask, SIGINT);
-  sigaddset (&mask, SIGUSR1);
+  sigaddset (&mask, RESTART_SIGNAL);
   sigaddset (&mask, SIGPIPE);
   sigaddset (&mask, SIGCHLD);
 

@@ -64,8 +64,18 @@ static void hin_restart_new () {
   char * buf = NULL;
   if (asprintf (&buf, "%d", master.sharefd) < 0)
     perror ("asprintf");
-  char * const argv[] = {(char*)master.exe_path, "--reuse", buf, NULL};
-  execvp (master.exe_path, argv);
+  if (master.pid_path == NULL) {
+    master.pid_path = "";
+  }
+  const char * const argv[] = {
+  master.exe_path,
+  "--reuse", buf,
+  "--config", master.conf_path,
+  "--cwd", master.cwd_path,
+  "--logdir", master.logdir_path,
+  "--pidfile", master.pid_path,
+  NULL};
+  execvp ((const char *)master.exe_path, (char * const*)argv);
   perror ("execvp");
   exit (-1);
 }
@@ -74,6 +84,9 @@ int hin_restart () {
   printf("hin restart ...\n");
 
   master.share->done = 0;
+
+  int hin_pidfile_clean ();
+  hin_pidfile_clean ();
 
   int pid = fork ();
   if (pid < 0) {

@@ -13,7 +13,7 @@
 #include "hin.h"
 
 int hin_pidfile (const char * path) {
-  int fd = openat (AT_FDCWD, path, O_WRONLY | O_CREAT | O_CLOEXEC | O_TRUNC | O_EXCL, S_IRWXU);
+  int fd = openat (AT_FDCWD, path, O_WRONLY | O_CREAT | O_CLOEXEC | O_TRUNC | O_EXCL, 0700);
   if (fd < 0) {
     if (errno == EEXIST) {
       printf ("should clean up old pidfile %s\n", path);
@@ -28,6 +28,14 @@ int hin_pidfile (const char * path) {
   if (err < ret) { perror ("write"); return -1; }
   err = close (fd);
   if (err < 0) { perror ("close"); return -1; }
+  return 0;
+}
+
+int hin_pidfile_clean () {
+  if (master.pid_path) {
+    if (unlinkat (AT_FDCWD, master.pid_path, 0) < 0)
+      perror ("unlinkat");
+  }
   return 0;
 }
 

@@ -1,4 +1,7 @@
 
+* fixed init.d script
+
+commit a61575b3a2b74b5324a757cfe03b39145c135542
 * bugfix graceful restart should work now
 * added restart to ebuild
 * minor fixes

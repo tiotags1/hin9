@@ -228,9 +228,9 @@ static int l_hin_redirect_log (lua_State *L) {
   if (type == LUA_TSTRING) {
     const char * path = lua_tostring (L, 1);
     FILE * fp = NULL;
-    fp = freopen (path, "w", stdout);
+    fp = freopen (path, "a", stdout);
     if (fp == NULL) { printf ("can't open '%s'\n", path); return 0; }
-    fp = freopen (path, "w", stderr);
+    fp = freopen (path, "a", stderr);
     if (fp == NULL) { printf ("can't open '%s'\n", path); return 0; }
 
     dup2 (fileno(stderr), fileno(stdout));
