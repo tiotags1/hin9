@@ -8,7 +8,7 @@ PID_FILE=$RUN_DIR/$NAME.pid
 CFG_FILE=/etc/hinsightd/$NAME.lua
 
 RUN_FILE=/usr/bin/hinsightd
-RUN_USER="root"
+RUN_USER="nobody"
 
 extra_commands="checkconfig reload"
 
@@ -16,6 +16,7 @@ command=$RUN_FILE
 command_args="--config $CFG_FILE --logdir $LOG_DIR --cwd $CWD_DIR --pidfile $PID_FILE"
 pidfile="$PID_FILE"
 command_args_background="--daemonize"
+command_user="$RUN_USER:$RUN_USER"
 
 depend() {
   use net

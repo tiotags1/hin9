@@ -194,6 +194,7 @@ int hin_log_flush () {
 
 static int l_hin_create_log (lua_State *L) {
   const char * path = lua_tostring (L, 1);
+  if (master.flags & HIN_PRETEND) path = "/dev/null";
   int fd = openat (AT_FDCWD, path, O_WRONLY | O_CREAT | O_CLOEXEC | O_TRUNC, S_IRWXU);
   if (fd < 0) {
     printf ("can't open '%s' %s\n", path, strerror (errno));
@@ -223,6 +224,7 @@ static int l_hin_create_log (lua_State *L) {
 }
 
 static int l_hin_redirect_log (lua_State *L) {
+  if (master.flags & HIN_PRETEND) return 0;
   int type;
   type = lua_type (L, 1);
   if (type == LUA_TSTRING) {

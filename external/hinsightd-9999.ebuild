@@ -3,7 +3,7 @@
 
 EAPI=7
 
-inherit git-r3
+inherit git-r3 fcaps
 
 DESCRIPTION="hinsightd is a http/1.1 webserver"
 HOMEPAGE="https://gitlab.com/tiotags/hin9"
@@ -45,6 +45,10 @@ src_install() {
 
   keepdir /var/www/localhost/htdocs
 # simple index file
+}
+
+pkg_postinst() {
+  fcaps CAP_NET_BIND_SERVICE /usr/bin/hinsightd
 }
 
 

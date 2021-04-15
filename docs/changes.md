@@ -1,4 +1,8 @@
 
+* use linux capabilities
+* set user to nobody
+
+commit 8afb936fe7d7274663d75824cd9bdf5ecd498bec
 * fixed init.d script
 
 commit a61575b3a2b74b5324a757cfe03b39145c135542
