@@ -1,6 +1,6 @@
 
 
-redirect_log (logdir.."/log.txt")
+redirect_log (logdir.."/debug.log")
 --redirect_log (NULL, "ffffffff")
 
 function printf (...)

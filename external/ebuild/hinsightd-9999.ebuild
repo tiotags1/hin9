@@ -26,13 +26,15 @@ DEPEND="${RDEPEND}"
 
 BDEPEND="dev-util/ninja"
 
+FILESDIR1=${S}/external/ebuild/files/
+
 PATCHES=(
-"${FILESDIR}/gentoo.patch"
+"${FILESDIR1}/gentoo.patch"
 )
 
 pkg_preinst() {
   enewgroup hinsightd
-  enewuser hinsightd -1 /bin/false /dev/null hinsightd
+  enewuser hinsightd -1 -1 /dev/null hinsightd
 }
 
 #src_configure() {
@@ -45,7 +47,7 @@ src_compile() {
 
 src_install() {
   newbin ${S}/build/hin9 hinsightd
-  newinitd ${S}/external/ebuild/init.d.sh hinsightd
+  newinitd ${FILESDIR1}/init.d.sh hinsightd
 
   insinto /etc/hinsightd
   newins ${S}/workdir/main.lua hinsightd.lua

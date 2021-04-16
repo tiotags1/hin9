@@ -1,7 +1,7 @@
 #!/sbin/openrc-run
 
 NAME=$RC_SVCNAME
-RUN_DIR=/var/run/
+RUN_DIR=/var/run/$NAME
 LOG_DIR=/var/log/$NAME
 TMP_DIR=/var/tmp/$NAME
 CWD_DIR=/var/www/localhost
@@ -28,7 +28,7 @@ checkconfig() {
 }
 
 start_pre() {
-  checkpath --directory --owner $RUN_USER:$RUN_USER --mode 0770 $LOG_DIR $TMP_DIR
+  checkpath --directory --owner $RUN_USER:$RUN_USER --mode 0770 $LOG_DIR $TMP_DIR $RUN_DIR
   checkconfig || return 1
 }
 
