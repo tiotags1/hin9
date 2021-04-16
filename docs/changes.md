@@ -1,5 +1,6 @@
 
 * ebuild changes
+* more compile time options
 
 commit 96e5fadd690547f26b0cadac1b7770b7b10fc044
 * use linux capabilities

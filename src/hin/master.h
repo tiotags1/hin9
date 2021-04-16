@@ -41,6 +41,7 @@ typedef struct {
   const char * exe_path;
   const char * conf_path;
   const char * logdir_path;
+  const char * tmpdir_path;
   const char * cwd_path;
   const char * pid_path;
   int restart_pid;

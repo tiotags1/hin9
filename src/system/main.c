@@ -103,6 +103,14 @@ int hin_process_argv (int argc, const char * argv[]) {
         return -1;
       }
       master.logdir_path = argv[i];
+    } else if (strcmp (argv[i], "--tmpdir") == 0) {
+      i++;
+      if (i >= argc) {
+        printf ("missing path\n");
+        print_help ();
+        return -1;
+      }
+      master.tmpdir_path = argv[i];
     } else if (strcmp (argv[i], "--config") == 0) {
       i++;
       if (i >= argc) {
@@ -128,8 +136,8 @@ int main (int argc, const char * argv[]) {
   memset (&master, 0, sizeof master);
   master.conf_path = HIN_CONF_PATH;
   master.exe_path = (char*)argv[0];
-  master.logdir_path = "build/";
-  master.cwd_path = "./";
+  master.logdir_path = HIN_LOGDIR_PATH;
+  master.cwd_path = HIN_CWD_PATH;
 
   if (hin_process_argv (argc, argv) < 0)
     return -1;
