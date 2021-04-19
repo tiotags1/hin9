@@ -1,11 +1,19 @@
 hin9
 ====
 
-hinsightd is a linux caching reverse proxy webserver
+hinsightd is a http/1.1 webserver designed for use with linux io_uring
 
-main features are http1.1 pipelining, reverse proxy, cgi, local file-based cache, ssl, dynamic deflate, 304 responses, customizable logging, customizable cache control headers, customizable everything
+main features are http1.1 pipelining, reverse proxy, local file-based cache, cgi, ssl, dynamic deflate, range requests, etag, 304 status, per request debug information, graceful restart, customizable logging, customizable cache control headers, customizable everything
 
-uses lua for both configuration and scripting
+uses lua for everything related to configuration
+
+fun features that can be implemented just in lua and have been left out as an excercise to the user
+* rewrites
+* virtual hosts
+* virtual hosts per host logging
+* zero or full logging and everything in between
+* basic auth
+* most kinds of load balancing
 
 whenever possible coherency, ease of understanding and algorithm aesthetic are prioritized over speed, optimization or features
 
@@ -28,9 +36,7 @@ install & run
 roadmap
 -------
 
-* caching reverse proxy
 * fastcgi
-* better daemon support
 * static deflate caching
 
 
