@@ -1,4 +1,8 @@
 
+* fixed proxying of chunked encoded connections
+* I thought I fixed this
+
+commit f930a5587707797c2df8bdec3e821f40470cd37c
 * bugfix something bad about cgi
 * bugfix cgi hang if subprocess crashes before headers
 * bugfix cgi not accepting a direct script path

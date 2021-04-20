@@ -154,6 +154,7 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer) {
   if (http1->flags & HIN_HTTP_CHUNKED) {
     int hin_pipe_decode_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush);
     pipe->decode_callback = hin_pipe_decode_chunked;
+    http->peer_flags |= HIN_HTTP_CHUNKED;
   } else if (sz > 0) {
     pipe->in.flags |= HIN_COUNT;
     pipe->left = pipe->sz = sz;
@@ -170,6 +171,9 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer) {
     } else if (n > 0) {
       if (len > 0) {
         hin_buffer_t * buf1 = hin_buffer_create_from_data (pipe, source.ptr, len);
+        buf1->fd = pipe->out.fd;
+        buf1->flags = pipe->out.flags;
+        buf1->ssl = pipe->out.ssl;
         hin_pipe_append (pipe, buf1);
       }
       hin_pipe_start (pipe);
@@ -182,6 +186,9 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer) {
 
   hin_buffer_t * buf = malloc (sizeof (*buf) + READ_SZ);
   memset (buf, 0, sizeof (*buf));
+  buf->fd = http->c.sockfd;
+  buf->flags = http->c.flags;
+  buf->ssl = &http->c.ssl;
   buf->count = 0;
   buf->sz = READ_SZ;
   buf->ptr = buf->buffer;
@@ -200,6 +207,9 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer) {
 
   if (len > 0) {
     hin_buffer_t * buf1 = hin_buffer_create_from_data (pipe, source.ptr, len);
+    buf1->fd = buf->fd;
+    buf1->flags = buf->flags;
+    buf1->ssl = buf->ssl;
     hin_pipe_append (pipe, buf1);
   }
 

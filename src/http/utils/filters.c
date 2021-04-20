@@ -25,12 +25,6 @@ static void hin_pipe_decode_prepare_half_read (hin_pipe_t * pipe, hin_buffer_t *
     buffer->count -= left;
   }
   printf ("left in buffer is '%.*s'\n", left, buffer->ptr);
-  hin_pipe_handled_read (pipe);
-  // offset should increase ?
-  if (hin_request_read (buffer) < 0) {
-    // TODO what's the proper way to handle failing here
-    return ;
-  }
 }
 
 int hin_pipe_decode_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush) {
@@ -43,6 +37,7 @@ int hin_pipe_decode_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, 
   orig.ptr = buffer->ptr - decode->left_over;
   orig.len = num + decode->left_over;
   source = orig;
+
   if (pipe->debug & DEBUG_HTTP_FILTER) printf ("pipe %d>%d decode chunk sz %d left %d %s\n", pipe->in.fd, pipe->out.fd, num, decode->left_over, flush ? "flush" : "cont");
   while (1) {
     if (pipe->debug & DEBUG_HTTP_FILTER) printf ("  chunk sz left %ld\n", decode->chunk_sz);
@@ -64,7 +59,7 @@ int hin_pipe_decode_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, 
       decode->chunk_sz -= consume;
       if (source.len < 2) {
         hin_pipe_decode_prepare_half_read (pipe, buffer, source.len-2, num);
-        return 0;
+        return 1;
       }
       if (match_string (&source, "\r\n") < 0) {
         printf ("chunk decode format error\n");
@@ -76,7 +71,7 @@ int hin_pipe_decode_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, 
       // save stuff
       if (source.len < 10) {
         hin_pipe_decode_prepare_half_read (pipe, buffer, source.len, num);
-        return 0;
+        return 1;
       }
       printf ("chunk decode couldn't find in '%.*s'\n", (int)(source.len > 20 ? 20 : source.len), source.ptr);
       return -1;
