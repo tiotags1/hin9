@@ -1,4 +1,13 @@
 
+add_lib {
+  tag="fcgi_test",
+  run_dir=".",
+  c_files={"build/fcgi.c"},
+  ldflags="-lfcgi",
+  cflags="",
+  dont_exe=true,
+}
+
 hin = {
   tag="hin9",
   run_dir=".",

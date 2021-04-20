@@ -28,8 +28,14 @@ int l_hin_set_path (lua_State *L) {
   basic_vfs_node_t * cwd = server->cwd_dir;
 
   path.ptr = (char*)lua_tolstring (L, 2, &path.len);
+  match_string (&path, "/");
 
-  basic_vfs_node_t * node = basic_vfs_ref_path (vfs, cwd, &path);
+  basic_vfs_node_t * node = NULL;
+  if (path.len > 0) {
+    node = basic_vfs_ref_path (vfs, cwd, &path);
+  } else {
+    node = cwd;
+  }
   if (node == NULL) {
     return 0;
   }

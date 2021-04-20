@@ -32,6 +32,7 @@ static void basic_vfs_clean_dir (basic_vfs_t * vfs, basic_vfs_dir_t * dir) {
     basic_vfs_node_t * node = dir->entries[i];
     if (node == NULL) continue;
     switch (node->type) {
+    case 0:
     case BASIC_ENT_FILE:
       if (node->inode == NULL) break;
       basic_vfs_unref (vfs, node);

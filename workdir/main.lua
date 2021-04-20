@@ -1,6 +1,6 @@
 
 
-redirect_log (logdir.."/debug.log")
+redirect_log (logdir.."debug.log")
 --redirect_log (NULL, "ffffffff")
 
 function printf (...)
@@ -10,7 +10,7 @@ end
 function timeout_callback (dt)
 end
 
-access = create_log (logdir .. "/access.log")
+access = create_log (logdir .. "access.log")
 access ("start server on %s\n", os.date ("%c"))
 
 to_cache = {ico=true, txt=true, js=true, jpg=true, png=true, css=true}
@@ -33,6 +33,8 @@ local server = create_httpd (function (server, req)
     return cgi (req, "/usr/bin/php-cgi", nil, "test.php")
   elseif (path == "/hello") then
     return respond (req, 200, "Hello world")
+  elseif (path == "/fcgi") then
+    return cgi (req, "./build/fcgi_test", nil, "index.html")
   end
 
   local dir_path, file_name, ext, path_info = set_path (req, path, "index.php", "index.html")

@@ -249,6 +249,20 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
 }
 
 static int hin_cgi_headers_close_callback (hin_buffer_t * buffer) {
+  printf ("httpd cgi process failed\n");
+  hin_worker_t * worker = buffer->parent;
+  httpd_client_t * http = (httpd_client_t*)worker->data;
+  free (worker);
+  httpd_respond_fatal (http, 500, NULL);
+  return 1;
+}
+
+static int hin_cgi_headers_eat_callback (hin_buffer_t * buffer, int num) {
+ if (num == 0) {
+    hin_lines_request (buffer);
+    return 0;
+  }
+  printf ("cgi frees headers %d buf %p\n", num, buffer);
   return 1;
 }
 
@@ -260,6 +274,7 @@ int hin_cgi_send (httpd_client_t * http, hin_worker_t * worker, int fd) {
   buf->debug = http->debug;
   hin_lines_t * lines = (hin_lines_t*)&buf->buffer;
   lines->read_callback = hin_cgi_headers_read_callback;
+  lines->eat_callback = hin_cgi_headers_eat_callback;
   lines->close_callback = hin_cgi_headers_close_callback;
   if (hin_request_read (buf) < 0) {
     httpd_respond_fatal_and_full (http, 503, NULL);
@@ -369,6 +384,8 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
     tmp++;
   }
 
+  exe_path = realpath (exe_path, NULL);
+
   if (fchdir (cwd_fd)) {
     perror ("fchdir");
     exit (1);
@@ -384,18 +401,15 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
   basic_vfs_node_t * file = http->file;
   basic_vfs_dir_t * dir;
 
-/*  if (script_path) {
-    //fprintf (stderr, "script path is %s\n", script_path);
+  if (script_path) {
     string_t path;
     path.ptr = (char*)script_path;
     path.len = strlen (path.ptr);
-    file = basic_vfs_ref_path (vfs, NULL, &path);
-    if (file) {
-      file = basic_vfs_get_file (vfs, dir, script_path);
-    } else {
-      exit (1);
+    file = basic_vfs_ref_path (vfs, cwd, &path);
+    if (file == NULL) {
+      fprintf (stderr, "can't find '%s' in '%s'\n", script_path, cwd_dir->path);
     }
-  }*/
+  }
 
   if (file == NULL) {
     fprintf (stderr, "can't find path\n");
