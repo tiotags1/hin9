@@ -10,7 +10,7 @@
 #include <basic_vfs.h>
 
 #include "hin.h"
-#include "lua.h"
+#include "hin_lua.h"
 #include "http.h"
 
 basic_vfs_t * vfs = NULL;

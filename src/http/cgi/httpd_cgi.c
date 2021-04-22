@@ -16,7 +16,7 @@
 #include "uri.h"
 #include "worker.h"
 #include "conf.h"
-#include "lua.h"
+#include "hin_lua.h"
 #include "file.h"
 
 typedef struct {

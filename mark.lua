@@ -12,8 +12,8 @@ hin = {
   tag="hin9",
   run_dir=".",
   c_files=list_dir ("src", "*.c"),
-  ldflags="-lm -luring -lz -lcrypto -lssl -llua5.1",
-  cflags="-D_GNU_SOURCE",
+  ldflags="-lm -luring -lz -lcrypto -lssl -llua5.4",
+  cflags="-D_GNU_SOURCE -I/usr/include/lua5.4",
   includes={"src/hin"},
   req={"basic_pattern", "basic_timer", "basic_hashtable", "basic_vfs"},
 }

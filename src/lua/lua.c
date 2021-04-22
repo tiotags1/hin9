@@ -7,7 +7,7 @@
 #include <fcntl.h>
 
 #include "hin.h"
-#include "lua.h"
+#include "hin_lua.h"
 #include "conf.h"
 
 int hin_server_callback (hin_client_t * client) {

@@ -7,7 +7,7 @@
 
 #include "hin.h"
 #include "http.h"
-#include "lua.h"
+#include "hin_lua.h"
 #include "conf.h"
 
 void httpd_client_ping (httpd_client_t * http, int timeout);

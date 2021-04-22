@@ -10,7 +10,7 @@
 
 #include "hin.h"
 #include "http.h"
-#include "lua.h"
+#include "hin_lua.h"
 #include "file.h"
 
 #include <basic_hashtable.h>

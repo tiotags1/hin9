@@ -6,7 +6,7 @@
 
 #include "hin.h"
 #include "http.h"
-#include "lua.h"
+#include "hin_lua.h"
 #include "uri.h"
 #include "file.h"
 
@@ -93,7 +93,11 @@ static int l_hin_parse_headers (lua_State *L) {
       lua_pop (L, 2);
     break;
     case LUA_TTABLE:
+      #if LUA_VERSION_NUM > 501
+      lua_pushnumber (L, lua_rawlen (L, -1) + 1);
+      #else
       lua_pushnumber (L, lua_objlen (L, -1) + 1);
+      #endif
       lua_pushlstring (L, line.ptr, line.len);
       lua_settable (L, -3);
 

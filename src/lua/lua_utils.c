@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include "hin.h"
-#include "lua.h"
+#include "hin_lua.h"
 
 int lua_add_functions (lua_State * L, lua_function_t * func) {
   while (1) {

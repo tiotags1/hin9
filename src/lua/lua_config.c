@@ -6,7 +6,7 @@
 
 #include "hin.h"
 #include "http.h"
-#include "lua.h"
+#include "hin_lua.h"
 #include "ssl.h"
 #include "conf.h"
 
