@@ -5,6 +5,7 @@
 #include <signal.h>
 
 #include <unistd.h>
+#include <fcntl.h>
 
 #include <basic_pattern.h>
 #include <basic_vfs.h>
@@ -41,6 +42,10 @@ void hin_clean () {
   int hin_socket_clean ();
   hin_socket_clean ();
   // shouldn't clean pidfile it can incur a race condition
+  free ((void*)master.exe_path);
+  free ((void*)master.logdir_path);
+  free ((void*)master.cwd_path);
+  free ((void*)master.tmpdir_path);
 
   //close (0); close (1); close (2);
 
@@ -93,7 +98,7 @@ int hin_process_argv (int argc, const char * argv[]) {
         print_help ();
         return -1;
       }
-      master.cwd_path = argv[i];
+      hin_directory_path (argv[i], &master.cwd_path);
       if (chdir (master.cwd_path) < 0) perror ("chdir");
     } else if (strcmp (argv[i], "--logdir") == 0) {
       i++;
@@ -102,7 +107,7 @@ int hin_process_argv (int argc, const char * argv[]) {
         print_help ();
         return -1;
       }
-      master.logdir_path = argv[i];
+      hin_directory_path (argv[i], &master.logdir_path);
     } else if (strcmp (argv[i], "--tmpdir") == 0) {
       i++;
       if (i >= argc) {
@@ -110,7 +115,7 @@ int hin_process_argv (int argc, const char * argv[]) {
         print_help ();
         return -1;
       }
-      master.tmpdir_path = argv[i];
+      hin_directory_path (argv[i], &master.tmpdir_path);
     } else if (strcmp (argv[i], "--config") == 0) {
       i++;
       if (i >= argc) {
@@ -126,7 +131,12 @@ int hin_process_argv (int argc, const char * argv[]) {
         print_help ();
         return -1;
       }
-      master.sharefd = atoi (argv[i]);
+      int fd = atoi (argv[i]);
+      if (fcntl (fd, F_GETFD) == -1) {
+        printf ("fd %d is not opened\n", fd);
+        exit (1);
+      }
+      master.sharefd = fd;
     }
   }
   return 0;
@@ -135,9 +145,9 @@ int hin_process_argv (int argc, const char * argv[]) {
 int main (int argc, const char * argv[]) {
   memset (&master, 0, sizeof master);
   master.conf_path = HIN_CONF_PATH;
-  master.exe_path = (char*)argv[0];
-  master.logdir_path = HIN_LOGDIR_PATH;
-  master.cwd_path = HIN_CWD_PATH;
+  master.exe_path = realpath ((char*)argv[0], NULL);
+  hin_directory_path (HIN_LOGDIR_PATH, &master.logdir_path);
+  hin_directory_path (HIN_CWD_PATH, &master.cwd_path);
 
   if (hin_process_argv (argc, argv) < 0)
     return -1;

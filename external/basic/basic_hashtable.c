@@ -137,7 +137,7 @@ int basic_ht_set_pair (basic_ht_t * hashtable, basic_ht_hash_t key1, basic_ht_ha
 }
 
 int basic_ht_delete_pair (basic_ht_t *hashtable, basic_ht_hash_t key1, basic_ht_hash_t key2) {
-  basic_ht_pair_t * next = NULL, * last = NULL, * newpair;
+  basic_ht_pair_t * next = NULL, * last = NULL;
 
   basic_ht_hash_t bin = key1 & hashtable->mask;
   next = hashtable->table [bin];

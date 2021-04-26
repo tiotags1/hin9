@@ -12,6 +12,27 @@
 
 #include "hin.h"
 
+char * hin_directory_path (const char * old, const char ** replace) {
+  if (replace && *replace) {
+    free ((void*)*replace);
+  }
+  int len = strlen (old);
+  char * new = NULL;
+  if (old[len] == '/') {
+    new = strdup (old);
+    goto done;
+  }
+  new = malloc (len + 2);
+  memcpy (new, old, len);
+  new[len] = '/';
+  new[len+1] = '\0';
+done:
+  if (replace) {
+    *replace = new;
+  }
+  return new;
+}
+
 int hin_pidfile (const char * path) {
   int fd = openat (AT_FDCWD, path, O_WRONLY | O_CREAT | O_CLOEXEC | O_TRUNC | O_EXCL, 0700);
   if (fd < 0) {

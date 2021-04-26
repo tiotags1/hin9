@@ -229,16 +229,26 @@ static int l_hin_create_log (lua_State *L) {
 }
 
 static int l_hin_redirect_log (lua_State *L) {
-  if (master.flags & HIN_PRETEND) return 0;
   int type;
   type = lua_type (L, 1);
   if (type == LUA_TSTRING) {
     const char * path = lua_tostring (L, 1);
-    FILE * fp = NULL;
-    fp = freopen (path, "a", stdout);
-    if (fp == NULL) { printf ("can't open '%s'\n", path); return 0; }
-    fp = freopen (path, "a", stderr);
-    if (fp == NULL) { printf ("can't open '%s'\n", path); return 0; }
+    FILE * fp1 = NULL, * fp2 = NULL;
+
+    if (master.flags & HIN_PRETEND) {
+      fp1 = fp2 = fopen (path, "w");
+    } else {
+      fp1 = freopen (path, "a", stdout);
+      fp2 = freopen (path, "a", stderr);
+    }
+    if (fp1 == NULL || fp2 == NULL) {
+      printf ("can't open '%s' '%s'\n", path, strerror (errno));
+      exit (1);
+    }
+
+    if (master.flags & HIN_PRETEND) {
+      return 0;
+    }
 
     dup2 (fileno(stderr), fileno(stdout));
     setvbuf (stdout, NULL, _IOLBF, 2024);
@@ -246,6 +256,8 @@ static int l_hin_redirect_log (lua_State *L) {
   } else if (type != LUA_TNONE && type != LUA_TNIL) {
     printf ("redirect log path needs to be a string\n");
   }
+
+  if (master.flags & HIN_PRETEND) return 0;
 
   type = lua_type (L, 2);
   if (type == LUA_TSTRING) {

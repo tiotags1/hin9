@@ -31,7 +31,7 @@ void basic_time_delay (basic_ftime seconds);
 basic_ftime basic_time_fdiff (basic_time_t * start, basic_time_t * end);
 basic_time_t basic_time_diff (basic_time_t * start, basic_time_t * end);
 
-void basic_timer_init (basic_timer_t * timer, int);
+void basic_timer_init (basic_timer_t * timer, int fps);
 void basic_timer_update (basic_timer_t * timer);
 int basic_timer_frames (basic_timer_t * timer);
 

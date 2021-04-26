@@ -90,7 +90,7 @@ static inline int match_pattern (const string_t *data, const string_t *pattern, 
   const char * fmt;
   const char * max_s = data->ptr+data->len, * max_f = pattern->ptr+pattern->len;
   int match_anything, negative;
-  uint32_t matches, character;
+  uint32_t matches, character = 0;
   if (specifier != '*' && specifier != '+') max_s = data->ptr + 1;
   do {
     match_anything = 0;
@@ -134,11 +134,10 @@ static inline int get_specifier (int x) {
 }
 
 int match_string_virtual (string_t *data, uint32_t flags, const char *format, va_list argptr) {
-  size_t count = 0;
-  int specifier;
+  int specifier = 0;
   const char * ptr, * fmt, * old_fmt;
   const char * max = data->ptr + data->len;
-  const char * start_data = NULL, * end_data = NULL;
+  const char * start_data = NULL;
   const char * start_pattern = NULL, * end_pattern = NULL;
   string_t string = *data;
   string_t pattern, * str;
@@ -152,7 +151,7 @@ int match_string_virtual (string_t *data, uint32_t flags, const char *format, va
       start_pattern = fmt+1;
       while (*fmt && *fmt != ']') fmt++;
       end_pattern = fmt;
-      int specifier = get_specifier (*(fmt+1));
+      specifier = get_specifier (*(fmt+1));
       if (specifier) fmt++;
       pattern.ptr = (char*)start_pattern;
       pattern.len = end_pattern-start_pattern;

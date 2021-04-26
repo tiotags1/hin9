@@ -61,5 +61,7 @@ void hin_stop ();
 int hin_restart ();
 int hin_check_alive ();
 
+char * hin_directory_path (const char * old, const char ** replace);
+
 #endif
 

@@ -217,7 +217,7 @@ int hin_socket_request_listen (const char * addr, const char *port, const char *
   for (rp = result; rp != NULL; rp = rp->ai_next) {
     char buf1[256];
     hin_client_addr (buf1, sizeof buf1, rp->ai_addr, rp->ai_addrlen);
-    printf ("socket request '%s'\n", buf1);
+    if (master.debug & DEBUG_SOCKET) printf ("socket request '%s'\n", buf1);
 
     hin_master_socket1_t * socket = calloc (1, sizeof (hin_master_socket1_t));
     socket->sockfd = -1;
@@ -265,10 +265,10 @@ int hin_socket_do_listen () {
     // search in share for the socket
     hin_master_socket_t * new = hin_socket_search_prev (&sock->ai_addr, sock->ai_addrlen);
     if (new) {
-      printf ("socket listen '%s' reuse %d\n", buf1, new->sockfd);
+      if (master.debug & DEBUG_SOCKET) printf ("socket listen '%s' reuse %d\n", buf1, new->sockfd);
       goto just_use;
     }
-    printf ("socket listen '%s'\n", buf1);
+    if (master.debug & DEBUG_SOCKET) printf ("socket listen '%s'\n", buf1);
 
     int sockfd = socket (sock->ai_family, sock->ai_socktype, sock->ai_protocol);
     if (sockfd == -1) { perror ("socket"); continue; }
@@ -311,7 +311,20 @@ just_use:
     }
   }
 
-  return 0;
+  int err = 0;
+  for (hin_master_socket1_t * sock = master.socket; sock; sock = sock->next) {
+    if (sock->server == NULL) continue;
+    hin_server_t * server = sock->server;
+    if (sock->sockfd >= 0) continue;
+    if (server->c.sockfd >= 0) continue;
+
+    char buf1[256];
+    hin_client_addr (buf1, sizeof buf1, &sock->ai_addr, sock->ai_addrlen);
+    printf ("socket couldn't listen to '%s'\n", buf1);
+    err = -1;
+  }
+
+  return err;
 }
 
 int hin_socket_clean () {

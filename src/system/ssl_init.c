@@ -159,8 +159,8 @@ void * hin_ssl_init (const char * cert, const char * key) {
   return NULL;
 }
 
-int hin_ssl_request_write (hin_buffer_t * buffer) {}
-int hin_ssl_request_read (hin_buffer_t * buffer) {}
+int hin_ssl_request_write (hin_buffer_t * buffer) { return -1; }
+int hin_ssl_request_read (hin_buffer_t * buffer) { return -1; }
 
 #endif
 
