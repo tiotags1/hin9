@@ -198,6 +198,7 @@ int main (int argc, const char * argv[]) {
   printf ("hin serve ...\n");
   master.share->done = 1;
 
+  void * hin_cache_create ();
   hin_cache_create ();
 
   //http_download ("http://localhost:28005/cgi-bin/test.php", "/tmp/dl.txt", NULL);

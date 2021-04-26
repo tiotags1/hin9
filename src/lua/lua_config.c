@@ -1,5 +1,6 @@
 
 #include <assert.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -80,6 +81,10 @@ static int l_hin_listen (lua_State *L) {
     }
   }
 #else
+  if (cert || key) {
+    printf ("ERROR! this build does not have ssl enabled\n");
+    exit (1);
+  }
   void * ctx = NULL;
 #endif
 

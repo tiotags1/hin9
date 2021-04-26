@@ -3,7 +3,6 @@ docs/*
 !docs/*.txt
 
 build/*
-!build/build.ninja
 
 htdocs/*
 !htdocs/index.html
@@ -26,3 +25,5 @@ src/*
 
 perf.data*
 *.c1
+
+/mark.lua

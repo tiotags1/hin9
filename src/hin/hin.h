@@ -14,7 +14,6 @@ typedef struct hin_buffer_struct hin_buffer_t;
 typedef struct hin_client_struct hin_client_t;
 typedef struct hin_pipe_struct hin_pipe_t;
 
-#define HIN_USE_OPENSSL 1
 #define READ_SZ 4096
 //65536
 

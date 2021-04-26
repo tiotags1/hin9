@@ -1,4 +1,10 @@
 
+* switched from homegrown ninja files to cmake
+
+commit 05bcf5207cd60e069b3dc5a3377cdc4d23b6239a
+* fixed lua not being properly #include
+
+commit 0e1e88ddb00d2786730d400dd06b5e735f9ddd62
 * fixed proxying of chunked encoded connections
 * I thought I fixed this
 
