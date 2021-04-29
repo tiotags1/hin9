@@ -21,15 +21,15 @@ whenever possible coherency, ease of understanding and algorithm aesthetic are p
 requirements
 ------------
 
-* linux kernel >5.6 (march 2020), liburing, lua (5.1 ?), libz
+* linux kernel >5.6 (march 2020), liburing, lua (5.1-5.4), libz
 * optional: openssl/libressl
-* ninja build system for compilation
+* cmake build system for compilation
 
 
 install & run
 -------------
 
-* cd build && ninja && cd ..
+* mkdir build && cd build && cmake .. && make && cd ..
 * build/hin9
 
 
@@ -38,10 +38,13 @@ roadmap
 
 * fastcgi
 * static deflate caching
+* don't require restarts to modify static files served
 
 
 function reference
 ------------------
+
+outdated
 
 create\_httpd (request-callback, error-callback, finish-callback)
   * request-callback - is called when all the headers are gathered and the request is ready to be parsed

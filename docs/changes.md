@@ -1,7 +1,10 @@
 
-* added exit if you can't redirect output log to file, so as to not continue in a broken condition
+* documentation changes
+
+commit f23205a0310b25e3c2d9dcd7a21c56ca7cfa8743
+* abort program if you can't redirect log to file
 * logdir, cwd and tmpdir forced to have trailing /
-* added abort if program fails to bind any of the requested sockets
+* abort program if fail to bind any of the requested sockets
 
 commit 54787f932072c955da27d2146832fc0898d9d1e9
 * switched from homegrown ninja files to cmake
