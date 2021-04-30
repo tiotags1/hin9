@@ -4,7 +4,8 @@
 
 #define HIN_CONF_PATH "workdir/main.lua"
 #define HIN_LOGDIR_PATH "build/"
-#define HIN_CWD_PATH "./"
+#define HIN_WORKDIR_PATH "./"
+#define HIN_PRINT_GREETING 1
 
 #define HIN_URING_QUEUE_DEPTH 256
 #define HIN_URING_DONT_FORK 0

@@ -44,7 +44,7 @@ void hin_clean () {
   // shouldn't clean pidfile it can incur a race condition
   free ((void*)master.exe_path);
   free ((void*)master.logdir_path);
-  free ((void*)master.cwd_path);
+  free ((void*)master.workdir_path);
   free ((void*)master.tmpdir_path);
 
   //close (0); close (1); close (2);
@@ -98,8 +98,8 @@ int hin_process_argv (int argc, const char * argv[]) {
         print_help ();
         return -1;
       }
-      hin_directory_path (argv[i], &master.cwd_path);
-      if (chdir (master.cwd_path) < 0) perror ("chdir");
+      hin_directory_path (argv[i], &master.workdir_path);
+      if (chdir (master.workdir_path) < 0) perror ("chdir");
     } else if (strcmp (argv[i], "--logdir") == 0) {
       i++;
       if (i >= argc) {
@@ -147,12 +147,13 @@ int main (int argc, const char * argv[]) {
   master.conf_path = HIN_CONF_PATH;
   master.exe_path = realpath ((char*)argv[0], NULL);
   hin_directory_path (HIN_LOGDIR_PATH, &master.logdir_path);
-  hin_directory_path (HIN_CWD_PATH, &master.cwd_path);
+  hin_directory_path (HIN_WORKDIR_PATH, &master.workdir_path);
 
   if (hin_process_argv (argc, argv) < 0)
     return -1;
 
-  printf ("hin start ...\n");
+  if (HIN_PRINT_GREETING)
+    printf ("hin start ...\n");
 
   master.debug = 0xffffffff;
   master.debug = 0;

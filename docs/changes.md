@@ -1,4 +1,8 @@
 
+* fixed redirect log (again)
+* compile option to disable greeting
+
+commit 4bb511fa407c3481af90286b23c357aaf1b1d231
 * documentation changes
 
 commit f23205a0310b25e3c2d9dcd7a21c56ca7cfa8743

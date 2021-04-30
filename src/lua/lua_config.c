@@ -41,7 +41,7 @@ static int l_hin_create_httpd (lua_State *L) {
   server->debug = master.debug;
   lua_pushlightuserdata (L, server);
 
-  hin_server_set_work_dir (server, master.cwd_path);
+  hin_server_set_work_dir (server, master.workdir_path);
 
   hin_server_data_t * prev = master.servers;
   server->next = prev;
@@ -233,21 +233,20 @@ static int l_hin_redirect_log (lua_State *L) {
   type = lua_type (L, 1);
   if (type == LUA_TSTRING) {
     const char * path = lua_tostring (L, 1);
-    FILE * fp1 = NULL, * fp2 = NULL;
-
-    if (master.flags & HIN_PRETEND) {
-      fp1 = fp2 = fopen (path, "w");
-    } else {
-      fp1 = freopen (path, "a", stdout);
-      fp2 = freopen (path, "a", stderr);
-    }
-    if (fp1 == NULL || fp2 == NULL) {
-      printf ("can't open '%s' '%s'\n", path, strerror (errno));
-      exit (1);
-    }
+    FILE * fp = NULL;
 
     if (master.flags & HIN_PRETEND) {
       return 0;
+    }
+    fp = freopen (path, "a", stdout);
+    if (fp == NULL) {
+      fprintf (stderr, "can't open1 '%s' '%s'\n", path, strerror (errno));
+      exit (1);
+    }
+    fp = freopen (path, "a", stderr);
+    if (fp == NULL) {
+      fprintf (stdout, "can't open2 '%s' '%s'\n", path, strerror (errno));
+      exit (1);
     }
 
     dup2 (fileno(stderr), fileno(stdout));

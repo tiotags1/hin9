@@ -262,7 +262,6 @@ static int hin_cgi_headers_eat_callback (hin_buffer_t * buffer, int num) {
     hin_lines_request (buffer);
     return 0;
   }
-  printf ("cgi frees headers %d buf %p\n", num, buffer);
   return 1;
 }
 

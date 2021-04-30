@@ -71,7 +71,7 @@ static void hin_restart_new () {
   master.exe_path,
   "--reuse", buf,
   "--config", master.conf_path,
-  "--cwd", master.cwd_path,
+  "--cwd", master.workdir_path,
   "--logdir", master.logdir_path,
   "--pidfile", master.pid_path,
   NULL};
