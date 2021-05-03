@@ -95,6 +95,7 @@ int basic_vfs_stat_dir (basic_vfs_t * vfs, basic_vfs_dir_t * dir, const char * p
     }
   }
   closedir (d);
+  return 0;
 }
 
 int basic_vfs_node_free (basic_vfs_node_t * node) {

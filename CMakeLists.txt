@@ -51,6 +51,7 @@ src/system/signal.c
 src/system/daemon.c
 src/system/restart.c
 src/system/main.c
+src/system/compat.c
 src/netcode/ssl.c
 src/netcode/connect.c
 src/netcode/uring.c

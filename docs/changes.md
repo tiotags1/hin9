@@ -1,4 +1,7 @@
 
+* musl compatibility, weird way to force posix compliance musl
+
+commit efb5dd88e60588c712dfc90f042d3c3e75fbd45d
 * fixed redirect log (again)
 * compile option to disable greeting
 

@@ -2,6 +2,8 @@
 #ifndef BASIC_VFS_H
 #define BASIC_VFS_H
 
+#include <time.h>
+
 #include <basic_pattern.h>
 #include <basic_hashtable.h>
 

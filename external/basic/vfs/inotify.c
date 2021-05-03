@@ -102,5 +102,6 @@ int basic_vfs_add_inotify (basic_vfs_t * vfs, basic_vfs_node_t * node) {
     return -1;
   }
   basic_ht_set_pair (&vfs->ht, 0, watch, 0, (uintptr_t)dir);
+  return 0;
 }
 

@@ -13,7 +13,7 @@
 #include "internal.h"
 
 basic_vfs_node_t * basic_vfs_ref_path (basic_vfs_t * vfs, basic_vfs_node_t * dir_node, string_t * path) {
-  basic_vfs_node_t * node = NULL, * next = NULL;
+  basic_vfs_node_t * next = NULL;
   string_t source, param1;
   source = *path;
   basic_vfs_node_t * current = dir_node;

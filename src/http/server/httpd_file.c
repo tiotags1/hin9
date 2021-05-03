@@ -9,6 +9,10 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+#ifndef STATX_MTIME
+#include <linux/stat.h>
+#endif
+
 #include <basic_pattern.h>
 #include <basic_vfs.h>
 

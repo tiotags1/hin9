@@ -2,6 +2,8 @@
 #ifndef BANNED_H
 #define BANNED_H
 
+#ifdef __GLIBC__
+
 /*
  * This header lists functions that have been banned from our code base,
  * because they're too easy to misuse (and even if used correctly,
@@ -42,5 +44,7 @@
 #define asctime(t) BANNED(asctime)
 #undef asctime_r
 #define asctime_r(t, buf) BANNED(asctime_r)
+
+#endif
 
 #endif /* BANNED_H */
