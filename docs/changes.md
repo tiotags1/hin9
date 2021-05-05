@@ -1,4 +1,7 @@
 
+* docker container project
+
+commit e370b38d734e881104e27da50b6cf3ae29c8f55e
 * musl compatibility, weird way to force posix compliance musl
 
 commit efb5dd88e60588c712dfc90f042d3c3e75fbd45d

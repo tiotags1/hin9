@@ -3,6 +3,8 @@
 --redirect_log (logdir.."debug.log")
 --redirect_log (NULL, "ffffffff")
 
+php_bin = "/usr/bin/php-cgi"
+
 function printf (...)
   io.write (string.format (...))
 end
@@ -30,7 +32,7 @@ local server = create_httpd (function (server, req)
   if (app_path == "proxy") then
     return proxy (req, "http://localhost:28005/" .. (sub_path or ""))
   elseif (app_path == "testing") then
-    return cgi (req, "/usr/bin/php-cgi", nil, "test.php")
+    return cgi (req, php_bin, nil, "test.php")
   elseif (path == "/hello") then
     return respond (req, 200, "Hello world")
   elseif (path == "/fcgi") then
@@ -54,7 +56,7 @@ local server = create_httpd (function (server, req)
   end
 
   if (ext == "php") then
-    return cgi (req, "/usr/bin/php-cgi", nil, nil, path_info)
+    return cgi (req, php_bin, nil, nil, path_info)
   elseif (to_cache[ext]) then
     set_option (req, "cache", 604800)
   end
