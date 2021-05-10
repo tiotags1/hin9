@@ -70,6 +70,8 @@ basic_vfs_node_t * basic_vfs_search_dir (basic_vfs_t * vfs, basic_vfs_dir_t * di
 int basic_vfs_delete (basic_vfs_t * vfs, basic_vfs_dir_t * dir, const char * name, int name_len);
 basic_vfs_node_t * basic_vfs_add (basic_vfs_t * vfs, basic_vfs_dir_t * dir, int type, const char * name, int len);
 
+int basic_vfs_event (basic_vfs_t * vfs, char * buf, int len);
+
 #endif
 
 

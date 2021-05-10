@@ -181,7 +181,7 @@ int httpd_pipe_set_chunked (httpd_client_t * http, hin_pipe_t * pipe) {
   if (http->peer_flags & HIN_HTTP_DEFLATE) {
     httpd_request_chunked (http);
     pipe->read_callback = hin_pipe_copy_deflate;
-  } else if ((http->peer_flags & HIN_HTTP_CHUNKED) || (http->count == 0)) {
+  } else if ((http->peer_flags & HIN_HTTP_CHUNKED)) {
     if (httpd_request_chunked (http)) {
       pipe->read_callback = hin_pipe_copy_chunked;
     }

@@ -1,4 +1,12 @@
 
+* server can now read new files added to htdocs without restart
+* added inotify to basic_vfs
+* added an epoll framework
+* fixed serving of . files
+* fixed sending chunked for 0 length files
+* docker optimization
+
+commit e239ca9e285e3065bcc04ee736a20cae1363977f
 * docker container project
 
 commit e370b38d734e881104e27da50b6cf3ae29c8f55e

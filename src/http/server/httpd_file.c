@@ -232,6 +232,10 @@ int httpd_handle_file_request (hin_client_t * client, const char * path, off_t p
   if (http->file) {
     basic_vfs_node_t * node = http->file;
     basic_vfs_file_t * file = basic_vfs_get_file (vfs, node);
+    if (file == NULL) {
+      httpd_respond_fatal (http, 404, NULL);
+      return 0;
+    }
 
     hin_cache_item_t item;
     memset (&item, 0, sizeof (item));

@@ -38,7 +38,6 @@ roadmap
 
 * fastcgi
 * static deflate caching
-* don't require restarts to modify static files served
 
 
 function reference

@@ -27,6 +27,7 @@ typedef struct hin_pipe_struct hin_pipe_t;
 enum {
 HIN_DONE = 0x1, HIN_SOCKET = 0x2, HIN_FILE = 0x4, HIN_OFFSETS = 0x8,
 HIN_SSL = 0x10, HIN_COUNT = 0x20, HIN_HASH = 0x40, HIN_SYNC = 0x80,
+HIN_EPOLL = 0x100, HIN_EPOLL_INIT = 0x200,
 };
 
 enum { HIN_CLIENT = 1, HIN_DYN_BUFFER, HIN_SERVER, HIN_DOWNLOAD, HIN_CACHE_OBJECT };

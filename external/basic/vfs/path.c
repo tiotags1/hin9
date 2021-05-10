@@ -30,8 +30,8 @@ basic_vfs_node_t * basic_vfs_ref_path (basic_vfs_t * vfs, basic_vfs_node_t * dir
   basic_vfs_dir_t * dir = basic_vfs_get_dir (vfs, current);
   while (1) {
     int used = match_string (&source, "([%w%._-]+)", &param1);
+    //printf ("matching '%.*s' in %s\n", param1.len, param1.ptr, dir->path);
     if (used <= 0) return NULL;
-    if (param1.ptr[0] == '.') { return NULL; }
     next = basic_vfs_search_dir (vfs, dir, param1.ptr, param1.len);
     if (next == NULL) {
       return NULL;
@@ -45,7 +45,9 @@ basic_vfs_node_t * basic_vfs_ref_path (basic_vfs_t * vfs, basic_vfs_node_t * dir
     }
     current = next;
     dir = basic_vfs_get_dir (vfs, next);
-    if (dir == NULL) return NULL;
+    if (dir == NULL) {
+      return NULL;
+    }
   }
   return NULL;
 }
@@ -75,21 +77,22 @@ int basic_vfs_ref_file (basic_vfs_t * vfs, basic_vfs_file_t * inode) {
   int ret = asprintf (&path, "%s%s", dir->path, node->name);
   if (ret < 0) return -1;
   file->fd = openat (AT_FDCWD, path, O_RDONLY | O_CLOEXEC);
-  free (path);
 
+  ret = 0;
   if (file->fd < 0) {
     printf ("can't open path '%s' err '%s'\n", path, strerror (errno));
-    return -1;
+    ret = -1;
   }
 
-  return 0;
+  return ret;
 }
 
 int basic_vfs_ref (basic_vfs_t * vfs, basic_vfs_node_t * node) {
   if (node == NULL) return -1;
   node->refcount++;
-  if (node->type == BASIC_ENT_FILE)
+  if (node->type == BASIC_ENT_FILE) {
     basic_vfs_ref_file (vfs, node->inode);
+  }
   return 0;
 }
 

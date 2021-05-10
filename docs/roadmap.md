@@ -1,10 +1,9 @@
 
 * bugs
-  * wordpress fails in many places
+  * only unreported
 
 
 * reverse proxy
-  * cache
   * cache gzipped files
 
 
@@ -13,9 +12,7 @@
 
 
 * daemon support
-  * graceful restart
-  * daemon detach from console
-  * pid file file locking
+  * unknown
 
 
 * sandboxing

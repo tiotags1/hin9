@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <signal.h>
+
 #include <unistd.h>
 
 #include <basic_pattern.h>
@@ -100,6 +100,9 @@ static int hin_timer_callback (hin_buffer_t * buffer, int ret) {
   httpd_timer ();
   int hin_check_alive_timer ();
   hin_check_alive_timer ();
+
+  int hin_epoll_check ();
+  hin_epoll_check ();
 
   int frames = basic_timer_frames (&tm->timer);
 

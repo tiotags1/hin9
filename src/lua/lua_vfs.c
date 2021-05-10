@@ -92,6 +92,35 @@ int l_hin_set_path (lua_State *L) {
   return nret;
 }
 
+int hin_epoll_request_read (hin_buffer_t * buf);
+
+static int hin_vfs_event_callback (hin_buffer_t * buf, int ret) {
+  if (ret < 0) {
+    printf ("inotify error '%s'\n", strerror (-ret));
+    return -1;
+  }
+  basic_vfs_event (vfs, buf->ptr, ret);
+
+  hin_epoll_request_read (buf);
+  return 0;
+}
+
+static int hin_vfs_event_init (int inotify_fd) {
+  static int inited = 0;
+  if (inited) return 0;
+  inited = 1;
+  hin_buffer_t * buf = malloc (sizeof (*buf) + READ_SZ);
+  memset (buf, 0, sizeof (*buf));
+  buf->flags = 0;
+  buf->fd = inotify_fd;
+  buf->callback = hin_vfs_event_callback;
+  buf->count = buf->sz = READ_SZ;
+  buf->ptr = buf->buffer;
+  buf->debug = master.debug;
+  hin_epoll_request_read (buf);
+  return 1;
+}
+
 int hin_server_set_work_dir (hin_server_data_t * server, const char * rel_path) {
   char * abs_path = realpath (rel_path, NULL);
   if (abs_path == NULL) { perror ("cwd realpath"); return -1; }
@@ -122,6 +151,10 @@ int hin_server_set_work_dir (hin_server_data_t * server, const char * rel_path) 
 
   basic_vfs_get_dir (vfs, cwd);
   server->cwd_dir = cwd;
+
+  if (vfs->inotify_fd > 0) {
+    hin_vfs_event_init (vfs->inotify_fd);
+  }
 
   return 0;
 }

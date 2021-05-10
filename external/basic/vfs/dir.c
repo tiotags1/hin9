@@ -27,6 +27,7 @@ int basic_vfs_delete (basic_vfs_t * vfs, basic_vfs_dir_t * dir, const char * nam
     if (node->name_len != name_len) continue;
     if (memcmp (node->name, name, name_len) != 0) continue;
     basic_vfs_node_free (node);
+    dir->entries[i] = NULL;
     return 1;
   }
   return 0;
@@ -73,11 +74,14 @@ int basic_vfs_stat_dir (basic_vfs_t * vfs, basic_vfs_dir_t * dir, const char * p
   if (vfs->debug) printf ("vfs populating '%s'\n", dir->path);
   if (d == NULL) { perror ("opendir"); printf ("can't find '%s'\n", dir->path); return -1; }
 
-  int basic_vfs_add_inotify (basic_vfs_t * vfs, basic_vfs_dir_t * dir);
   basic_vfs_add_inotify (vfs, dir);
 
   while ((dent = readdir (d)) != NULL) {
-    if (dent->d_name[0] == '.') continue;
+    int len = strlen (dent->d_name);
+    if (dent->d_name[0] == '.' &&
+      (len == 1 || (dent->d_name[1] == '.' && len == 2))) {
+      continue;
+    }
     int type = 0;
     switch (dent->d_type) {
     case DT_DIR: type = BASIC_ENT_DIR; break;
