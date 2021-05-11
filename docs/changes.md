@@ -1,4 +1,10 @@
 
+* switched signalfd on by default
+* switched console on by default
+* epollfd framework changes needed for above
+* fancy lua os.execute replacement, more changes incoming, lua when are you adding this
+
+commit ab0235295d83ac21242b84c87d5773352c0f183a
 * server can now read new files added to htdocs without restart
 * added inotify to basic_vfs
 * added an epoll framework

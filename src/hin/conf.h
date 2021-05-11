@@ -12,7 +12,7 @@
 
 #define HIN_SOCKET_REUSEADDR 1
 
-#define HIN_USE_SIGNAL_FD 0
+#define HIN_USE_SIGNAL_FD 1
 
 #define HIN_HTTPD_TIMEOUT 10
 // in miliseconds
@@ -41,6 +41,8 @@
 #define HIN_HTTPD_NULL_SERVER 0
 
 #define HIN_LINUX_BUG_5_11_3
+#define HIN_LINUX_URING_DONT_HAVE_SIGNALFD
+#define HIN_LINUX_URING_DONT_HAVE_NOTIFYFD
 
 #endif
 

@@ -168,7 +168,9 @@ int hin_signal_install () {
 
   hin_buffer_t * buf = malloc (sizeof (*buf) + sizeof (struct signalfd_siginfo));
   memset (buf, 0, sizeof (*buf));
-  buf->flags = 0;
+  #ifdef HIN_LINUX_URING_DONT_HAVE_SIGNALFD
+  buf->flags = HIN_EPOLL;
+  #endif
   buf->fd = sig_fd;
   buf->callback = hin_signal_callback1;
   buf->count = buf->sz = sizeof (struct signalfd_siginfo);

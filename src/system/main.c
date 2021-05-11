@@ -35,10 +35,8 @@ void hin_clean () {
   hin_cache_clean ();
   int hin_signal_clean ();
   hin_signal_clean ();
-  int basic_vfs_clean (basic_vfs_t * vfs);
-  extern basic_vfs_t * vfs;
-  basic_vfs_clean (vfs);
-  free (vfs);
+  int hin_vfs_clean ();
+  hin_vfs_clean ();
   int hin_socket_clean ();
   hin_socket_clean ();
   // shouldn't clean pidfile it can incur a race condition
@@ -164,9 +162,7 @@ int main (int argc, const char * argv[]) {
   void hin_event_init ();
   hin_event_init ();
   void hin_console_init ();
-  #ifndef HIN_LINUX_BUG_5_11_3
   hin_console_init ();
-  #endif
   void hin_timer_init ();
   hin_timer_init ();
   int hin_signal_install ();

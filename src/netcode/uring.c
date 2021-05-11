@@ -27,6 +27,8 @@ static hin_sqe_que_t * queue = NULL;
 
 int hin_ssl_request_write (hin_buffer_t * buffer);
 int hin_ssl_request_read (hin_buffer_t * buffer);
+int hin_epoll_request_read (hin_buffer_t * buf);
+int hin_epoll_request_write (hin_buffer_t * buf);
 
 static inline int hin_request_callback (hin_buffer_t * buf, int ret) {
   if (ret < 0) ret = -errno;
@@ -70,6 +72,10 @@ int hin_request_write (hin_buffer_t * buffer) {
     return 0;
   }
 
+  if (buffer->flags & HIN_EPOLL) {
+    if (hin_epoll_request_write (buffer) < 0) return -1;
+    return 0;
+  }
   if (buffer->flags & HIN_SYNC) {
     int ret = write (buffer->fd, buffer->ptr, buffer->count);
     return hin_request_callback (buffer, ret);
@@ -93,6 +99,10 @@ int hin_request_read (hin_buffer_t * buffer) {
     return 0;
   }
 
+  if (buffer->flags & HIN_EPOLL) {
+    if (hin_epoll_request_read (buffer) < 0) return -1;
+    return 0;
+  }
   if (buffer->flags & HIN_SYNC) {
     int ret = read (buffer->fd, buffer->ptr, buffer->count);
     return hin_request_callback (buffer, ret);

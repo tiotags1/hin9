@@ -28,6 +28,8 @@ int console_execute (string_t * source) {
     int lua_reload ();
     if (lua_reload () < 0)
       printf ("reload failed\n");
+  } else {
+    printf ("command unknown '%.*s'\n", (int)source->len, source->ptr);
   }
   return 0;
 }
@@ -63,7 +65,9 @@ void hin_console_clean () {
 int hin_console_init () {
   hin_buffer_t * buf = malloc (sizeof (*buf) + READ_SZ);
   memset (buf, 0, sizeof (*buf));
-  buf->flags = 0;
+  #ifdef HIN_LINUX_BUG_5_11_3
+  buf->flags = HIN_EPOLL;
+  #endif
   buf->fd = STDIN_FILENO;
   buf->callback = hin_console_read_callback;
   buf->count = buf->sz = READ_SZ;

@@ -33,10 +33,33 @@ int hin_epoll_request_read (hin_buffer_t * buf) {
   event.data.ptr = buf;
 
   int op = EPOLL_CTL_MOD;
-  if ((buf->flags & HIN_EPOLL_INIT) == 0) {
+  if ((buf->flags & HIN_EPOLL) == HIN_EPOLL) {
     op = EPOLL_CTL_ADD;
+    buf->flags &= (~HIN_EPOLL) | HIN_EPOLL_READ;
   }
-  buf->flags |= HIN_EPOLL_INIT;
+
+  if (epoll_ctl (epoll_fd, op, buf->fd, &event) < 0) {
+    perror ("epoll_ctl");
+    return -1;
+  }
+
+  return 0;
+}
+
+int hin_epoll_request_write (hin_buffer_t * buf) {
+  if (hin_init_epoll () < 0) {
+    return -1;
+  }
+
+  struct epoll_event event;
+  event.events = EPOLLOUT | EPOLLONESHOT;
+  event.data.ptr = buf;
+
+  int op = EPOLL_CTL_MOD;
+  if ((buf->flags & HIN_EPOLL) == HIN_EPOLL) {
+    op = EPOLL_CTL_ADD;
+    buf->flags &= (~HIN_EPOLL) | HIN_EPOLL_WRITE;
+  }
 
   if (epoll_ctl (epoll_fd, op, buf->fd, &event) < 0) {
     perror ("epoll_ctl");
@@ -54,7 +77,15 @@ int hin_epoll_check () {
   for (int i = 0; i < event_count; i++) {
     hin_buffer_t * buf = events[i].data.ptr;
 
-    int ret = read (buf->fd, buf->ptr, buf->count);
+    int ret = 0;
+    if ((buf->flags & HIN_EPOLL) == HIN_EPOLL) {
+      printf ("error epoll read&write\n");
+      return -1;
+    } else if (buf->flags & HIN_EPOLL_READ) {
+      ret = read (buf->fd, buf->ptr, buf->count);
+    } else if (buf->flags & HIN_EPOLL_WRITE) {
+      ret = write (buf->fd, buf->ptr, buf->count);
+    }
     if (ret < 0) ret = -errno;
 
     int err = buf->callback (buf, ret);

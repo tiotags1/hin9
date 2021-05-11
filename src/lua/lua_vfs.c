@@ -10,6 +10,7 @@
 #include <basic_vfs.h>
 
 #include "hin.h"
+#include "conf.h"
 #include "hin_lua.h"
 #include "http.h"
 
@@ -101,9 +102,11 @@ static int hin_vfs_event_callback (hin_buffer_t * buf, int ret) {
   }
   basic_vfs_event (vfs, buf->ptr, ret);
 
-  hin_epoll_request_read (buf);
+  hin_request_read (buf);
   return 0;
 }
+
+static hin_buffer_t * inotify_buffer = NULL;
 
 static int hin_vfs_event_init (int inotify_fd) {
   static int inited = 0;
@@ -111,14 +114,24 @@ static int hin_vfs_event_init (int inotify_fd) {
   inited = 1;
   hin_buffer_t * buf = malloc (sizeof (*buf) + READ_SZ);
   memset (buf, 0, sizeof (*buf));
-  buf->flags = 0;
+  #ifdef HIN_LINUX_URING_DONT_HAVE_NOTIFYFD
+  buf->flags = HIN_EPOLL;
+  #endif
   buf->fd = inotify_fd;
   buf->callback = hin_vfs_event_callback;
   buf->count = buf->sz = READ_SZ;
   buf->ptr = buf->buffer;
   buf->debug = master.debug;
-  hin_epoll_request_read (buf);
+  hin_request_read (buf);
+  inotify_buffer = buf;
   return 1;
+}
+
+int hin_vfs_clean () {
+  basic_vfs_clean (vfs);
+  free (vfs);
+  if (inotify_buffer) hin_buffer_clean (inotify_buffer);
+  return 0;
 }
 
 int hin_server_set_work_dir (hin_server_data_t * server, const char * rel_path) {
