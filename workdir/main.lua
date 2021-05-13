@@ -77,7 +77,7 @@ end, function (server, req)
   access ("%x    status %d\n", id or -1, status or 1)
 end)
 
---listen (server, "localhost", "8081", nil, "workdir/cert.pem", "workdir/key.pem")
+listen (server, nil, "8081", nil, "workdir/ssl/cert.pem", "workdir/ssl/key.pem")
 listen (server, nil, "8080", "ipv4")
 
 set_server_option (server, "timeout", 15)

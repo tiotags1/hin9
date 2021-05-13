@@ -43,4 +43,12 @@ int run_function (lua_State * L, const char * name) {
   return 0;
 }
 
+int hin_lua_rawlen (lua_State * L, int index) {
+  #if LUA_VERSION_NUM > 501
+  return lua_rawlen (L, index);
+  #else
+  return lua_objlen (L, index);
+  #endif
+}
+
 

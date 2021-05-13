@@ -1,4 +1,9 @@
 
+* os.execute replacement function now has a callback
+* added more epoll support
+* fixed compilation for lua5.1, again
+
+commit cad1fae8bf84f04a6989238d774b085fd56908be
 * switched signalfd on by default
 * switched console on by default
 * epollfd framework changes needed for above

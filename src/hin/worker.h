@@ -66,5 +66,13 @@ int hin_worker_submit (hin_work_order_t * order);
 hin_worker_t * hin_worker_get ();
 int hin_worker_reset (hin_worker_t * worker);
 
+// children related
+typedef struct hin_child_struct {
+  int pid;
+  int (*callback) (struct hin_child_struct * child, int ret);
+} hin_child_t;
+
+int hin_children_add (hin_child_t * child);
+
 #endif
 

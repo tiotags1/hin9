@@ -8,9 +8,41 @@
 #include <sys/wait.h>
 #include <sys/signalfd.h>
 
+#include <basic_hashtable.h>
+
 #include "hin.h"
+#include "worker.h" // for children
 
 #define RESTART_SIGNAL SIGUSR1
+
+basic_ht_t * child_ht = NULL;
+
+static int hin_children_init () {
+  child_ht = basic_ht_create (1024, 100);
+  return 0;
+}
+
+static int hin_children_clean () {
+  basic_ht_free (child_ht);
+  child_ht = NULL;
+  return 0;
+}
+
+static int hin_children_close_pid (int pid, int status) {
+  basic_ht_pair_t * pair = basic_ht_get_pair (child_ht, 0, pid);
+  if (pair == NULL) return 0;
+  hin_child_t * child = (hin_child_t*)pair->value2;
+  if (child == NULL) return 0;
+  child->callback (child, status);
+  free (child);
+  basic_ht_delete_pair (child_ht, 0, pid);
+  return 1;
+}
+
+int hin_children_add (hin_child_t * child) {
+  basic_ht_set_pair (child_ht, 0, child->pid, 0, (uintptr_t)child);
+  return 0;
+}
 
 static void hin_sig_restart_handler (int signo, siginfo_t * info, void * ucontext) {
   hin_restart ();
@@ -29,6 +61,7 @@ static void hin_sig_child_handler (int signo, siginfo_t * info, void * ucontext)
         printf ("child %d terminated due to another signal\n", pid);
       }
     }
+    hin_children_close_pid (pid, status);
     #if HIN_HTTPD_WORKER_PREFORKED
     int hin_worker_closed (int pid);
     if (hin_worker_closed (pid) <= 0) {
@@ -63,6 +96,9 @@ int hin_signal_clean () {
   signal(RESTART_SIGNAL, SIG_DFL);
   signal(SIGPIPE, SIG_DFL);
   signal(SIGCHLD, SIG_DFL);
+
+  hin_children_clean ();
+
   return 0;
 }
 
@@ -93,6 +129,8 @@ int hin_signal_install () {
   sa.sa_sigaction = hin_sig_child_handler;
   sigaction (SIGCHLD, &sa, NULL);
 
+  hin_children_init ();
+
   return 0;
 }
 
@@ -109,6 +147,9 @@ int hin_signal_clean () {
     hin_buffer_clean (signal_buffer);
     signal_buffer = NULL;
   }
+
+  hin_children_clean ();
+
   return 0;
 }
 
@@ -175,7 +216,7 @@ int hin_signal_install () {
   buf->callback = hin_signal_callback1;
   buf->count = buf->sz = sizeof (struct signalfd_siginfo);
   buf->ptr = buf->buffer;
-  buf->debug = 0xffffffff;
+  buf->debug = master.debug;
   signal_buffer = buf;
 
   printf ("installed sighandler fd %d\n", sig_fd);
@@ -184,6 +225,8 @@ int hin_signal_install () {
     printf ("signalfd failed\n");
     return -1;
   }
+
+  hin_children_init ();
 
   return 0;
 }

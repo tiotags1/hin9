@@ -33,5 +33,7 @@ int run_function (lua_State * L, const char * name);
 
 int hin_server_set_work_dir (hin_server_data_t * server, const char * rel_path);
 
+int hin_lua_rawlen (lua_State * L, int index);
+
 #endif
 

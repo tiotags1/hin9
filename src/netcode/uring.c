@@ -121,7 +121,7 @@ int hin_request_read (hin_buffer_t * buffer) {
   if (buffer->debug & DEBUG_URING) printf ("req%d %s buf %p cb %p fd %d\n", master.id, buffer->flags & HIN_SOCKET ? "recv" : "read", buffer, buffer->callback, buffer->fd);
   return 0;
 }
-
+/*
 int hin_request_write_fixed (hin_buffer_t * buffer) {
   struct io_uring_sqe *sqe = hin_request_sqe ();
   if (buffer->flags & HIN_SOCKET) {
@@ -147,12 +147,16 @@ int hin_request_read_fixed (hin_buffer_t * buffer) {
   if (buffer->debug & DEBUG_URING) printf ("req%d %s buf %p cb %p fd %d\n", master.id, "fread ", buffer, buffer->callback, buffer->fd);
   return 0;
 }
-
+*/
 int hin_request_accept (hin_buffer_t * buffer, int flags) {
   hin_client_t * client = (hin_client_t*)buffer->parent;
   hin_client_t * server = (hin_client_t*)client->parent;
   client->ai_addrlen = sizeof (client->ai_addr);
 
+  if (buffer->flags & HIN_EPOLL) {
+    if (hin_epoll_request_read (buffer) < 0) return -1;
+    return 0;
+  }
   if (buffer->flags & HIN_SYNC) {
     int ret = accept4 (buffer->fd, &client->ai_addr, &client->ai_addrlen, flags);
     return hin_request_callback (buffer, ret);
@@ -168,6 +172,10 @@ int hin_request_accept (hin_buffer_t * buffer, int flags) {
 int hin_request_connect (hin_buffer_t * buffer) {
   hin_client_t * client = (hin_client_t*)buffer->parent;
 
+  if (buffer->flags & HIN_EPOLL) {
+    if (hin_epoll_request_read (buffer) < 0) return -1;
+    return 0;
+  }
   if (buffer->flags & HIN_SYNC) {
     int ret = connect (buffer->fd, &client->ai_addr, client->ai_addrlen);
     return hin_request_callback (buffer, ret);
@@ -181,7 +189,7 @@ int hin_request_connect (hin_buffer_t * buffer) {
 }
 
 int hin_request_close (hin_buffer_t * buffer) {
-  if (buffer->flags & HIN_SYNC) {
+  if (buffer->flags & (HIN_SYNC | HIN_EPOLL)) {
     int ret = close (buffer->fd);
     return hin_request_callback (buffer, ret);
   }
@@ -194,7 +202,7 @@ int hin_request_close (hin_buffer_t * buffer) {
 }
 
 int hin_request_openat (hin_buffer_t * buffer, int dfd, const char * path, int flags, int mode) {
-  if (buffer->flags & HIN_SYNC) {
+  if (buffer->flags & (HIN_SYNC | HIN_EPOLL)) {
     int ret = openat (dfd, path, flags, mode);
     return hin_request_callback (buffer, ret);
   }
@@ -207,7 +215,7 @@ int hin_request_openat (hin_buffer_t * buffer, int dfd, const char * path, int f
 }
 
 int hin_request_timeout (hin_buffer_t * buffer, struct timespec * ts, int count, int flags) {
-  if (buffer->flags & HIN_SYNC) {
+  if (buffer->flags & (HIN_SYNC | HIN_EPOLL)) {
     printf ("error timeout can't be sync ?\n");
     return -1;
   }
@@ -220,7 +228,7 @@ int hin_request_timeout (hin_buffer_t * buffer, struct timespec * ts, int count,
 }
 
 int hin_request_statx (hin_buffer_t * buffer, int dfd, const char * path, int flags, int mask) {
-  if (buffer->flags & HIN_SYNC) {
+  if (buffer->flags & (HIN_SYNC | HIN_EPOLL)) {
     int ret = statx (dfd, path, flags, mask, (struct statx *)buffer->ptr);
     return hin_request_callback (buffer, ret);
   }

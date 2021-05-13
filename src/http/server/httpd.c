@@ -153,6 +153,7 @@ static int httpd_client_buffer_eat_callback (hin_buffer_t * buffer, int num) {
   return 0;
 }
 
+#if HIN_HTTPD_NULL_SERVER
 extern hin_buffer_t * buf_list;
 
 int temp_callback2 (hin_buffer_t * buf, int ret) {
@@ -180,6 +181,7 @@ int temp_callback1 (hin_buffer_t * buf, int ret) {
 
   return 0;
 }
+#endif
 
 int httpd_client_accept (hin_client_t * client) {
   httpd_client_t * http = (httpd_client_t*)client;

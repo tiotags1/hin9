@@ -54,28 +54,44 @@ void hin_clean () {
   #endif
 }
 
-void print_help () {
+static void print_help () {
   printf ("usage hinsightd [OPTION]...\n\
  --version: prints version information\n\
  --config <path>: sets config path\n\
- --pretend: checks config file and exits\n\
+ --tmpdir <path>: sets tmp dir path\n\
  --logdir <path>: sets log dir path\n\
- --cwd <path>: sets current directory\n\
+ --workdir <path>: sets current directory\n\
+ --check: checks config file and exits\n\
  --pidfile <path>: prints pid to file, used for daemons\n\
- --daemonize: used for daemons\n\
+ --daemonize: used to make daemons\n\
+ --verbose: print lots of irrelevant information\n\
  --reuse <nr>: used for graceful restart, should never be used otherwise\n\
 ");
 }
 
+static int my_strcmp (const char * base, ...) {
+  va_list ap;
+  va_start (ap, base);
+  const char * ptr = va_arg (ap, const char *);
+  int ret = 0;
+  while (1) {
+    if (strcmp (base, ptr) != 0) { break; }
+    ptr = va_arg (ap, const char *);
+    if (ptr == NULL) { ret = 1; break; }
+  }
+  va_end (ap);
+  return ret;
+}
+
 int hin_process_argv (int argc, const char * argv[]) {
   for (int i = 1; i < argc; i++) {
-    if (strcmp (argv[i], "--version") == 0) {
+    if (my_strcmp (argv[i], "--version", NULL)) {
       printf ("%s\n", HIN_HTTPD_SERVER_BANNER);
       return -1;
-    } else if (strcmp (argv[i], "--help") == 0) {
+    } else if (my_strcmp (argv[i], "--help", NULL)) {
       print_help ();
       return -1;
-    } else if (strcmp (argv[i], "--pidfile") == 0) {
+    } else if (my_strcmp (argv[i], "--pidfile", NULL)) {
       i++;
       if (i >= argc) {
         printf ("missing path\n");
@@ -85,11 +101,11 @@ int hin_process_argv (int argc, const char * argv[]) {
       if (argv[i][0]) {
         master.pid_path = argv[i];
       }
-    } else if (strcmp (argv[i], "--daemonize") == 0) {
+    } else if (my_strcmp (argv[i], "--daemonize", NULL)) {
       master.flags |= HIN_DAEMONIZE;
-    } else if (strcmp (argv[i], "--pretend") == 0) {
+    } else if (my_strcmp (argv[i], "--pretend", "--check", NULL)) {
       master.flags |= HIN_PRETEND;
-    } else if (strcmp (argv[i], "--cwd") == 0) {
+    } else if (my_strcmp (argv[i], "--workdir", "--cwd", NULL)) {
       i++;
       if (i >= argc) {
         printf ("missing path\n");
@@ -98,7 +114,7 @@ int hin_process_argv (int argc, const char * argv[]) {
       }
       hin_directory_path (argv[i], &master.workdir_path);
       if (chdir (master.workdir_path) < 0) perror ("chdir");
-    } else if (strcmp (argv[i], "--logdir") == 0) {
+    } else if (my_strcmp (argv[i], "--logdir", NULL)) {
       i++;
       if (i >= argc) {
         printf ("missing path\n");
@@ -106,7 +122,7 @@ int hin_process_argv (int argc, const char * argv[]) {
         return -1;
       }
       hin_directory_path (argv[i], &master.logdir_path);
-    } else if (strcmp (argv[i], "--tmpdir") == 0) {
+    } else if (my_strcmp (argv[i], "--tmpdir", NULL)) {
       i++;
       if (i >= argc) {
         printf ("missing path\n");
@@ -114,7 +130,7 @@ int hin_process_argv (int argc, const char * argv[]) {
         return -1;
       }
       hin_directory_path (argv[i], &master.tmpdir_path);
-    } else if (strcmp (argv[i], "--config") == 0) {
+    } else if (my_strcmp (argv[i], "--config", NULL)) {
       i++;
       if (i >= argc) {
         printf ("missing config path\n");
@@ -122,7 +138,7 @@ int hin_process_argv (int argc, const char * argv[]) {
         return -1;
       }
       master.conf_path = (char *)argv[i];
-    } else if (strcmp (argv[i], "--reuse") == 0) {
+    } else if (my_strcmp (argv[i], "--reuse", NULL)) {
       i++;
       if (i >= argc) {
         printf ("missing reuse fd\n");
@@ -135,6 +151,8 @@ int hin_process_argv (int argc, const char * argv[]) {
         exit (1);
       }
       master.sharefd = fd;
+    } else if (my_strcmp (argv[i], "--verbose", NULL)) {
+      master.debug = 0xffffffff;
     }
   }
   return 0;
@@ -147,16 +165,15 @@ int main (int argc, const char * argv[]) {
   hin_directory_path (HIN_LOGDIR_PATH, &master.logdir_path);
   hin_directory_path (HIN_WORKDIR_PATH, &master.workdir_path);
 
+  master.debug = 0xffffffff;
+  master.debug = 0;
+
   if (hin_process_argv (argc, argv) < 0)
     return -1;
 
   if (HIN_PRINT_GREETING)
     printf ("hin start ...\n");
 
-  master.debug = 0xffffffff;
-  master.debug = 0;
-  //master.debug |= DEBUG_SOCKET;
-  //master.debug &= ~(DEBUG_URING);
   void hin_init_sharedmem ();
   hin_init_sharedmem ();
   void hin_event_init ();

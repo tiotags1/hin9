@@ -83,6 +83,12 @@ void hin_client_ssl_cleanup (hin_client_t * client) {
   SSL_free (ssl->ssl);   // free the SSL object and its BIO's
 }
 
+void hin_ssl_print_error () {
+  int err1 = ERR_get_error ();
+  printf ("ssl error reason '%s'\n", ERR_reason_error_string (err1));
+  printf ("ssl error '%s'\n", ERR_error_string (err1, NULL));
+}
+
 SSL_CTX * hin_ssl_init (const char * cert, const char * key) {
   SSL_CTX * ctx = NULL;
 
@@ -105,30 +111,30 @@ SSL_CTX * hin_ssl_init (const char * cert, const char * key) {
 
   // Load certificate and private key files, and check consistency
   int err;
-  err = SSL_CTX_use_certificate_file (ctx, cert,  SSL_FILETYPE_PEM);
+  err = SSL_CTX_use_certificate_file (ctx, cert, SSL_FILETYPE_PEM);
   if (err != 1) {
-    printf ("SSL_CTX_use_certificate_file failed\n");
+    printf ("SSL_CTX_use_certificate_file '%s' failed\n", cert);
+    hin_ssl_print_error ();
     return NULL;
-  } else {
-    printf("ssl certificate file loaded ok.\n");
   }
+  printf ("ssl cert ok.\n");
 
   // Indicate the key file to be used
   err = SSL_CTX_use_PrivateKey_file (ctx, key, SSL_FILETYPE_PEM);
   if (err != 1) {
-    printf ("SSL_CTX_use_PrivateKey_file failed\n");
+    printf ("SSL_CTX_use_PrivateKey_file '%s' failed\n", key);
+    hin_ssl_print_error ();
     return NULL;
-  } else {
-    printf("ssl private-key file loaded ok.\n");
   }
+  printf("ssl key  ok.\n");
 
   // Make sure the key and certificate file match.
   if (SSL_CTX_check_private_key (ctx) != 1) {
     printf ("SSL_CTX_check_private_key failed");
+    hin_ssl_print_error ();
     return NULL;
-  } else {
-    printf("ssl private key verified ok.\n");
   }
+  printf("ssl verified.\n");
 
   //if (SSL_CTX_set_max_proto_version (ctx, TLS1_2_VERSION) == 0) {
   //  printf ("can't set max proto version\n");
