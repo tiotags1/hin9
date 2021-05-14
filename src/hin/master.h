@@ -44,6 +44,8 @@ typedef struct {
   const char * tmpdir_path;
   const char * workdir_path;
   const char * pid_path;
+  const char ** argv;
+  const char ** envp;
   int restart_pid;
   void * servers;
   hin_master_socket1_t * socket, * last_socket;

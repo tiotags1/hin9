@@ -143,6 +143,8 @@ int lua_init () {
   err |= hin_lua_config_init (L);
   int hin_lua_os_init (lua_State * L);
   err |= hin_lua_os_init (L);
+  int hin_lua_utils_init (lua_State * L);
+  err |= hin_lua_utils_init (L);
 
   if (err < 0) return err;
 

@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <libgen.h> // for dirname
+
 #include "hin.h"
 #include "hin_lua.h"
 
@@ -49,6 +51,33 @@ int hin_lua_rawlen (lua_State * L, int index) {
   #else
   return lua_objlen (L, index);
   #endif
+}
+
+static int l_hin_dofile (lua_State *L) {
+  const char * path = lua_tostring (L, 1);
+  if (path == NULL) { printf ("can't load nil file\n"); return 0; }
+  if (*path == '/') {
+    run_file (L, path);
+    return 0;
+  }
+  char * conf_path = strdup (master.conf_path);
+  const char * dir_path = dirname (conf_path);
+  char * new = NULL;
+  int ret = asprintf (&new, "%s/%s", dir_path, path);
+  if (ret < 0) { perror ("asprintf"); return 0; }
+  run_file (L, new);
+  free (conf_path);
+  free (new);
+  return 0;
+}
+
+static lua_function_t functs [] = {
+{"dofile",		l_hin_dofile },
+{NULL, NULL},
+};
+
+int hin_lua_utils_init (lua_State * L) {
+  return lua_add_functions (L, functs);
 }
 
 

@@ -148,10 +148,12 @@ static int l_hin_exec (lua_State *L) {
     argv = calloc (2, sizeof (void*));
     argv[0] = (char*)path;
   }
-  envp = calloc (1, sizeof (void*));
+  if (envp == NULL) {
+    envp = (char**)master.envp;
+  }
 
   execvpe (path, argv, envp);
-  perror ("execvpe");
+  printf ("execvpe '%s' error: %s\n", path);
   exit (1);
 }
 

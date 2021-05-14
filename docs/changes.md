@@ -1,4 +1,9 @@
 
+* lua include file
+* bugfix logs now properly keep previous contents on server startup
+* docker script for retreiving a letsencrypt ssl certificate (using bacme script)
+
+commit 1e53bdf997b3d182612b5275178eb8fdbb1b8bb1
 * os.execute replacement function now has a callback
 * added more epoll support
 * fixed compilation for lua5.1, again

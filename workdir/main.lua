@@ -1,24 +1,21 @@
 
+-- log stuff
+--redirect_log (nil, "ffffffff")
+--redirect_log (server_log)
 
---redirect_log (logdir.."debug.log")
---redirect_log (NULL, "ffffffff")
+dofile "lib.lua"
+dofile "config.lua"
 
 php_bin = "/usr/bin/php-cgi"
 
-function printf (...)
-  io.write (string.format (...))
-end
-
 function timeout_callback (dt)
+  if (auto_ssl_renew) then
+    auto_ssl_time_callback (dt)
+  end
 end
 
-access = create_log (logdir .. "access.log")
+access = create_log (access_log)
 access ("start server on %s\n", os.date ("%c"))
-
-to_cache = {ico=true, txt=true, js=true, jpg=true, png=true, css=true}
-to_deflate = {html=true, css=true, js=true, txt=true}
-content_type = {html="text/html", jpg="image/jpeg", png="image/png", gif="image/gif", txt="text/plain", css="text/css", ico="image/vnd.microsoft.icon", js="text/javascript",
-svg="image/svg+xml"}
 
 local server = create_httpd (function (server, req)
   local path, query, method, version = parse_path (req)
@@ -77,12 +74,14 @@ end, function (server, req)
   access ("%x    status %d\n", id or -1, status or 1)
 end)
 
-listen (server, nil, "8081", nil, "workdir/ssl/cert.pem", "workdir/ssl/key.pem")
+ssl_sock = listen (server, nil, "8081", nil, "workdir/ssl/cert.pem", "workdir/ssl/key.pem")
 listen (server, nil, "8080", "ipv4")
 
 set_server_option (server, "timeout", 15)
-set_server_option (server, "hostname", "localhost")
+set_server_option (server, "hostname", server_name)
 set_server_option (server, "cwd", "htdocs")
 
-
+if (ssl_sock == nil) then
+  auto_ssl_do_renew ()
+end
 

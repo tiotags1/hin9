@@ -83,7 +83,7 @@ static int l_hin_listen (lua_State *L) {
 #else
   if (cert || key) {
     printf ("ERROR! this build does not have ssl enabled\n");
-    exit (1);
+    return 0;
   }
   void * ctx = NULL;
 #endif
@@ -200,7 +200,7 @@ int hin_log_flush () {
 static int l_hin_create_log (lua_State *L) {
   const char * path = lua_tostring (L, 1);
   if (master.flags & HIN_PRETEND) path = "/dev/null";
-  int fd = openat (AT_FDCWD, path, O_WRONLY | O_CREAT | O_CLOEXEC | O_TRUNC, S_IRWXU);
+  int fd = openat (AT_FDCWD, path, O_WRONLY | O_APPEND | O_CLOEXEC | O_CREAT, 0640);
   if (fd < 0) {
     printf ("can't open '%s' %s\n", path, strerror (errno));
     return 0;
@@ -233,25 +233,22 @@ static int l_hin_redirect_log (lua_State *L) {
   type = lua_type (L, 1);
   if (type == LUA_TSTRING) {
     const char * path = lua_tostring (L, 1);
-    FILE * fp = NULL;
 
-    if (master.flags & HIN_PRETEND) {
+    if (master.flags & HIN_PRETEND) path = "/dev/null";
+    int fd = openat (AT_FDCWD, path, O_WRONLY | O_APPEND | O_CLOEXEC | O_CREAT, 0640);
+    if (fd < 0) {
+      printf ("can't open '%s' %s\n", path, strerror (errno));
       return 0;
     }
-    fp = freopen (path, "a", stdout);
-    if (fp == NULL) {
-      fprintf (stderr, "can't open1 '%s' '%s'\n", path, strerror (errno));
-      exit (1);
-    }
-    fp = freopen (path, "a", stderr);
-    if (fp == NULL) {
-      fprintf (stdout, "can't open2 '%s' '%s'\n", path, strerror (errno));
-      exit (1);
-    }
 
-    dup2 (fileno(stderr), fileno(stdout));
-    setvbuf (stdout, NULL, _IOLBF, 2024);
-    setvbuf (stderr, NULL, _IOLBF, 2024);
+    if (master.debug & DEBUG_CONFIG)
+      printf ("create log on %d '%s'\n", fd, path);
+
+    fflush (stdout);
+    fflush (stderr);
+    if (dup2 (fd, STDOUT_FILENO) < 0) perror ("dup2 stdout");
+    if (dup2 (fd, STDERR_FILENO) < 0) perror ("dup2 stderr");
+    close (fd);
   } else if (type != LUA_TNONE && type != LUA_TNIL) {
     printf ("redirect log path needs to be a string\n");
   }
@@ -271,7 +268,7 @@ static int l_hin_redirect_log (lua_State *L) {
     printf ("redirect log debug mask needs to be a string\n");
   }
 
-  return 1;
+  return 0;
 }
 
 static lua_function_t functs [] = {

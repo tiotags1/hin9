@@ -158,10 +158,12 @@ int hin_process_argv (int argc, const char * argv[]) {
   return 0;
 }
 
-int main (int argc, const char * argv[]) {
+int main (int argc, const char * argv[], const char * envp[]) {
   memset (&master, 0, sizeof master);
   master.conf_path = HIN_CONF_PATH;
   master.exe_path = realpath ((char*)argv[0], NULL);
+  master.argv = argv;
+  master.envp = envp;
   hin_directory_path (HIN_LOGDIR_PATH, &master.logdir_path);
   hin_directory_path (HIN_WORKDIR_PATH, &master.workdir_path);
 

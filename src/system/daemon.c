@@ -18,7 +18,7 @@ char * hin_directory_path (const char * old, const char ** replace) {
   }
   int len = strlen (old);
   char * new = NULL;
-  if (old[len] == '/') {
+  if (old[len-1] == '/') {
     new = strdup (old);
     goto done;
   }
