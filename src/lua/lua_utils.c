@@ -71,8 +71,35 @@ static int l_hin_dofile (lua_State *L) {
   return 0;
 }
 
+#include <time.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#ifndef STATX_MTIME
+#include <linux/stat.h>
+#endif
+
+static int l_hin_file_age (lua_State *L) {
+  const char * path = lua_tostring (L, 1);
+  if (path == NULL) { printf ("can't load nil file\n"); return 0; }
+
+  struct statx stat;
+
+  if (statx (AT_FDCWD, path, 0, STATX_MTIME, &stat) < 0) {
+    perror ("statx");
+    return 0;
+  }
+
+  time_t t = time (NULL);
+  time_t new = t - stat.stx_mtime.tv_sec;
+
+  lua_pushnumber (L, new);
+
+  return 1;
+}
+
 static lua_function_t functs [] = {
 {"dofile",		l_hin_dofile },
+{"file_age",		l_hin_file_age },
 {NULL, NULL},
 };
 

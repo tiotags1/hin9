@@ -111,7 +111,7 @@ int hin_lines_default_eat (hin_buffer_t * buffer, int num) {
   } else {
     hin_lines_t * lines = (hin_lines_t*)&buffer->buffer;
     if (lines->close_callback) {
-      return lines->close_callback (buffer);
+      return lines->close_callback (buffer, num);
     } else {
       printf ("lines client error\n");
     }
@@ -125,7 +125,7 @@ static int hin_lines_read_callback (hin_buffer_t * buffer, int ret) {
 
   if (ret <= 0) {
     if (lines->close_callback)
-      return lines->close_callback (buffer);
+      return lines->close_callback (buffer, ret);
     return -1;
   }
 

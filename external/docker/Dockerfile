@@ -10,6 +10,7 @@ WORKDIR /app
 
 # used for ssl certificate retrieval,
 #set in docker run --env SITE_HOSTNAME="example.com"
+#also mount workdir/ssl to host os so you don't hit letsencrypt limits
 #ENV SITE_HOSTNAME="example.com www.example.com"
 #ENV SITE_EMAIL="example@example.com"
 

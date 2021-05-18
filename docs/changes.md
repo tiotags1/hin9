@@ -1,4 +1,9 @@
 
+* fixed embarassingly simple ssl keepalive bug
+* certificates renewing improvements
+* added ip address to debug logs
+
+commit bd30c060b2f808e2929658cfdc5e0e8d3f381bd9
 * lua include file
 * bugfix logs now properly keep previous contents on server startup
 * docker script for retreiving a letsencrypt ssl certificate (using bacme script)

@@ -6,6 +6,8 @@
 dofile "lib.lua"
 dofile "config.lua"
 
+redirect_log (server_log, debug_level)
+
 php_bin = "/usr/bin/php-cgi"
 
 function timeout_callback (dt)
@@ -80,6 +82,8 @@ listen (server, nil, "8080", "ipv4")
 set_server_option (server, "timeout", 15)
 set_server_option (server, "hostname", server_name)
 set_server_option (server, "cwd", "htdocs")
+
+init ()
 
 if (ssl_sock == nil) then
   auto_ssl_do_renew ()

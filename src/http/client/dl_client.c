@@ -66,8 +66,8 @@ int http_client_shutdown (http_client_t * http) {
   return 0;
 }
 
-int http_client_buffer_close (hin_buffer_t * buf) {
-  printf ("http %d buffer close\n", buf->fd);
+int http_client_buffer_close (hin_buffer_t * buf, int ret) {
+  printf ("http %d buffer close %s\n", buf->fd, strerror (-ret));
   http_client_shutdown (buf->parent);
   return 0;
 }

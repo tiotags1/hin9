@@ -117,7 +117,8 @@ SSL_CTX * hin_ssl_init (const char * cert, const char * key) {
     hin_ssl_print_error ();
     return NULL;
   }
-  printf ("ssl cert ok.\n");
+  if (master.debug & HIN_SSL)
+    printf ("ssl cert ok.\n");
 
   // Indicate the key file to be used
   err = SSL_CTX_use_PrivateKey_file (ctx, key, SSL_FILETYPE_PEM);
@@ -126,7 +127,8 @@ SSL_CTX * hin_ssl_init (const char * cert, const char * key) {
     hin_ssl_print_error ();
     return NULL;
   }
-  printf("ssl key  ok.\n");
+  if (master.debug & HIN_SSL)
+    printf("ssl key  ok.\n");
 
   // Make sure the key and certificate file match.
   if (SSL_CTX_check_private_key (ctx) != 1) {
@@ -134,7 +136,8 @@ SSL_CTX * hin_ssl_init (const char * cert, const char * key) {
     hin_ssl_print_error ();
     return NULL;
   }
-  printf("ssl verified.\n");
+  if (master.debug & HIN_SSL)
+    printf("ssl verified.\n");
 
   //if (SSL_CTX_set_max_proto_version (ctx, TLS1_2_VERSION) == 0) {
   //  printf ("can't set max proto version\n");

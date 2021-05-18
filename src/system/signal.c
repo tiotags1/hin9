@@ -30,9 +30,16 @@ static int hin_children_clean () {
 
 static int hin_children_close_pid (int pid, int status) {
   basic_ht_pair_t * pair = basic_ht_get_pair (child_ht, 0, pid);
-  if (pair == NULL) return 0;
+  if (pair == NULL) {
+    if (master.debug & DEBUG_CHILD)
+      printf ("child %d unhandled %d\n", pid, status);
+    return 0;
+  }
   hin_child_t * child = (hin_child_t*)pair->value2;
-  if (child == NULL) return 0;
+  if (child == NULL) {
+    printf ("error %d\n", 34256376);
+    return 0;
+  }
   child->callback (child, status);
   free (child);
   basic_ht_delete_pair (child_ht, 0, pid);
@@ -40,6 +47,16 @@ static int hin_children_close_pid (int pid, int status) {
 }
 
 int hin_children_add (hin_child_t * child) {
+  if (child->pid <= 0) {
+    printf ("child add missing pid\n");
+    return -1;
+  }
+  if (child->callback == NULL) {
+    printf ("child add missing callback\n");
+    return -1;
+  }
+  if (master.debug & DEBUG_CHILD)
+    printf ("child pid %d added\n", child->pid);
   basic_ht_set_pair (child_ht, 0, child->pid, 0, (uintptr_t)child);
   return 0;
 }
@@ -68,13 +85,6 @@ static void hin_sig_child_handler (int signo, siginfo_t * info, void * ucontext)
       printf ("child %d died\n", pid);
     }
     #endif
-    if (master.restart_pid == pid) {
-      printf ("restart to %d failed status %d\n", pid, status);
-      master.restart_pid = 0;
-    } else {
-      if (master.debug & DEBUG_CHILD)
-        printf ("child %d terminated status %d\n", pid, status);
-    }
   }
 }
 

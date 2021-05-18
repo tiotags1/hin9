@@ -136,9 +136,9 @@ int httpd_client_shutdown (httpd_client_t * http) {
   return 0;
 }
 
-static int httpd_client_buffer_close_callback (hin_buffer_t * buffer) {
+static int httpd_client_buffer_close_callback (hin_buffer_t * buffer, int ret) {
   httpd_client_t * http = (httpd_client_t*)buffer->parent;
-  if (http->debug & DEBUG_HTTP) printf ("httpd %d shutdown buffer\n", http->c.sockfd);
+  if (http->debug & DEBUG_HTTP) printf ("httpd %d shutdown buffer: %s\n", http->c.sockfd, strerror (-ret));
   httpd_client_shutdown (http);
   return 0;
 }

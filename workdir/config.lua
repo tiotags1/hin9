@@ -1,6 +1,6 @@
 
 -- basic
-server_log = logdir.."debug.log"
+--server_log = logdir.."debug.log"
 --debug_level = "ffffffff"
 access_log = logdir .. "access.log"
 server_name = "localhost"

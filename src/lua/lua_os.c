@@ -153,7 +153,7 @@ static int l_hin_exec (lua_State *L) {
   }
 
   execvpe (path, argv, envp);
-  printf ("execvpe '%s' error: %s\n", path);
+  printf ("execvpe '%s' error: %s\n", path, strerror (errno));
   exit (1);
 }
 

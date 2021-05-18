@@ -50,7 +50,7 @@ int hin_ssl_read_callback (hin_buffer_t * crypt, int ret) {
   ssl->flags &= ~HIN_SSL_READ;
 
   if (ret <= 0) {
-    if (master.debug & DEBUG_SSL) printf ("ssl detect close !!!\n");
+    if (crypt->debug & DEBUG_SSL) printf ("ssl detect close !!!\n");
     for (hin_buffer_t * plain = ssl->read; plain; plain = plain->next) {
       hin_ssl_callback (plain, ret);
     }
@@ -59,7 +59,7 @@ int hin_ssl_read_callback (hin_buffer_t * crypt, int ret) {
   }
 
   int n = BIO_write (ssl->rbio, crypt->ptr, ret);
-  if (master.debug & DEBUG_SSL) printf ("ssl done read %d/%d/%d\n", n, ret, crypt->count);
+  if (crypt->debug & DEBUG_SSL) printf ("ssl done read %d/%d/%d\n", n, ret, crypt->count);
 
   if (n < 0) {
     printf ("ssl bio read fatal fail %d<%d\n", n, ret);
@@ -76,7 +76,7 @@ static int hin_ssl_write_callback (hin_buffer_t * crypt, int ret) {
   ssl->flags &= ~HIN_SSL_WRITE;
 
   if (ret < crypt->count) {
-    if (master.debug & DEBUG_SSL) printf ("ssl incomplete write done callback %d/%d bytes\n", ret, crypt->count);
+    if (crypt->debug & DEBUG_SSL) printf ("ssl incomplete write done callback %d/%d bytes\n", ret, crypt->count);
     if (ret < 0) { printf ("ssl write error '%s'\n", strerror (-ret)); return -1; }
     crypt->ptr += ret;
     crypt->count -= ret;
@@ -89,11 +89,11 @@ static int hin_ssl_write_callback (hin_buffer_t * crypt, int ret) {
 
   hin_buffer_t * plain = (hin_buffer_t*)crypt->parent;
   if (plain) {
-    if (master.debug & DEBUG_SSL) printf ("ssl done write crypt %d/%d plain %d\n", ret, crypt->count, plain->count);
+    if (crypt->debug & DEBUG_SSL) printf ("ssl done write crypt %d/%d plain %d\n", ret, crypt->count, plain->count);
     plain->ssl_buffer = NULL;
     hin_ssl_callback (plain, plain->count);
   } else {
-    if (master.debug & DEBUG_SSL) printf ("ssl done write crypt %d/%d\n", ret, crypt->count);
+    if (crypt->debug & DEBUG_SSL) printf ("ssl done write crypt %d/%d\n", ret, crypt->count);
   }
   hin_ssl_handshake (crypt->ssl, crypt);
   return 0;
@@ -108,12 +108,13 @@ static int hin_ssl_do_read (hin_ssl_t * ssl, hin_buffer_t * crypt) {
 
   int m = SSL_read (ssl->ssl, plain->ptr, plain->count);
   if (m > 0) {
-    if (master.debug & DEBUG_SSL) printf ("ssl read ahead read %d plain %d\n", m, plain->count);
+    if (crypt->debug & DEBUG_SSL) printf ("ssl read ahead read %d plain %d\n", m, plain->count);
+    ssl->flags &= ~HIN_SSL_READ;
     hin_buffer_list_remove ((hin_buffer_t**)&ssl->read, plain);
     return hin_ssl_callback (plain, m); // does clean inside the function
   }
 
-  if (master.debug & DEBUG_SSL) printf ("ssl read request\n");
+  if (crypt->debug & DEBUG_SSL) printf ("ssl read request\n");
 
   crypt->parent = plain;
   crypt->count = crypt->sz;
@@ -152,7 +153,7 @@ static int hin_ssl_do_write (hin_ssl_t * ssl, hin_buffer_t * crypt) {
   }
 
   if (m < plain->count) { printf ("ssl write to buffer incomplete %d/%d\n", m, plain->count); }
-  if (master.debug & DEBUG_SSL) printf ("ssl write plain %d/%d crypt %d/%d\n", m, plain->count, n, crypt->count);
+  if (crypt->debug & DEBUG_SSL) printf ("ssl write plain %d/%d crypt %d/%d\n", m, plain->count, n, crypt->count);
 
   crypt->parent = plain;
   crypt->count = n;
@@ -177,7 +178,7 @@ static int hin_ssl_check_data (hin_ssl_t * ssl, hin_buffer_t * crypt) {
   if ((ssl->flags & HIN_SSL_WRITE) == 0)
     n = BIO_read (ssl->wbio, crypt->buffer, crypt->sz);
   if (n > 0) {
-    if (master.debug & DEBUG_SSL) printf ("ssl want write %d\n", n);
+    if (crypt->debug & DEBUG_SSL) printf ("ssl want write %d\n", n);
     ssl->flags |= HIN_SSL_WRITE;
     crypt->count = n;
     crypt->callback = hin_ssl_write_callback;
@@ -198,7 +199,7 @@ static int hin_ssl_check_data (hin_ssl_t * ssl, hin_buffer_t * crypt) {
     printf ("ssl want write old ??? %p\n", crypt);
   break;
   case SSL_STATUS_WANT_READ:
-    if (master.debug & DEBUG_SSL) printf ("ssl want read %d\n", crypt->sz);
+    if (crypt->debug & DEBUG_SSL) printf ("ssl want read %d\n", crypt->sz);
     if (ssl->flags & HIN_SSL_READ) {
       hin_buffer_clean (crypt);
       return 1;
@@ -233,7 +234,7 @@ static int hin_ssl_check_data (hin_ssl_t * ssl, hin_buffer_t * crypt) {
     return n;
   }
 
-  if (master.debug & DEBUG_SSL) printf ("ssl finished buffer %p\n", crypt);
+  if (crypt->debug & DEBUG_SSL) printf ("ssl finished buffer %p\n", crypt);
   hin_buffer_clean (crypt);
   return 1;
 }

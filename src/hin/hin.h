@@ -115,7 +115,7 @@ typedef struct hin_server_struct {
 typedef struct {
   int (*read_callback) (hin_buffer_t * buffer);
   int (*eat_callback) (hin_buffer_t * buffer, int num);
-  int (*close_callback) (hin_buffer_t * buffer);
+  int (*close_callback) (hin_buffer_t * buffer, int ret);
 } hin_lines_t;
 
 int hin_connect (hin_client_t * client, const char * host, const char * port, int (*callback) (hin_client_t * client, int ret));

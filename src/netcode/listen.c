@@ -60,7 +60,11 @@ int hin_server_accept (hin_buffer_t * buffer, int ret) {
   }
 
   client->sockfd = ret;
-  if (master.debug & DEBUG_SOCKET) printf ("socket %d accept\n", ret);
+  if (master.debug & DEBUG_SOCKET) {
+    char buf1[256];
+    hin_client_addr (buf1, sizeof buf1, &client->ai_addr, client->ai_addrlen);
+    printf ("socket %d accept %s\n", ret, buf1);
+  }
   if (hin_server_handle_client (client) < 0) {
     if (master.quit) return 1;
     if (hin_request_accept (buffer, bp->accept_flags) < 0) {
@@ -215,9 +219,11 @@ int hin_socket_request_listen (const char * addr, const char *port, const char *
   }
 
   for (rp = result; rp != NULL; rp = rp->ai_next) {
-    char buf1[256];
-    hin_client_addr (buf1, sizeof buf1, rp->ai_addr, rp->ai_addrlen);
-    if (master.debug & DEBUG_SOCKET) printf ("socket request '%s'\n", buf1);
+    if (master.debug & DEBUG_SOCKET) {
+      char buf1[256];
+      hin_client_addr (buf1, sizeof buf1, rp->ai_addr, rp->ai_addrlen);
+      printf ("socket request '%s'\n", buf1);
+    }
 
     hin_master_socket1_t * socket = calloc (1, sizeof (hin_master_socket1_t));
     socket->sockfd = -1;
@@ -260,10 +266,12 @@ int hin_socket_do_listen () {
     if (server->c.sockfd >= 0) continue;
 
     char buf1[256];
-    hin_client_addr (buf1, sizeof buf1, &sock->ai_addr, sock->ai_addrlen);
 
     // search in share for the socket
     hin_master_socket_t * new = hin_socket_search_prev (&sock->ai_addr, sock->ai_addrlen);
+    if (master.debug & DEBUG_SOCKET) {
+      hin_client_addr (buf1, sizeof buf1, &sock->ai_addr, sock->ai_addrlen);
+    }
     if (new) {
       if (master.debug & DEBUG_SOCKET) printf ("socket listen '%s' reuse %d\n", buf1, new->sockfd);
       goto just_use;

@@ -3,7 +3,7 @@ hin9
 
 hinsightd is a http/1.1 webserver designed for use with linux io_uring
 
-main features are http1.1 pipelining, reverse proxy, local file-based cache, cgi, ssl, dynamic deflate, range requests, etag, 304 status, per request debug information, graceful restart, customizable logging, customizable cache control headers, customizable everything
+main features are http1.1 pipelining, reverse proxy, local file-based cache, cgi, ssl, dynamic deflate, per request debug information, graceful restart, customizable logging, customizable cache control headers, customizable everything
 
 uses lua for everything related to configuration
 
@@ -29,8 +29,7 @@ requirements
 install & run
 -------------
 
-* mkdir build && cd build && cmake .. && make && cd ..
-* build/hin9
+* mkdir -p build && cd build && cmake .. && make && cd .. && build/hin9
 
 
 roadmap

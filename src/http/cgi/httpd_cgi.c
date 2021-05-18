@@ -248,8 +248,8 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
   return -1;
 }
 
-static int hin_cgi_headers_close_callback (hin_buffer_t * buffer) {
-  printf ("httpd cgi process failed\n");
+static int hin_cgi_headers_close_callback (hin_buffer_t * buffer, int ret) {
+  printf ("httpd cgi process failed %s\n", strerror (-ret));
   hin_worker_t * worker = buffer->parent;
   httpd_client_t * http = (httpd_client_t*)worker->data;
   free (worker);
