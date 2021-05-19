@@ -28,8 +28,9 @@ static inline void httpd_client_timer (httpd_client_t * http, basic_time_t * now
       httpd_client_shutdown (http);
     }
   } else {
-    if (http->debug & DEBUG_TIMEOUT)
+    if (http->debug & DEBUG_TIMEOUT) {
       printf ("httpd %d timer %.6f\n", http->c.sockfd, dt);
+    }
   }
 }
 

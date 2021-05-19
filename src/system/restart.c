@@ -9,6 +9,7 @@
 #include <sys/types.h>
 
 #include "hin.h"
+#include "worker.h"
 
 int hin_check_alive () {
   if (master.flags & HIN_RESTARTING) {
@@ -53,34 +54,46 @@ void hin_stop () {
   hin_check_alive ();
 }
 
-static void hin_restart_old () {
+static void hin_restart_do_close () {
   master.flags |= HIN_RESTARTING;
+  hin_stop ();
 }
 
-static void hin_restart_new () {
-  int hin_event_clean ();
-  hin_event_clean ();
-  printf ("restart exe file '%s'\n", master.exe_path);
+static void hin_restart_do_exec () {
+  //int hin_event_clean ();
+  //hin_event_clean ();
+  printf ("restart to '%s'\n", master.exe_path);
   char * buf = NULL;
   if (asprintf (&buf, "%d", master.sharefd) < 0)
     perror ("asprintf");
-  if (master.pid_path == NULL) {
-    master.pid_path = "";
+  const char ** argv = calloc (20, sizeof (char*));
+  int i=0;
+  argv[i++] = master.exe_path;
+  argv[i++] = "--reuse";
+  argv[i++] = buf;
+  argv[i++] = "--config";
+  argv[i++] = master.conf_path;
+  argv[i++] = "--workdir_path";
+  argv[i++] = master.workdir_path;
+  argv[i++] = "--logdir";
+  argv[i++] = master.logdir_path;
+  if (master.pid_path) {
+    argv[i++] = "--pidfile";
+    argv[i++] = master.pid_path;
   }
-  const char * const argv[] = {
-  master.exe_path,
-  "--reuse", buf,
-  "--config", master.conf_path,
-  "--cwd", master.workdir_path,
-  "--logdir", master.logdir_path,
-  "--pidfile", master.pid_path,
-  NULL};
-  execvp ((const char *)master.exe_path, (char * const*)argv);
-  perror ("execvp");
+  argv[i++] = NULL;
+  execvp (master.exe_path, (char * const*)argv);
+  printf ("execvp '%s' error: %s\n", master.exe_path, strerror (errno));
   exit (-1);
 }
 
-int hin_restart () {
+static int hin_restart_child_done (hin_child_t * child, int ret) {
+  printf ("restart child done\n");
+  master.share->done = 1;
+  return 0;
+}
+
+int hin_restart1 () {
   printf("hin restart ...\n");
 
   master.share->done = 0;
@@ -94,13 +107,19 @@ int hin_restart () {
     return -1;
   }
   if (pid == 0) {
-    hin_restart_new ();
+    hin_restart_do_exec ();
     return 0;
   }
 
-  printf ("restart %d into %d\n", getpid (), pid);
+  printf ("restarting %d helper %d\n", getpid (), pid);
   master.restart_pid = pid;
-  hin_restart_old ();
+
+  hin_child_t * child = calloc (1, sizeof (hin_child_t));
+  child->pid = pid;
+  child->callback = hin_restart_child_done;
+  hin_children_add (child);
+
+  hin_restart_do_close ();
 
   return 0;
 }

@@ -22,8 +22,7 @@ int console_execute (string_t * source) {
     printf ("do quit\n");
     hin_stop ();
   } else if (matchi_string_equal (source, "restart\n") > 0) {
-    int hin_restart ();
-    hin_restart ();
+    hin_restart1 ();
   } else if (matchi_string_equal (source, "reload\n") > 0) {
     int lua_reload ();
     if (lua_reload () < 0)
@@ -101,7 +100,6 @@ static int hin_timer_callback (hin_buffer_t * buffer, int ret) {
   }
 
   void httpd_timer ();
-  httpd_timer ();
   int hin_check_alive_timer ();
   hin_check_alive_timer ();
 
@@ -113,8 +111,10 @@ static int hin_timer_callback (hin_buffer_t * buffer, int ret) {
   int hin_timeout_callback (float dt);
   hin_timeout_callback (tm->timer.dt);
   void hin_cache_timer (int num);
-  if (frames > 0)
+  if (frames > 0) {
+    httpd_timer ();
     hin_cache_timer (frames);
+  }
 
   return 0;
 }

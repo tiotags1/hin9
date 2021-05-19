@@ -1,4 +1,7 @@
 
+* fixed another ssl segfault bug
+
+commit c0d01c0f3fbf57deafbf720599159ff99e5df540
 * fixed embarassingly simple ssl keepalive bug
 * certificates renewing improvements
 * added ip address to debug logs

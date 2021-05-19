@@ -62,7 +62,7 @@ int hin_children_add (hin_child_t * child) {
 }
 
 static void hin_sig_restart_handler (int signo, siginfo_t * info, void * ucontext) {
-  hin_restart ();
+  hin_restart1 ();
 }
 
 static void hin_sig_child_handler (int signo, siginfo_t * info, void * ucontext) {

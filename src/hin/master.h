@@ -60,7 +60,8 @@ typedef struct {
 extern hin_master_t master;
 
 void hin_stop ();
-int hin_restart ();
+int hin_restart1 ();
+int hin_restart2 ();
 int hin_check_alive ();
 
 char * hin_directory_path (const char * old, const char ** replace);

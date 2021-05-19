@@ -102,9 +102,8 @@ static int httpd_client_close_callback (hin_buffer_t * buffer, int ret) {
     hin_buffer_clean (http->read_buffer);
     http->read_buffer = NULL;
   }
-  hin_buffer_clean (buffer);
   hin_client_unlink (&http->c);
-  return 0;
+  return 1;
 }
 
 int httpd_client_shutdown (httpd_client_t * http) {

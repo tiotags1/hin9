@@ -63,7 +63,7 @@ int hin_server_accept (hin_buffer_t * buffer, int ret) {
   if (master.debug & DEBUG_SOCKET) {
     char buf1[256];
     hin_client_addr (buf1, sizeof buf1, &client->ai_addr, client->ai_addrlen);
-    printf ("socket %d accept %s\n", ret, buf1);
+    printf ("socket %d accept '%s'\n", ret, buf1);
   }
   if (hin_server_handle_client (client) < 0) {
     if (master.quit) return 1;

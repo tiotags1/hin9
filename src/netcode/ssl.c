@@ -39,7 +39,6 @@ static int hin_ssl_handshake (hin_ssl_t * ssl, hin_buffer_t * crypt);
 
 int hin_ssl_callback (hin_buffer_t * plain, int ret) {
   if (plain->callback (plain, ret)) {
-    plain->ssl_buffer = NULL;
     hin_buffer_clean (plain);
   }
   return 1;
@@ -50,11 +49,13 @@ int hin_ssl_read_callback (hin_buffer_t * crypt, int ret) {
   ssl->flags &= ~HIN_SSL_READ;
 
   if (ret <= 0) {
-    if (crypt->debug & DEBUG_SSL) printf ("ssl detect close !!!\n");
+    if (crypt->debug & DEBUG_SSL) printf ("ssl closed %p\n", crypt);
     for (hin_buffer_t * plain = ssl->read; plain; plain = plain->next) {
+      plain->ssl_buffer = NULL;
       hin_ssl_callback (plain, ret);
     }
     ssl->read = NULL;
+    crypt->parent = NULL;
     return 1;
   }
 
@@ -241,7 +242,9 @@ static int hin_ssl_check_data (hin_ssl_t * ssl, hin_buffer_t * crypt) {
 
 static int hin_ssl_handshake (hin_ssl_t * ssl, hin_buffer_t * buf) {
   hin_buffer_t * crypt = buf;
-  if (buf->flags & HIN_SSL) {
+  if (buf->flags & HIN_SSL && buf->ssl_buffer) {
+    crypt = buf->ssl_buffer;
+  } else if (buf->flags & HIN_SSL) {
     int sz = READ_SZ + 100;
     crypt = malloc (sizeof (hin_buffer_t) + sz);
     memset (crypt, 0, sizeof (hin_buffer_t));

@@ -85,7 +85,7 @@ static int l_hin_file_age (lua_State *L) {
   struct statx stat;
 
   if (statx (AT_FDCWD, path, 0, STATX_MTIME, &stat) < 0) {
-    perror ("statx");
+    printf ("statx '%s': %s\n", path, strerror (errno));
     return 0;
   }
 
