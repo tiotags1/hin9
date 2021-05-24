@@ -19,6 +19,8 @@ external/*
 !external/ebuild
 !external/docker
 
+workdir/config.lua
+
 *.pem
 *.key
 *.crt

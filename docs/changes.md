@@ -1,4 +1,9 @@
 
+* added a simple ssl sni implementation (serving multiple ssl sites on a single ip)
+* added hostname tracking to request
+* added separate function to load certificates
+
+commit 05e4e1a44b1feae4f01086a21d6f5ed1d6ec2436
 * fixed another ssl segfault bug
 
 commit c0d01c0f3fbf57deafbf720599159ff99e5df540

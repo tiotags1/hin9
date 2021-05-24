@@ -30,6 +30,7 @@ void httpd_client_clean (httpd_client_t * http) {
 
   if (http->append_headers) free (http->append_headers);
   if (http->content_type) free (http->content_type);
+  if (http->hostname) free (http->hostname);
   //memset (&http->state, 0, sizeof (httpd_client_t) - sizeof (hin_client_t)); // cleans things it shouldn't
 
   http->peer_flags = http->disable = 0;
@@ -38,7 +39,8 @@ void httpd_client_clean (httpd_client_t * http) {
   http->cache = http->modified_since = 0;
   http->cache_flags = 0;
   http->etag = http->post_sz = 0;
-  http->post_sep = http->file_path = http->append_headers = http->content_type = NULL;
+  http->post_sep = http->file_path = http->append_headers = NULL;
+  http->hostname = http->content_type = NULL;
   http->file = NULL;
 }
 

@@ -53,6 +53,7 @@ src/system/restart.c
 src/system/main.c
 src/system/compat.c
 src/system/epoll.c
+src/system/vhost.c
 src/netcode/ssl.c
 src/netcode/connect.c
 src/netcode/uring.c

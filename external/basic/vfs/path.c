@@ -84,6 +84,7 @@ int basic_vfs_ref_file (basic_vfs_t * vfs, basic_vfs_file_t * inode) {
     ret = -1;
   }
 
+  free (path);
   return ret;
 }
 

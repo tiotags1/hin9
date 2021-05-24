@@ -1,10 +1,12 @@
 
+#include <assert.h>
 #include <stdio.h>
-#include <netinet/in.h>
 #include <string.h>
+#include <stdlib.h>
+
+#include <netinet/in.h>
 #include <ctype.h>
 #include <unistd.h>
-#include <stdlib.h>
 #include <signal.h>
 #include <liburing.h>
 #include <sys/stat.h>
@@ -89,6 +91,34 @@ void hin_ssl_print_error () {
   printf ("ssl error '%s'\n", ERR_error_string (err1, NULL));
 }
 
+static int hin_ssl_sni_callback (SSL *ssl, int *ad, void *arg) {
+  if (ssl == NULL)
+    return SSL_TLSEXT_ERR_NOACK;
+
+  const char* servername = SSL_get_servername (ssl, TLSEXT_NAMETYPE_host_name);
+  if (servername == NULL || servername[0] == '\0') {
+    printf ("ssl SNI null\n");
+    return SSL_TLSEXT_ERR_NOACK;
+  }
+
+  if (master.debug & HIN_SSL)
+    printf ("ssl SNI '%s'\n", servername);
+
+  void * hin_vhost_get (const char * name, int name_len);
+  SSL_CTX * new = hin_vhost_get (servername, strlen (servername));
+  if (new == NULL) {
+    printf ("ssl can't find vhost '%s'\n", servername);
+    return SSL_TLSEXT_ERR_OK;
+  }
+  SSL_CTX * r = SSL_set_SSL_CTX (ssl, new);
+  if (r != new) {
+    printf ("ssl can't set new ctx\n");
+    return SSL_TLSEXT_ERR_ALERT_FATAL;
+  }
+
+  return SSL_TLSEXT_ERR_OK;
+}
+
 SSL_CTX * hin_ssl_init (const char * cert, const char * key) {
   SSL_CTX * ctx = NULL;
 
@@ -139,13 +169,10 @@ SSL_CTX * hin_ssl_init (const char * cert, const char * key) {
   if (master.debug & HIN_SSL)
     printf("ssl verified.\n");
 
-  //if (SSL_CTX_set_max_proto_version (ctx, TLS1_2_VERSION) == 0) {
-  //  printf ("can't set max proto version\n");
-  //}
-  //SSL_CTX_set_options (ctx, SSL_OP_ALL|SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION);
+  SSL_CTX_set_tlsext_servername_callback (ctx, hin_ssl_sni_callback);
 
   // Recommended to avoid SSLv2 & SSLv3
-  //SSL_CTX_set_options (ctx, SSL_OP_ALL|SSL_OP_NO_SSLv2|SSL_OP_NO_SSLv3);
+  SSL_CTX_set_options (ctx, SSL_OP_ALL|SSL_OP_NO_SSLv2|SSL_OP_NO_SSLv3);
   return ctx;
 }
 

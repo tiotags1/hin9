@@ -50,6 +50,7 @@ typedef struct {
 
   char * append_headers;
   char * content_type;
+  char * hostname;
 
   basic_time_t next_time;
 

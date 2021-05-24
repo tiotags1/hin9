@@ -36,8 +36,9 @@ static int l_hin_parse_path (lua_State *L) {
   lua_pushlstring (L, uri.query.ptr, uri.query.len);
   lua_pushlstring (L, method.ptr, method.len);
   lua_pushlstring (L, param.ptr, param.len);
+  lua_pushstring (L, http->hostname);
 
-  return 4;
+  return 5;
 }
 
 static int l_hin_parse_headers (lua_State *L) {

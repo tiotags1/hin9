@@ -7,15 +7,14 @@
 
 #include "basic_hashtable.h"
 
-static int isPowerOfTwo (int number) {
-  if (number < 0) return -1;
-  while (number != 0) {
-    if (number == 1) return 1;
-    if ((number & 1) == 1)
-      // number is an odd number and not 1 - so it's not a power of two.
-      return 0;
-    number = number >> 1;
+static int isPowerOfTwo (int num) {
+  if (num <= 0) return 0;
+  //return ((num & (num-1)) == 0); // have not audited this
+  int pow = 1;
+  while (num > pow) {
+    pow = pow * 2;
   }
+  if (num == pow) return 1;
   return 0;
 }
 

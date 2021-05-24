@@ -53,21 +53,49 @@ int hin_lua_rawlen (lua_State * L, int index) {
   #endif
 }
 
-static int l_hin_dofile (lua_State *L) {
+static int l_hin_require (lua_State *L) {
   const char * path = lua_tostring (L, 1);
+  int ret = 0;
   if (path == NULL) { printf ("can't load nil file\n"); return 0; }
   if (*path == '/') {
-    run_file (L, path);
-    return 0;
+    ret = run_file (L, path);
+    goto finish;
   }
   char * conf_path = strdup (master.conf_path);
   const char * dir_path = dirname (conf_path);
   char * new = NULL;
-  int ret = asprintf (&new, "%s/%s", dir_path, path);
+  ret = asprintf (&new, "%s/%s", dir_path, path);
   if (ret < 0) { perror ("asprintf"); return 0; }
-  run_file (L, new);
+  ret = run_file (L, new);
   free (conf_path);
   free (new);
+finish:
+  if (ret < 0) {
+    exit (1);
+  }
+  return 0;
+}
+
+static int l_hin_include (lua_State *L) {
+  const char * path = lua_tostring (L, 1);
+  int ret = 0;
+  if (path == NULL) { printf ("can't load nil file\n"); return 0; }
+  if (*path == '/') {
+    ret = run_file (L, path);
+    goto finish;
+  }
+  char * conf_path = strdup (master.conf_path);
+  const char * dir_path = dirname (conf_path);
+  char * new = NULL;
+  ret = asprintf (&new, "%s/%s", dir_path, path);
+  if (ret < 0) { perror ("asprintf"); return 0; }
+  ret = run_file (L, new);
+  free (conf_path);
+  free (new);
+finish:
+  if (ret < 0) {
+    // doesn't crash
+  }
   return 0;
 }
 
@@ -98,7 +126,8 @@ static int l_hin_file_age (lua_State *L) {
 }
 
 static lua_function_t functs [] = {
-{"dofile",		l_hin_dofile },
+{"include",		l_hin_include },
+{"require",		l_hin_require },
 {"file_age",		l_hin_file_age },
 {NULL, NULL},
 };

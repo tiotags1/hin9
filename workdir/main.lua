@@ -1,14 +1,11 @@
 
--- log stuff
---redirect_log (nil, "ffffffff")
---redirect_log (server_log)
+php_bin = "/usr/bin/php-cgi"
 
-dofile "lib.lua"
-dofile "config.lua"
+require "lib.lua"
+require "default_config.lua"
+include "config.lua"
 
 redirect_log (server_log, debug_level)
-
-php_bin = "/usr/bin/php-cgi"
 
 function timeout_callback (dt)
   if (auto_ssl_renew) then
@@ -20,7 +17,7 @@ access = create_log (access_log)
 access ("start server on %s\n", os.date ("%c"))
 
 local server = create_httpd (function (server, req)
-  local path, query, method, version = parse_path (req)
+  local path, query, method, version, host = parse_path (req)
   local ip, port = remote_address (req)
   local id = get_option (req, "id")
   access ("%x %s %s %s %s\n", id, ip, method, path, query)
@@ -76,7 +73,7 @@ end, function (server, req)
   access ("%x    status %d\n", id or -1, status or 1)
 end)
 
-ssl_sock = listen (server, nil, "8081", nil, "workdir/ssl/cert.pem", "workdir/ssl/key.pem")
+ssl_sock = listen (server, nil, "8081", nil, cert)
 listen (server, nil, "8080", "ipv4")
 
 set_server_option (server, "timeout", 15)

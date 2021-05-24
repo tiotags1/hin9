@@ -5,7 +5,7 @@ end
 
 function sec_to_str (sec)
   local pre = ""
-  if (sec == nil) then return end
+  if (sec == nil) then return "nil" end
   if (sec < 0) then
     sec = -sec
     pre = "-"

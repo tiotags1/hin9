@@ -39,6 +39,8 @@ void hin_clean () {
   hin_vfs_clean ();
   int hin_socket_clean ();
   hin_socket_clean ();
+  void hin_vhost_clean ();
+  hin_vhost_clean ();
   // shouldn't clean pidfile it can incur a race condition
   free ((void*)master.exe_path);
   free ((void*)master.logdir_path);

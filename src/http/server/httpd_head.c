@@ -26,6 +26,11 @@ int httpd_parse_headers_line (httpd_client_t * http, string_t * line) {
       }
       if (match_string (line, "%s*,%s*") <= 0) break;
     }
+  } else if (match_string (line, "Host:%s*([%w%.]+)", &param1) > 0) {
+    if (http->debug & (DEBUG_HTTP))
+      printf ("hostname is '%.*s'\n", (int)param1.len, param1.ptr);
+    if (http->hostname == NULL)
+      http->hostname = strndup (param1.ptr, param1.len);
   } else if (match_string (line, "If%-Modified%-Since:%s*") > 0) {
     time_t tm = hin_date_str_to_time (line);
     http->modified_since = tm;

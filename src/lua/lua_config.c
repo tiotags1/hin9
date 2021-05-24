@@ -60,33 +60,11 @@ static int l_hin_listen (lua_State *L) {
   const char * addr = lua_tostring (L, 2);
   const char * port = lua_tostring (L, 3);
   const char * type = lua_tostring (L, 4);
-  const char * cert = lua_tostring (L, 5);
-  const char * key = lua_tostring (L, 6);
-
-#ifdef HIN_USE_OPENSSL
-  extern SSL_CTX * default_ctx;
-  SSL_CTX * hin_ssl_init (const char * cert, const char * key);
-
-  SSL_CTX * ctx = NULL;
-  if (cert && key) {
-    ctx = hin_ssl_init (cert, key);
-    if (ctx == NULL) return 0;
-  } else {
-    int ssl = lua_toboolean (L, 5);
-    if (ssl) {
-      if (default_ctx == NULL) {
-        printf ("ssl not init\n");
-        return 0;
-      }
-    }
-  }
-#else
-  if (cert || key) {
-    printf ("ERROR! this build does not have ssl enabled\n");
+  if (lua_type (L, 5) == LUA_TBOOLEAN) {
+    printf ("ssl missing cert for '%s:%s'", addr, port);
     return 0;
   }
-  void * ctx = NULL;
-#endif
+  void * ctx = lua_topointer (L, 5);
 
   hin_server_t * sock = httpd_create (addr, port, type, ctx);
   sock->c.parent = server;
@@ -271,11 +249,52 @@ static int l_hin_redirect_log (lua_State *L) {
   return 0;
 }
 
+static int l_hin_create_cert (lua_State *L) {
+  const char * cert = lua_tostring (L, 1);
+  const char * key = lua_tostring (L, 2);
+
+#ifdef HIN_USE_OPENSSL
+  SSL_CTX * hin_ssl_init (const char * cert, const char * key);
+
+  SSL_CTX * ctx = NULL;
+  if (cert && key) {
+    ctx = hin_ssl_init (cert, key);
+  }
+#else
+  if (cert || key) {
+    printf ("ERROR! this build does not have ssl enabled\n");
+  }
+  void * ctx = NULL;
+#endif
+  if (ctx) {
+    lua_pushlightuserdata (L, ctx);
+  } else {
+    lua_pushboolean (L, 0);
+  }
+  return 1;
+}
+
+static int l_hin_add_vhost (lua_State *L) {
+  size_t len = 0;
+  const char * name = lua_tolstring (L, 1, &len);
+
+  // TODO check if this is an actual ssl context
+  void * ctx = (void*)lua_topointer (L, 2);
+
+  int hin_vhost_add (const char * name, int name_len, void* ptr);
+  int ret = hin_vhost_add (name, len, ctx);
+
+  lua_pushboolean (L, ret < 0 ? 0 : 1);
+  return 1;
+}
+
 static lua_function_t functs [] = {
 {"create_httpd",	l_hin_create_httpd },
 {"listen",		l_hin_listen },
 {"create_log",		l_hin_create_log },
 {"redirect_log",	l_hin_redirect_log },
+{"create_cert",		l_hin_create_cert },
+{"add_vhost",		l_hin_add_vhost },
 {NULL, NULL},
 };
 

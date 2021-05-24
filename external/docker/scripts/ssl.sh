@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -e
+
 if [ -z $SITE_HOSTNAME ]; then
   echo "ssl.sh can't find $SITE_HOSTNAME in environment";
   exit 1
