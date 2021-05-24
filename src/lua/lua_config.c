@@ -61,10 +61,10 @@ static int l_hin_listen (lua_State *L) {
   const char * port = lua_tostring (L, 3);
   const char * type = lua_tostring (L, 4);
   if (lua_type (L, 5) == LUA_TBOOLEAN) {
-    printf ("ssl missing cert for '%s:%s'", addr, port);
-    return 0;
+    printf ("ssl missing cert for '%s:%s'\n", addr, port);
+    exit (1);
   }
-  void * ctx = lua_topointer (L, 5);
+  void * ctx = (void*)lua_topointer (L, 5);
 
   hin_server_t * sock = httpd_create (addr, port, type, ctx);
   sock->c.parent = server;

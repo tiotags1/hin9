@@ -1,4 +1,9 @@
 
+* moved around some configuration values
+* added quiet, loglevel and debugmask command line parameter
+* added timestamp for each received connection
+
+commit de4907df6d5d47d130f3c8e89f65685938ee0f59
 * added a simple ssl sni implementation (serving multiple ssl sites on a single ip)
 * added hostname tracking to request
 * added separate function to load certificates

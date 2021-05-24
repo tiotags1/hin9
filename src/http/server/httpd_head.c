@@ -100,7 +100,9 @@ int httpd_parse_headers (httpd_client_t * http, string_t * source) {
 
   line.len = 0;
   if (find_line (source, &line) == 0 || match_string (&line, "(%a+) ("HIN_HTTP_PATH_ACCEPT") HTTP/1.([01])", &method, &path, &param) <= 0) {
-    printf ("httpd 400 error parsing request line '%.*s' whole '%.*s'\n", (int)line.len, line.ptr, (int)source->len, source->ptr);
+    printf ("httpd 400 error parsing request line '%.*s'\n", (int)line.len, line.ptr);
+    if (http->debug & (DEBUG_RW|DEBUG_RW_ERROR))
+      printf (" raw request '\n%.*s'\n", (int)orig.len, orig.ptr);
     httpd_respond_fatal (http, 400, NULL);
     return -1;
   }
@@ -116,7 +118,9 @@ int httpd_parse_headers (httpd_client_t * http, string_t * source) {
   } else if (matchi_string_equal (&method, "HEAD") > 0) {
     http->method = HIN_HTTP_HEAD;
   } else {
-    printf ("httpd 405 error unknown method\n");
+    printf ("httpd 405 error unknown method '%.*s'\n", (int)method.len, method.ptr);
+    if (http->debug & (DEBUG_RW|DEBUG_RW_ERROR))
+      printf (" raw request '\n%.*s'\n", (int)orig.len, orig.ptr);
     httpd_respond_fatal (http, 405, NULL);
     return -1;
   }

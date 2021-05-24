@@ -37,6 +37,9 @@ function init ()
   if (auto_ssl_renew) then
     renew_time = (auto_ssl_renew or 0) - (age or 0)
     printf ("cert age is %s due in %s\n", sec_to_str (age), sec_to_str (renew_time))
+    if (ssl_sock == nil) then
+      auto_ssl_do_renew ()
+    end
   end
 end
 
@@ -49,7 +52,7 @@ function auto_ssl_time_callback (dt)
 end
 
 function auto_ssl_do_renew ()
-  if (auto_ssl_script) then
+  if (auto_ssl_renew and auto_ssl_script) then
     exec {path=auto_ssl_script, mode="fork", callback=function (ret, err)
     end}
   end

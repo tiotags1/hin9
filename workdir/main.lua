@@ -73,16 +73,18 @@ end, function (server, req)
   access ("%x    status %d\n", id or -1, status or 1)
 end)
 
-ssl_sock = listen (server, nil, "8081", nil, cert)
-listen (server, nil, "8080", "ipv4")
+listen (server, nil, "8080", nil)
+if (ssl_enable) then
+  ssl_sock = listen (server, nil, "8081", nil, cert)
+end
 
 set_server_option (server, "timeout", 15)
 set_server_option (server, "hostname", server_name)
 set_server_option (server, "cwd", "htdocs")
 
-init ()
-
-if (ssl_sock == nil) then
-  auto_ssl_do_renew ()
+if (not ssl_enable) then
+  auto_ssl_renew = nil
 end
+
+init ()
 

@@ -66,7 +66,10 @@ static void print_help () {
  --check: checks config file and exits\n\
  --pidfile <path>: prints pid to file, used for daemons\n\
  --daemonize: used to make daemons\n\
+ --quiet: print only error messages\n\
  --verbose: print lots of irrelevant information\n\
+ --loglevel <nr>: 0 prints only errors, 5 prints everything\n\
+ --debugmask 0x<nr>: debugmask in hex\n\
  --reuse <nr>: used for graceful restart, should never be used otherwise\n\
 ");
 }
@@ -155,6 +158,32 @@ int hin_process_argv (int argc, const char * argv[]) {
       master.sharefd = fd;
     } else if (my_strcmp (argv[i], "--verbose", NULL)) {
       master.debug = 0xffffffff;
+    } else if (my_strcmp (argv[i], "--quiet", NULL)) {
+      master.debug = 0;
+    } else if (my_strcmp (argv[i], "--loglevel", NULL)) {
+      i++;
+      if (i >= argc) {
+        printf ("missing loglevel\n");
+        print_help ();
+        return -1;
+      }
+      int nr = atoi (argv[i]);
+      switch (nr) {
+      case 0: master.debug = DEBUG_CONFIG; break;
+      case 1: master.debug = DEBUG_CONFIG|DEBUG_SOCKET; break;
+      case 2: master.debug = DEBUG_CONFIG|DEBUG_SOCKET|DEBUG_HTTP|DEBUG_CGI|DEBUG_PROXY; break;
+      case 3 ... 4:
+      case 5: master.debug = 0xffffffff; break;
+      default: printf ("unkown loglevel '%s'\n", argv[i]); return -1; break;
+      }
+    } else if (my_strcmp (argv[i], "--debugmask", NULL)) {
+      i++;
+      if (i >= argc) {
+        printf ("missing debugmask\n");
+        print_help ();
+        return -1;
+      }
+      master.debug = strtol (argv[i], NULL, 16);
     }
   }
   return 0;
@@ -169,7 +198,7 @@ int main (int argc, const char * argv[], const char * envp[]) {
   hin_directory_path (HIN_LOGDIR_PATH, &master.logdir_path);
   hin_directory_path (HIN_WORKDIR_PATH, &master.workdir_path);
 
-  master.debug = 0xffffffff;
+  master.debug = HIN_DEBUG_MASK;
   master.debug = 0;
 
   if (hin_process_argv (argc, argv) < 0)

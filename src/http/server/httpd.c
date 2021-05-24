@@ -54,7 +54,10 @@ int httpd_client_start_request (httpd_client_t * http) {
     http->debug = data->debug;
   }
 
-  if (http->debug & DEBUG_HTTP) printf ("httpd %d request begin\n", http->c.sockfd);
+  if (http->debug & DEBUG_HTTP) {
+    printf ("http%sd %d request begin\n", (http->c.flags & HIN_SSL) ? "s" : "",
+      http->c.sockfd);
+  }
   httpd_client_ping (http, data->timeout);
   return 0;
 }
