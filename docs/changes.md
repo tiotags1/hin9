@@ -1,4 +1,7 @@
 
+* changed logging a bit
+
+commit 514c8f767e091bb2409237bf86ef2f9752ad0d51
 * moved around some configuration values
 * added quiet, loglevel and debugmask command line parameter
 * added timestamp for each received connection

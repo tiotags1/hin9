@@ -42,6 +42,8 @@ void httpd_client_clean (httpd_client_t * http) {
   http->post_sep = http->file_path = http->append_headers = NULL;
   http->hostname = http->content_type = NULL;
   http->file = NULL;
+  http->headers.len = 0;
+  http->headers.ptr = NULL;
 }
 
 int httpd_client_start_request (httpd_client_t * http) {
@@ -236,7 +238,8 @@ hin_server_t * httpd_create (const char * addr, const char * port, const char * 
   server->ssl_ctx = ssl_ctx;
   server->accept_flags = SOCK_CLOEXEC;
 
-  printf ("http%sd listening on '%s':'%s'\n", ssl_ctx ? "s" : "", addr ? addr : "all", port);
+  if (master.debug & (DEBUG_BASIC|DEBUG_SOCKET))
+    printf ("http%sd listening on '%s':'%s'\n", ssl_ctx ? "s" : "", addr ? addr : "all", port);
 
   hin_client_list_add (&master.server_list, &server->c);
 

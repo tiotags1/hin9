@@ -77,12 +77,11 @@ static void print_help () {
 static int my_strcmp (const char * base, ...) {
   va_list ap;
   va_start (ap, base);
-  const char * ptr = va_arg (ap, const char *);
   int ret = 0;
   while (1) {
-    if (strcmp (base, ptr) != 0) { break; }
-    ptr = va_arg (ap, const char *);
-    if (ptr == NULL) { ret = 1; break; }
+    const char * ptr = va_arg (ap, const char *);
+    if (ptr == NULL) { break; }
+    if (strcmp (base, ptr) == 0) { ret = 1; break; }
   }
   va_end (ap);
   return ret;
@@ -110,6 +109,7 @@ int hin_process_argv (int argc, const char * argv[]) {
       master.flags |= HIN_DAEMONIZE;
     } else if (my_strcmp (argv[i], "--pretend", "--check", NULL)) {
       master.flags |= HIN_PRETEND;
+      master.debug = 0;
     } else if (my_strcmp (argv[i], "--workdir", "--cwd", NULL)) {
       i++;
       if (i >= argc) {
@@ -143,6 +143,14 @@ int hin_process_argv (int argc, const char * argv[]) {
         return -1;
       }
       master.conf_path = (char *)argv[i];
+    } else if (my_strcmp (argv[i], "--log", NULL)) {
+      i++;
+      if (i >= argc) {
+        printf ("missing path\n");
+        print_help ();
+        return -1;
+      }
+      if (hin_redirect_log (argv[i]) < 0) return -1;
     } else if (my_strcmp (argv[i], "--reuse", NULL)) {
       i++;
       if (i >= argc) {
@@ -168,10 +176,11 @@ int hin_process_argv (int argc, const char * argv[]) {
         return -1;
       }
       int nr = atoi (argv[i]);
+      master.debug = 0;
       switch (nr) {
-      case 0: master.debug = DEBUG_CONFIG; break;
-      case 1: master.debug = DEBUG_CONFIG|DEBUG_SOCKET; break;
-      case 2: master.debug = DEBUG_CONFIG|DEBUG_SOCKET|DEBUG_HTTP|DEBUG_CGI|DEBUG_PROXY; break;
+      case 0: master.debug |= DEBUG_BASIC;
+      case 1: master.debug |= DEBUG_CONFIG|DEBUG_SOCKET|DEBUG_RW_ERROR;
+      case 2: master.debug |= DEBUG_HTTP|DEBUG_CGI|DEBUG_PROXY;
       case 3 ... 4:
       case 5: master.debug = 0xffffffff; break;
       default: printf ("unkown loglevel '%s'\n", argv[i]); return -1; break;
@@ -195,16 +204,14 @@ int main (int argc, const char * argv[], const char * envp[]) {
   master.exe_path = realpath ((char*)argv[0], NULL);
   master.argv = argv;
   master.envp = envp;
+  master.debug = HIN_DEBUG_MASK;
   hin_directory_path (HIN_LOGDIR_PATH, &master.logdir_path);
   hin_directory_path (HIN_WORKDIR_PATH, &master.workdir_path);
-
-  master.debug = HIN_DEBUG_MASK;
-  master.debug = 0;
 
   if (hin_process_argv (argc, argv) < 0)
     return -1;
 
-  if (HIN_PRINT_GREETING)
+  if (master.debug & DEBUG_BASIC)
     printf ("hin start ...\n");
 
   void hin_init_sharedmem ();
@@ -252,7 +259,8 @@ int main (int argc, const char * argv[], const char * envp[]) {
     return -1;
   }
 
-  printf ("hin serve ...\n");
+  if (master.debug & DEBUG_BASIC)
+    printf ("hin serve ...\n");
   master.share->done = 1;
 
   void * hin_cache_create ();

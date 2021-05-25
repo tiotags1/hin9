@@ -1,7 +1,7 @@
 
 -- basic
 --server_log = logdir.."debug.log"
-debug_level = "ffffffff"
+--debug_level = "ffffffff"
 access_log = logdir .. "access.log"
 server_name = "localhost"
 
@@ -23,6 +23,7 @@ cert = create_cert ("workdir/ssl/cert.pem", "workdir/ssl/key.pem")
 
 if (cert) then
   -- if you find a cert just use it
+  -- the server quits if you try to use the return of a failed create_cert
   ssl_enable = true
 end
 

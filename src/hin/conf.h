@@ -6,7 +6,6 @@
 #define HIN_LOGDIR_PATH "build/"
 #define HIN_WORKDIR_PATH "./"
 #define HIN_TEMP_PATH "/tmp/"
-#define HIN_PRINT_GREETING 1
 #define HIN_DEBUG_MASK 0xffffffff
 
 #define HIN_URING_QUEUE_DEPTH 256

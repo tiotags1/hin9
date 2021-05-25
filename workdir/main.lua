@@ -57,7 +57,6 @@ local server = create_httpd (function (server, req)
     set_option (req, "cache", 604800)
   end
 
-  set_option (req, "debug", "0")
   send_file (req)
 
 end, function (server, req, status, err)

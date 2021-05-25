@@ -33,8 +33,6 @@ typedef struct {
   int status;
   int method;
 
-  int file_fd;
-  char * file_path;
   off_t pos, count;
   void * file;
 
@@ -59,6 +57,10 @@ typedef struct {
   uint32_t debug;
   string_t headers;
   z_stream z;
+
+  // TODO remove
+  int file_fd;
+  char * file_path;
 } httpd_client_t;
 
 typedef struct {

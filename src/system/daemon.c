@@ -69,14 +69,14 @@ int hin_daemonize () {
     exit (EXIT_FAILURE);
   }
   if (pid > 0)
-    exit(EXIT_SUCCESS);
+    exit (EXIT_SUCCESS);
 
   if (setsid() < 0) {
     perror ("setsid");
     exit (EXIT_FAILURE);
   }
 
-  //TODO: Implement a working signal handler */
+  //TODO: Implement a working signal handler
   signal (SIGCHLD, SIG_IGN);
   signal (SIGHUP, SIG_IGN);
 
@@ -92,17 +92,36 @@ int hin_daemonize () {
 
   umask (0);
 
-  /* Change the working directory to the root directory */
-  /* or another appropriated directory */
+  // Change the working directory to the root directory
+  // or another appropriated directory
   //chdir ("/");
 
   for (int x = sysconf (_SC_OPEN_MAX); x >= 3; x--) {
     //close (x);
   }
 
-  /* Open the log file */
+  // Open the log file
   openlog ("hin", LOG_PID, LOG_DAEMON);
   return 0;
 }
 
+
+int hin_redirect_log (const char * path) {
+  if (master.flags & HIN_PRETEND) return 0;
+  int fd = openat (AT_FDCWD, path, O_WRONLY | O_APPEND | O_CLOEXEC | O_CREAT, 0660);
+  if (fd < 0) {
+    printf ("hin can't open log '%s' %s\n", path, strerror (errno));
+    return -1;
+  }
+
+  if (master.debug & DEBUG_CONFIG)
+    printf ("create log on %d '%s'\n", fd, path);
+
+  fflush (stdout);
+  fflush (stderr);
+  if (dup2 (fd, STDOUT_FILENO) < 0) perror ("dup2 stdout");
+  if (dup2 (fd, STDERR_FILENO) < 0) perror ("dup2 stderr");
+  close (fd);
+  return 0;
+}
 

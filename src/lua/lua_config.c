@@ -178,7 +178,7 @@ int hin_log_flush () {
 static int l_hin_create_log (lua_State *L) {
   const char * path = lua_tostring (L, 1);
   if (master.flags & HIN_PRETEND) path = "/dev/null";
-  int fd = openat (AT_FDCWD, path, O_WRONLY | O_APPEND | O_CLOEXEC | O_CREAT, 0640);
+  int fd = openat (AT_FDCWD, path, O_WRONLY | O_APPEND | O_CLOEXEC | O_CREAT, 0660);
   if (fd < 0) {
     printf ("can't open '%s' %s\n", path, strerror (errno));
     return 0;
@@ -211,22 +211,7 @@ static int l_hin_redirect_log (lua_State *L) {
   type = lua_type (L, 1);
   if (type == LUA_TSTRING) {
     const char * path = lua_tostring (L, 1);
-
-    if (master.flags & HIN_PRETEND) path = "/dev/null";
-    int fd = openat (AT_FDCWD, path, O_WRONLY | O_APPEND | O_CLOEXEC | O_CREAT, 0640);
-    if (fd < 0) {
-      printf ("can't open '%s' %s\n", path, strerror (errno));
-      return 0;
-    }
-
-    if (master.debug & DEBUG_CONFIG)
-      printf ("create log on %d '%s'\n", fd, path);
-
-    fflush (stdout);
-    fflush (stderr);
-    if (dup2 (fd, STDOUT_FILENO) < 0) perror ("dup2 stdout");
-    if (dup2 (fd, STDERR_FILENO) < 0) perror ("dup2 stderr");
-    close (fd);
+    hin_redirect_log (path);
   } else if (type != LUA_TNONE && type != LUA_TNIL) {
     printf ("redirect log path needs to be a string\n");
   }
