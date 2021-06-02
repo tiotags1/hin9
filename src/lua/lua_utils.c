@@ -23,13 +23,11 @@ int run_file (lua_State * L, const char * path) {
   int err;
   err = luaL_loadfile (L, path);
   if (err) {
-    fprintf (stderr, "Couldn't load file: %s\n", lua_tostring (L, -1));
     return -1;
   }
 
   err = lua_pcall (L, 0, LUA_MULTRET, 0);
   if (err) {
-    fprintf (stderr, "Failed to run script1: %s\n", lua_tostring (L, -1));
     return -1;
   }
   return 0;
@@ -56,7 +54,7 @@ int hin_lua_rawlen (lua_State * L, int index) {
 static int l_hin_require (lua_State *L) {
   const char * path = lua_tostring (L, 1);
   int ret = 0;
-  if (path == NULL) { printf ("can't load nil file\n"); return 0; }
+  if (path == NULL) { lua_pushstring (L, "path nil"); return 1; }
   if (*path == '/') {
     ret = run_file (L, path);
     goto finish;
@@ -71,6 +69,8 @@ static int l_hin_require (lua_State *L) {
   free (new);
 finish:
   if (ret < 0) {
+    const char * reason = lua_tostring (L, -1);
+    printf ("%s\n", reason);
     exit (1);
   }
   return 0;
@@ -79,7 +79,7 @@ finish:
 static int l_hin_include (lua_State *L) {
   const char * path = lua_tostring (L, 1);
   int ret = 0;
-  if (path == NULL) { printf ("can't load nil file\n"); return 0; }
+  if (path == NULL) { lua_pushstring (L, "path nil"); return 1; }
   if (*path == '/') {
     ret = run_file (L, path);
     goto finish;
@@ -94,7 +94,7 @@ static int l_hin_include (lua_State *L) {
   free (new);
 finish:
   if (ret < 0) {
-    // doesn't crash
+    return 1;
   }
   return 0;
 }

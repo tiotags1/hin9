@@ -7,53 +7,28 @@
 
 #include "hin.h"
 #include "http.h"
-#include "lua.h"
 #include "file.h"
 
+int httpd_timeout_callback (hin_timer_t * timer, time_t time) {
+  httpd_client_t * http = (httpd_client_t*)timer->ptr;
+  int do_close = 0;
+  if (http->state & (HIN_REQ_HEADERS | HIN_REQ_POST | HIN_REQ_END)) do_close = 1;
+  if (http->debug & DEBUG_TIMEOUT)
+    printf ("httpd %d timer shutdown %ld state %x %s\n", http->c.sockfd, time, http->state, do_close ? "close" : "wait");
+  if (do_close == 0) {
+    // reset timer ?
+  }
+  shutdown (http->c.sockfd, SHUT_RD);
+  httpd_client_shutdown (http);
+  return 0;
+}
+
 void httpd_client_ping (httpd_client_t * http, int timeout) {
-  http->next_time = basic_time_get ();
-  http->next_time.sec += timeout;
-}
-
-static inline void httpd_client_timer (httpd_client_t * http, basic_time_t * now) {
-  if (http->next_time.sec == 0) return ;
-  basic_ftime dt = basic_time_fdiff (now, &http->next_time);
-  if (dt < 0.0) {
-    int do_close = 0;
-    if (http->state & (HIN_REQ_HEADERS | HIN_REQ_POST | HIN_REQ_END)) do_close = 1;
-    if (http->debug & DEBUG_TIMEOUT)
-      printf ("httpd %d timer shutdown state %x %s %.6f\n", http->c.sockfd, http->state, do_close ? "close" : "wait", dt);
-    if (do_close) {
-      shutdown (http->c.sockfd, SHUT_RD);
-      httpd_client_shutdown (http);
-    }
-  } else {
-    if (http->debug & DEBUG_TIMEOUT) {
-      printf ("httpd %d timer %.6f\n", http->c.sockfd, dt);
-    }
-  }
-}
-
-void httpd_timer () {
-  basic_time_t now = basic_time_get ();
-  for (hin_client_t * server = master.server_list; server; server = server->next) {
-    hin_server_t * bp = (hin_server_t*)server;
-    for (httpd_client_t * http = (httpd_client_t*)bp->active_client; http; http = (httpd_client_t*)http->c.next) {
-      httpd_client_timer (http, &now);
-    }
-  }
-}
-
-void httpd_timer_flush () {
-  basic_time_t now = basic_time_get ();
-  now.sec -= 1;
-  for (hin_client_t * server = master.server_list; server; server = server->next) {
-    hin_server_t * bp = (hin_server_t*)server;
-    for (hin_client_t * client = bp->active_client; client; client = client->next) {
-      httpd_client_t * http = (httpd_client_t *)client;
-      http->next_time = now;
-    }
-  }
+  hin_timer_t * timer = &http->timer;
+  timer->time = time (NULL) + timeout;
+  timer->callback = httpd_timeout_callback;
+  timer->ptr = http;
+  hin_timer_add (timer);
 }
 
 void httpd_close_socket () {

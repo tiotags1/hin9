@@ -325,7 +325,7 @@ int hin_event_loop () {
     }
 
     hin_buffer_t * buffer = (hin_buffer_t *)cqe->user_data;
-    if (buffer->debug & DEBUG_URING) printf ("req%d done buf %p cb %p\n", master.id, buffer, buffer->callback);
+    if (buffer->debug & DEBUG_URING) printf ("req%d done buf %p cb %p %d\n", master.id, buffer, buffer->callback, cqe->res);
 
     io_uring_cqe_seen (&ring, cqe);
     err = buffer->callback (buffer, cqe->res);

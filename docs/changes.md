@@ -1,4 +1,11 @@
 
+* rewrote the httpd timeout code to use lists (faster server at high load)
+  resons for slow progress: bugs, more bugs, the existential dread of commiting
+  a poor api that would later cause 50x the work for simple fixes and bugs
+* better lua include/require error messages
+* timing code simplification, removed perfect frame timing
+
+commit 8c55b6c18dffdb77148ea75cd6427a20103bb804
 * changed logging a bit
 
 commit 514c8f767e091bb2409237bf86ef2f9752ad0d51

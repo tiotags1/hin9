@@ -3,7 +3,10 @@ php_bin = "/usr/bin/php-cgi"
 
 require "lib.lua"
 require "default_config.lua"
-include "config.lua"
+local err = include "config.lua"
+if (err) then
+  printf ("%s\n", err)
+end
 
 redirect_log (server_log, debug_level)
 
@@ -77,8 +80,6 @@ if (ssl_enable) then
   ssl_sock = listen (server, nil, "8081", nil, cert)
 end
 
-set_server_option (server, "timeout", 15)
-set_server_option (server, "hostname", server_name)
 set_server_option (server, "cwd", "htdocs")
 
 if (not ssl_enable) then

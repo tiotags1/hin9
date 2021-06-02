@@ -9,6 +9,7 @@
 #include "hin.h"
 #include "utils.h"
 #include "conf.h"
+#include "hin_lua.h"
 
 static int hin_server_handle_client (hin_client_t * client) {
   hin_server_t * server = (hin_server_t*)client->parent;
@@ -92,11 +93,13 @@ int hin_server_accept (hin_buffer_t * buffer, int ret) {
 
 int hin_server_start_accept (hin_server_t * server) {
   hin_client_t * client = hin_server_new_client (server);
+  hin_server_data_t * vhost = (hin_server_data_t*)server->c.parent;
 
   hin_buffer_t * buffer = calloc (1, sizeof *buffer);
   buffer->fd = server->c.sockfd;
   buffer->parent = client;
   buffer->callback = hin_server_accept;
+  buffer->debug = vhost->debug;
   server->accept_buffer = buffer;
 
   if (hin_request_accept (buffer, server->accept_flags) < 0) {

@@ -133,25 +133,24 @@ void hin_cache_timer (int seconds) {
   basic_ht_pair_t * pair;
   hin_cache_store_t * store = default_store;
   hin_cache_item_t * prev = NULL;
-  if (store) {
-    memset (&iter, 0, sizeof iter);
-    while ((pair = basic_ht_iterate_pair (&store->ht, &iter)) != NULL) {
-      if (prev) {
-        hin_cache_remove (store, prev);
-        prev = NULL;
-      }
-      hin_cache_item_t * item = (void*)pair->value1;
-      if (item->flags & HIN_CACHE_DONE)
-        item->lifetime -= seconds;
-      if (master.debug & DEBUG_CACHE) printf ("cache %lx_%lx item life %ld\n", item->cache_key1, item->cache_key2, item->lifetime);
-      if (item->lifetime <= 0) {
-        prev = item;
-      }
-    }
+  if (store == NULL) { return ; }
+  memset (&iter, 0, sizeof iter);
+  while ((pair = basic_ht_iterate_pair (&store->ht, &iter)) != NULL) {
     if (prev) {
       hin_cache_remove (store, prev);
       prev = NULL;
     }
+    hin_cache_item_t * item = (void*)pair->value1;
+    if (item->flags & HIN_CACHE_DONE)
+      item->lifetime -= seconds;
+    if (master.debug & DEBUG_CACHE) printf ("cache %lx_%lx item life %ld\n", item->cache_key1, item->cache_key2, item->lifetime);
+    if (item->lifetime <= 0) {
+      prev = item;
+    }
+  }
+  if (prev) {
+    hin_cache_remove (store, prev);
+    prev = NULL;
   }
 }
 

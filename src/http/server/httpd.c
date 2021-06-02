@@ -24,14 +24,13 @@ void httpd_client_clean (httpd_client_t * http) {
   }
   if (!HIN_HTTPD_WORKER_PREFORKED && http->post_fd) {
     if (http->debug & (DEBUG_HTTP|DEBUG_SYSCALL)) printf ("  close post_fd %d\n", http->post_fd);
-    close (http->post_fd); // TODO cgi worker needs to keep this
+    close (http->post_fd);
   }
   http->file_fd = http->post_fd = 0;
 
   if (http->append_headers) free (http->append_headers);
   if (http->content_type) free (http->content_type);
   if (http->hostname) free (http->hostname);
-  //memset (&http->state, 0, sizeof (httpd_client_t) - sizeof (hin_client_t)); // cleans things it shouldn't
 
   http->peer_flags = http->disable = 0;
   http->status = http->method = 0;
@@ -44,6 +43,7 @@ void httpd_client_clean (httpd_client_t * http) {
   http->file = NULL;
   http->headers.len = 0;
   http->headers.ptr = NULL;
+  hin_timer_remove (&http->timer);
 }
 
 int httpd_client_start_request (httpd_client_t * http) {
@@ -109,6 +109,7 @@ static int httpd_client_close_callback (hin_buffer_t * buffer, int ret) {
     hin_buffer_clean (http->read_buffer);
     http->read_buffer = NULL;
   }
+  httpd_client_clean (http);
   hin_client_unlink (&http->c);
   return 1;
 }
@@ -117,14 +118,6 @@ int httpd_client_shutdown (httpd_client_t * http) {
   if (http->state & HIN_REQ_ENDING) return -1;
   http->state |= HIN_REQ_ENDING;
   if (http->debug & (DEBUG_HTTP)) printf ("httpd %d shutdown\n", http->c.sockfd);
-
-#if 0
-  struct linger sl;
-  sl.l_onoff = 1;		// non-zero value enables linger option in kernel
-  sl.l_linger = 10;		// timeout interval in seconds
-  if (setsockopt (http->c.sockfd, SOL_SOCKET, SO_LINGER, &sl, sizeof(sl)) < 0)
-    perror ("setsockopt(SO_LINGER) failed");
-#endif
 
   hin_buffer_t * buf = malloc (sizeof *buf);
   memset (buf, 0, sizeof (*buf));

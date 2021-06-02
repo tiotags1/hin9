@@ -5,7 +5,6 @@
 #include <time.h>
 
 #include "uri.h"
-#include <basic_timer.h>
 
 enum { HIN_REQ_HEADERS = 0x1, HIN_REQ_DATA = 0x2, HIN_REQ_POST = 0x4, HIN_REQ_WAIT = 0x8,
 	HIN_REQ_PROXY = 0x10, HIN_REQ_CGI = 0x20, HIN_REQ_END = 0x40, HIN_REQ_ENDING = 0x80,
@@ -50,13 +49,13 @@ typedef struct {
   char * content_type;
   char * hostname;
 
-  basic_time_t next_time;
-
   hin_buffer_t * read_buffer;
 
   uint32_t debug;
   string_t headers;
   z_stream z;
+
+  hin_timer_t timer;
 
   // TODO remove
   int file_fd;

@@ -8,7 +8,6 @@
 
 #include "hin.h"
 #include "http.h"
-#include "lua.h"
 #include "conf.h"
 
 int httpd_client_read_callback (hin_buffer_t * buffer);

@@ -81,10 +81,8 @@ int hin_console_init () {
   return 0;
 }
 
-#include <basic_timer.h>
-
 typedef struct {
-  basic_timer_t timer;
+  time_t time;
   struct timespec ts;
   int pad;
 } hin_timeout_t;
@@ -99,22 +97,21 @@ static int hin_timer_callback (hin_buffer_t * buffer, int ret) {
     return -1;
   }
 
-  void httpd_timer ();
   int hin_check_alive_timer ();
   hin_check_alive_timer ();
-
   int hin_epoll_check ();
   hin_epoll_check ();
 
-  int frames = basic_timer_frames (&tm->timer);
+  time_t new = time (NULL);
+  if (tm->time == new) return 0;
 
   int hin_timeout_callback (float dt);
-  hin_timeout_callback (tm->timer.dt);
+  hin_timeout_callback (1);
   void hin_cache_timer (int num);
-  if (frames > 0) {
-    httpd_timer ();
-    hin_cache_timer (frames);
-  }
+  int hin_timer_check ();
+  hin_timer_check ();
+  hin_cache_timer (new - tm->time);
+  tm->time = new;
 
   return 0;
 }
@@ -137,7 +134,6 @@ int hin_timer_init () {
     return -1;
   }
 
-  basic_timer_init (&tm->timer, 1);
   return 0;
 }
 

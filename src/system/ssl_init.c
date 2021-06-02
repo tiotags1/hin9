@@ -148,7 +148,7 @@ SSL_CTX * hin_ssl_init (const char * cert, const char * key) {
     return NULL;
   }
   if (master.debug & HIN_SSL)
-    printf ("ssl cert ok.\n");
+    printf ("ssl cert '%s' ok.\n", cert);
 
   // Indicate the key file to be used
   err = SSL_CTX_use_PrivateKey_file (ctx, key, SSL_FILETYPE_PEM);
@@ -158,7 +158,7 @@ SSL_CTX * hin_ssl_init (const char * cert, const char * key) {
     return NULL;
   }
   if (master.debug & HIN_SSL)
-    printf("ssl key  ok.\n");
+    printf("ssl key '%s' ok.\n", key);
 
   // Make sure the key and certificate file match.
   if (SSL_CTX_check_private_key (ctx) != 1) {
@@ -166,8 +166,6 @@ SSL_CTX * hin_ssl_init (const char * cert, const char * key) {
     hin_ssl_print_error ();
     return NULL;
   }
-  if (master.debug & HIN_SSL)
-    printf("ssl verified.\n");
 
   SSL_CTX_set_tlsext_servername_callback (ctx, hin_ssl_sni_callback);
 

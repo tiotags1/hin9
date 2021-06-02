@@ -54,6 +54,7 @@ src/system/main.c
 src/system/compat.c
 src/system/epoll.c
 src/system/vhost.c
+src/system/timing.c
 src/netcode/ssl.c
 src/netcode/connect.c
 src/netcode/uring.c

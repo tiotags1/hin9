@@ -16,6 +16,7 @@ typedef struct hin_pipe_struct hin_pipe_t;
 
 #define READ_SZ 4096
 //65536
+//16k prob
 
 #include "ssl.h"
 #include "master.h"
@@ -167,5 +168,19 @@ int hin_buffer_eat (hin_buffer_t * buffer, int num);
 int hin_lines_request (hin_buffer_t * buffer);
 int hin_lines_reread (hin_client_t * client);
 hin_buffer_t * hin_lines_create_raw ();
+
+// timing
+struct hin_timer_struct;
+typedef int (*hin_timer_callback_t) (struct hin_timer_struct * timer, time_t tm);
+
+typedef struct hin_timer_struct {
+  void * ptr;
+  hin_timer_callback_t callback;
+  time_t time;
+  struct hin_timer_struct * next, * prev;
+} hin_timer_t;
+
+int hin_timer_add (hin_timer_t * new);
+int hin_timer_remove (hin_timer_t * timer);
 
 #endif
