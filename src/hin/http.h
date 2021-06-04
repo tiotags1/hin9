@@ -56,6 +56,7 @@ typedef struct {
   z_stream z;
 
   hin_timer_t timer;
+  void * vhost;
 
   // TODO remove
   int file_fd;

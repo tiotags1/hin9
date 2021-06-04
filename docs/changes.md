@@ -1,4 +1,10 @@
 
+* added an initial 'proper' vhost api
+  seems like the idea of handling vhosts purely in lua is bad considering things
+  like ssl sni and proper cwd handling
+* fixes to the new timing api
+
+commit a6194916bb20f7bff5d7a42af9982b8dd00e013d
 * rewrote the httpd timeout code to use lists (faster server at high load)
   resons for slow progress: bugs, more bugs, the existential dread of commiting
   a poor api that would later cause 50x the work for simple fixes and bugs

@@ -47,12 +47,13 @@ typedef struct {
   const char ** argv;
   const char ** envp;
   int restart_pid;
-  void * servers;
-  hin_master_socket1_t * socket, * last_socket;
   int num_client;
   int num_connection;
+  hin_master_socket1_t * socket, * last_socket;
   hin_client_t * server_list;
   hin_client_t * connection_list;
+  void * vhosts;
+  void * certs;
   int sharefd;
   hin_master_share_t * share;
 } hin_master_t;

@@ -12,7 +12,8 @@ static int hin_timer_add_int (hin_timer_t * base, hin_timer_t * timer) {
   if (base == NULL) {
     timer->next = first;
     if (first) first->prev = timer;
-    first = last = timer;
+    if (last == NULL) last = timer;
+    first = timer;
     return 0;
   }
   timer->prev = base;
@@ -44,18 +45,22 @@ int hin_timer_remove (hin_timer_t * timer) {
   return 0;
 }
 
-int hin_timer_add (hin_timer_t * timer) {
-  if (timer->next || timer->prev) hin_timer_remove (timer);
-  hin_timer_t * base = last;
-  for (;base && (base->time > timer->time); base=base->prev) {}
+int hin_timer_update (hin_timer_t * timer, time_t new) {
+  if (timer->time == new) return 0;
+  timer->time = new;
+  hin_timer_t * base = timer;
+  if (timer->next == NULL && timer->prev == NULL) {
+    base = last;
+  }
+  for (;base && base->next && (base->time < new); base=base->next) {}
+  for (;base && (base->time > new); base=base->prev) {}
+  hin_timer_remove (timer);
   hin_timer_add_int (base, timer);
   return 0;
 }
 
 int hin_timer_check () {
   time_t tm = time (NULL);
-  if (master.debug & DEBUG_TIMEOUT)
-    printf ("timer %ld\n", tm);
   hin_timer_t * next = NULL;
   for (hin_timer_t * timer = first; timer && (timer->time < tm);) {
     if (master.debug & DEBUG_TIMEOUT)

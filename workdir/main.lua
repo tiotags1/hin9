@@ -1,25 +1,13 @@
 
 php_bin = "/usr/bin/php-cgi"
 
-require "lib.lua"
-require "default_config.lua"
-local err = include "config.lua"
-if (err) then
-  printf ("%s\n", err)
-end
-
-redirect_log (server_log, debug_level)
-
 function timeout_callback (dt)
   if (auto_ssl_renew) then
     auto_ssl_time_callback (dt)
   end
 end
 
-access = create_log (access_log)
-access ("start server on %s\n", os.date ("%c"))
-
-local server = create_httpd (function (server, req)
+function default_onRequest_handler (req)
   local path, query, method, version, host = parse_path (req)
   local ip, port = remote_address (req)
   local id = get_option (req, "id")
@@ -61,30 +49,33 @@ local server = create_httpd (function (server, req)
   end
 
   send_file (req)
+end
 
-end, function (server, req, status, err)
+function default_onError_handler (req)
   printf ("error callback called %d err '%s'\n", status, err)
   respond (req, 404, "URL could not be found on this server\n")
 
   local status = get_option (req, "status")
   access ("%x    error %s\n", id or -1, err)
+end
 
-end, function (server, req)
+function default_onFinish_handler (req)
   local status = get_option (req, "status")
   local id = get_option (req, "id")
   access ("%x    status %d\n", id or -1, status or 1)
-end)
-
-listen (server, nil, "8080", nil)
-if (ssl_enable) then
-  ssl_sock = listen (server, nil, "8081", nil, cert)
 end
 
-set_server_option (server, "cwd", "htdocs")
-
-if (not ssl_enable) then
-  auto_ssl_renew = nil
+require "lib.lua"
+require "default_config.lua"
+local err = include "config.lua"
+if (err) then
+  printf ("%s\n", err)
 end
+
+redirect_log (server_log, debug_level)
+
+access = create_log (access_log)
+access ("start server on %s\n", os.date ("%c"))
 
 init ()
 

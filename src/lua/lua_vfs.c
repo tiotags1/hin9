@@ -22,11 +22,11 @@ int l_hin_set_path (lua_State *L) {
     printf ("lua set_path need a valid client\n");
     return 0;
   }
-  hin_client_t * socket = client->parent;
-  hin_server_data_t * server = socket->parent;
+  httpd_client_t * http = (httpd_client_t*)client;
+  hin_vhost_t * vhost = http->vhost;
 
   string_t path;
-  basic_vfs_node_t * cwd = server->cwd_dir;
+  basic_vfs_node_t * cwd = vhost->cwd_dir;
 
   path.ptr = (char*)lua_tolstring (L, 2, &path.len);
   match_string (&path, "/");
@@ -63,7 +63,6 @@ int l_hin_set_path (lua_State *L) {
   basic_vfs_file_t * file = basic_vfs_get_file (vfs, node);
   if (file == NULL) return 0;
 
-  httpd_client_t * http = (httpd_client_t*)client;
   if (http->file) {
     basic_vfs_unref (vfs, http->file);
   }
@@ -134,7 +133,7 @@ int hin_vfs_clean () {
   return 0;
 }
 
-int hin_server_set_work_dir (hin_server_data_t * server, const char * rel_path) {
+int hin_server_set_work_dir (hin_vhost_t * server, const char * rel_path) {
   char * abs_path = realpath (rel_path, NULL);
   if (abs_path == NULL) {
     fprintf (stderr, "cwd realpath '%s' %s", rel_path, strerror (errno));
@@ -144,9 +143,7 @@ int hin_server_set_work_dir (hin_server_data_t * server, const char * rel_path) 
   int fd = openat (AT_FDCWD, abs_path, O_DIRECTORY | O_CLOEXEC);
   if (server->debug & DEBUG_CONFIG) printf ("lua server cwd '%s'\n", abs_path);
   if (fd < 0) { perror ("cwd openat"); return -1; }
-  if (server->cwd_path) { free (server->cwd_path); }
   if (server->cwd_fd && server->cwd_fd != AT_FDCWD) { close (server->cwd_fd); }
-  server->cwd_path = abs_path;
   server->cwd_fd = fd;
 
   if (vfs == NULL) {
@@ -157,7 +154,7 @@ int hin_server_set_work_dir (hin_server_data_t * server, const char * rel_path) 
   }
 
   string_t path;
-  path.ptr = server->cwd_path;
+  path.ptr = abs_path;
   path.len = strlen (path.ptr);
   basic_vfs_node_t * cwd = basic_vfs_ref_path (vfs, NULL, &path);
   if (cwd == NULL) {

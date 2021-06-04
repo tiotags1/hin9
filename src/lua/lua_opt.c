@@ -66,8 +66,8 @@ static uint32_t get_mask (const char * name) {
 }
 
 static int l_hin_get_server_option (lua_State *L) {
-  hin_server_data_t *client = (hin_server_data_t*)lua_touserdata (L, 1);
-  if (client == NULL || client->magic != HIN_SERVER_MAGIC) {
+  hin_vhost_t *client = (hin_vhost_t*)lua_touserdata (L, 1);
+  if (client == NULL || client->magic != HIN_VHOST_MAGIC) {
     printf ("lua hin_get_option need a valid server\n");
     return 0;
   }
@@ -87,8 +87,8 @@ static int l_hin_get_server_option (lua_State *L) {
 }
 
 static int l_hin_set_server_option (lua_State *L) {
-  hin_server_data_t *client = (hin_server_data_t*)lua_touserdata (L, 1);
-  if (client == NULL || client->magic != HIN_SERVER_MAGIC) {
+  hin_vhost_t *client = (hin_vhost_t*)lua_touserdata (L, 1);
+  if (client == NULL || client->magic != HIN_VHOST_MAGIC) {
     printf ("lua hin_set_option need a valid server\n");
     return 0;
   }

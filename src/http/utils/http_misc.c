@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include <sys/socket.h>
 
@@ -9,14 +10,15 @@
 #include "http.h"
 #include "file.h"
 
-int httpd_timeout_callback (hin_timer_t * timer, time_t time) {
+int httpd_timeout_callback (hin_timer_t * timer, time_t tm) {
   httpd_client_t * http = (httpd_client_t*)timer->ptr;
   int do_close = 0;
   if (http->state & (HIN_REQ_HEADERS | HIN_REQ_POST | HIN_REQ_END)) do_close = 1;
   if (http->debug & DEBUG_TIMEOUT)
-    printf ("httpd %d timer shutdown %ld state %x %s\n", http->c.sockfd, time, http->state, do_close ? "close" : "wait");
+    printf ("httpd %d timer shutdown %ld state %x %s\n", http->c.sockfd, tm, http->state, do_close ? "close" : "wait");
   if (do_close == 0) {
-    // reset timer ?
+    hin_timer_update (timer, time (NULL) + 5);
+    return 0;
   }
   shutdown (http->c.sockfd, SHUT_RD);
   httpd_client_shutdown (http);
@@ -25,10 +27,8 @@ int httpd_timeout_callback (hin_timer_t * timer, time_t time) {
 
 void httpd_client_ping (httpd_client_t * http, int timeout) {
   hin_timer_t * timer = &http->timer;
-  timer->time = time (NULL) + timeout;
-  timer->callback = httpd_timeout_callback;
-  timer->ptr = http;
-  hin_timer_add (timer);
+  time_t tm = time (NULL) + timeout;
+  hin_timer_update (timer, tm);
 }
 
 void httpd_close_socket () {

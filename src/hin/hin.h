@@ -24,6 +24,8 @@ typedef struct hin_pipe_struct hin_pipe_t;
 #define HIN_CONNECT_MAGIC 0xfeabc321
 #define HIN_CLIENT_MAGIC 0xfeabc111
 #define HIN_SERVER_MAGIC 0xfcadc123
+#define HIN_VHOST_MAGIC 0xeeefcac1
+#define HIN_CERT_MAGIC 0xfaaaacc
 
 enum {
 HIN_DONE = 0x1, HIN_SOCKET = 0x2, HIN_FILE = 0x4, HIN_OFFSETS = 0x8,
@@ -107,6 +109,7 @@ typedef struct hin_server_struct {
   int user_data_size;
   void * ssl_ctx;
   int accept_flags;
+  uint32_t debug;
   hin_buffer_t * accept_buffer;
   hin_client_t * accept_client;
   hin_client_t * active_client;
@@ -180,7 +183,7 @@ typedef struct hin_timer_struct {
   struct hin_timer_struct * next, * prev;
 } hin_timer_t;
 
-int hin_timer_add (hin_timer_t * new);
+int hin_timer_update (hin_timer_t * timer, time_t new);
 int hin_timer_remove (hin_timer_t * timer);
 
 #endif

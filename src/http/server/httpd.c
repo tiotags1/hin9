@@ -10,7 +10,6 @@
 #include "hin_lua.h"
 #include "conf.h"
 
-void httpd_client_ping (httpd_client_t * http, int timeout);
 int httpd_client_reread (httpd_client_t * http);
 
 void httpd_client_clean (httpd_client_t * http) {
@@ -49,18 +48,14 @@ void httpd_client_clean (httpd_client_t * http) {
 int httpd_client_start_request (httpd_client_t * http) {
   http->state = HIN_REQ_HEADERS | (http->state & HIN_REQ_ENDING);
 
-  hin_client_t * server = (hin_client_t*)http->c.parent;
-  hin_server_data_t * data = (hin_server_data_t*)server->parent;
-  if (data) {
-    http->disable = data->disable;
-    http->debug = data->debug;
-  }
+  hin_server_t * server = (hin_server_t*)http->c.parent;
+  hin_vhost_t * vhost = (hin_vhost_t*)server->c.parent;
+  httpd_vhost_switch (http, vhost);
 
   if (http->debug & DEBUG_HTTP) {
-    printf ("http%sd %d request begin\n", (http->c.flags & HIN_SSL) ? "s" : "",
-      http->c.sockfd);
+    printf ("http%sd %d request begin %ld\n", (http->c.flags & HIN_SSL) ? "s" : "",
+      http->c.sockfd, time (NULL));
   }
-  httpd_client_ping (http, data->timeout);
   return 0;
 }
 
@@ -101,7 +96,7 @@ int httpd_client_finish_request (httpd_client_t * http) {
 static int httpd_client_close_callback (hin_buffer_t * buffer, int ret) {
   httpd_client_t * http = (httpd_client_t*)buffer->parent;
   if (ret < 0) {
-    printf ("httpd %d client close callback error: %s\n", http->c.sockfd, strerror (-ret));
+    printf ("httpd %d client close callback error %s\n", http->c.sockfd, ret < 0 ? strerror (-ret) : "");
     return -1;
   }
   if (http->debug & (DEBUG_HTTP)) printf ("httpd %d close\n", http->c.sockfd);
@@ -137,7 +132,7 @@ int httpd_client_shutdown (httpd_client_t * http) {
 
 static int httpd_client_buffer_close_callback (hin_buffer_t * buffer, int ret) {
   httpd_client_t * http = (httpd_client_t*)buffer->parent;
-  if (http->debug & DEBUG_HTTP) printf ("httpd %d shutdown buffer: %s\n", http->c.sockfd, strerror (-ret));
+  if (http->debug & DEBUG_HTTP) printf ("httpd %d shutdown buffer %s\n", http->c.sockfd, ret < 0 ? strerror (-ret) : "");
   httpd_client_shutdown (http);
   return 0;
 }
@@ -184,6 +179,12 @@ int temp_callback1 (hin_buffer_t * buf, int ret) {
 
 int httpd_client_accept (hin_client_t * client) {
   httpd_client_t * http = (httpd_client_t*)client;
+
+  hin_timer_t * timer = &http->timer;
+  int httpd_timeout_callback (hin_timer_t * timer, time_t time);
+  timer->callback = httpd_timeout_callback;
+  timer->ptr = http;
+
 #if HIN_HTTPD_NULL_SERVER
   hin_buffer_t * buf = buf_list;
   buf->flags = HIN_SOCKET | (http->c.flags & HIN_SSL);
@@ -230,6 +231,7 @@ hin_server_t * httpd_create (const char * addr, const char * port, const char * 
   server->user_data_size = sizeof (httpd_client_t);
   server->ssl_ctx = ssl_ctx;
   server->accept_flags = SOCK_CLOEXEC;
+  server->debug = master.debug;
 
   if (master.debug & (DEBUG_BASIC|DEBUG_SOCKET))
     printf ("http%sd listening on '%s':'%s'\n", ssl_ctx ? "s" : "", addr ? addr : "all", port);

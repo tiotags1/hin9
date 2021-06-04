@@ -12,8 +12,11 @@
 #include "hin.h"
 #include "http.h"
 #include "conf.h"
+#include "hin_lua.h"
 
 time_t hin_date_str_to_time (string_t * source);
+
+int httpd_vhost_request (httpd_client_t * http, const char * name, int len);
 
 int httpd_parse_headers_line (httpd_client_t * http, string_t * line) {
   string_t param, param1, param2;
@@ -27,10 +30,9 @@ int httpd_parse_headers_line (httpd_client_t * http, string_t * line) {
       if (match_string (line, "%s*,%s*") <= 0) break;
     }
   } else if (match_string (line, "Host:%s*([%w%.]+)", &param1) > 0) {
-    if (http->debug & (DEBUG_HTTP))
-      printf ("hostname is '%.*s'\n", (int)param1.len, param1.ptr);
-    if (http->hostname == NULL)
-      http->hostname = strndup (param1.ptr, param1.len);
+    if (httpd_vhost_request (http, param1.ptr, param1.len) < 0) {
+      // can't find hostname
+    }
   } else if (match_string (line, "If%-Modified%-Since:%s*") > 0) {
     time_t tm = hin_date_str_to_time (line);
     http->modified_since = tm;
@@ -136,6 +138,9 @@ int httpd_parse_headers (httpd_client_t * http, string_t * source) {
     if (line.len == 0) break;
     if (httpd_parse_headers_line (http, &line) < 0) {
       *source = orig;
+      if (http->status == 200) {
+        httpd_respond_fatal (http, 400, NULL);
+      }
       return -1;
     }
   }

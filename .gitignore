@@ -1,3 +1,4 @@
+
 docs/*
 !docs/*.md
 !docs/*.txt
@@ -20,6 +21,11 @@ external/*
 !external/docker
 
 workdir/config.lua
+
+workdir/ssl/*
+
+workdir/logs/*
+!workdir/logs/.keep
 
 *.pem
 *.key

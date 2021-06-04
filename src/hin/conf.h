@@ -3,7 +3,7 @@
 #define HIN_CONF_H
 
 #define HIN_CONF_PATH "workdir/main.lua"
-#define HIN_LOGDIR_PATH "build/"
+#define HIN_LOGDIR_PATH "workdir/logs/"
 #define HIN_WORKDIR_PATH "./"
 #define HIN_TEMP_PATH "/tmp/"
 #define HIN_DEBUG_MASK 0xffffffff

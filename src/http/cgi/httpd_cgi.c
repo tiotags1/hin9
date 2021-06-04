@@ -287,7 +287,7 @@ int httpd_request_chunked (httpd_client_t * http);
 int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_path, const char * script_path, const char * path_info) {
   hin_client_t * client = &http->c;
   hin_client_t * socket = (hin_client_t*)client->parent;
-  hin_server_data_t * server = (hin_server_data_t*)socket->parent;
+  hin_vhost_t * vhost = (hin_vhost_t*)http->vhost;
 
   if (http->state & HIN_REQ_DATA) return -1;
   http->state |= (HIN_REQ_DATA | HIN_REQ_CGI);
@@ -314,7 +314,7 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
     httpd_respond_error (http, 500, NULL);
     return -1;
   }
-  int cwd_fd = dup (server->cwd_fd);
+  int cwd_fd = dup (vhost->cwd_fd);
   if (cwd_fd < 0) {
     perror ("dup");
     httpd_respond_error (http, 500, NULL);
@@ -393,7 +393,7 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
 
   // if file set then create script path
   extern basic_vfs_t * vfs;
-  basic_vfs_node_t * cwd = server->cwd_dir;
+  basic_vfs_node_t * cwd = vhost->cwd_dir;
   basic_vfs_dir_t * cwd_dir = basic_vfs_get_dir (vfs, cwd);
   if (cwd_dir == NULL) { fprintf (stderr, "vfs_get_dir err\n"); exit (1); }
 
@@ -486,8 +486,8 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
 
   if (hostname.ptr) {
     var (&env, "SERVER_NAME=%.*s", hostname.len, hostname.ptr);
-  } else if (server->hostname) {
-    var (&env, "SERVER_NAME=%s", server->hostname);
+  } else if (vhost->hostname) {
+    var (&env, "SERVER_NAME=%s", vhost->hostname);
   } else {
     var (&env, "SERVER_NAME=unknown");
   }

@@ -14,6 +14,7 @@
 #include <fcntl.h>
 
 #include "hin.h"
+#include "hin_lua.h"
 
 #ifdef HIN_USE_OPENSSL
 
@@ -104,14 +105,13 @@ static int hin_ssl_sni_callback (SSL *ssl, int *ad, void *arg) {
   if (master.debug & HIN_SSL)
     printf ("ssl SNI '%s'\n", servername);
 
-  void * hin_vhost_get (const char * name, int name_len);
-  SSL_CTX * new = hin_vhost_get (servername, strlen (servername));
-  if (new == NULL) {
+  hin_vhost_t * vhost = hin_vhost_get (servername, strlen (servername));
+  if (vhost == NULL || vhost->ssl_ctx == NULL) {
     printf ("ssl can't find vhost '%s'\n", servername);
     return SSL_TLSEXT_ERR_OK;
   }
-  SSL_CTX * r = SSL_set_SSL_CTX (ssl, new);
-  if (r != new) {
+  SSL_CTX * r = SSL_set_SSL_CTX (ssl, vhost->ssl_ctx);
+  if (r != vhost->ssl_ctx) {
     printf ("ssl can't set new ctx\n");
     return SSL_TLSEXT_ERR_ALERT_FATAL;
   }

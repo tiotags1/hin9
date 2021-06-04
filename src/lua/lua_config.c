@@ -11,68 +11,6 @@
 #include "ssl.h"
 #include "conf.h"
 
-static int l_hin_create_httpd (lua_State *L) {
-  int ref1 = 0, ref2 = 0, ref3 = 0;
-  if (lua_type (L, 1) != LUA_TFUNCTION) {
-    printf ("not provided a callback\n");
-    return 0;
-  }
-
-  lua_pushvalue (L, 1);
-  ref1 = luaL_ref (L, LUA_REGISTRYINDEX);
-
-  if (lua_type (L, 2) == LUA_TFUNCTION) {
-    lua_pushvalue (L, 2);
-    ref2 = luaL_ref (L, LUA_REGISTRYINDEX);
-  }
-
-  if (lua_type (L, 3) == LUA_TFUNCTION) {
-    lua_pushvalue (L, 3);
-    ref3 = luaL_ref (L, LUA_REGISTRYINDEX);
-  }
-
-  hin_server_data_t * server = calloc (1, sizeof (hin_server_data_t));
-  server->request_callback = ref1;
-  server->error_callback = ref2;
-  server->finish_callback = ref3;
-  server->L = L;
-  server->magic = HIN_SERVER_MAGIC;
-  server->timeout = HIN_HTTPD_TIMEOUT;
-  server->debug = master.debug;
-  lua_pushlightuserdata (L, server);
-
-  hin_server_set_work_dir (server, master.workdir_path);
-
-  hin_server_data_t * prev = master.servers;
-  server->next = prev;
-  master.servers = server;
-
-  return 1;
-}
-
-static int l_hin_listen (lua_State *L) {
-  hin_server_data_t *server = (hin_server_data_t*)lua_touserdata (L, 1);
-  if (server == NULL || server->magic != HIN_SERVER_MAGIC) {
-    printf ("lua hin_listen need a valid server\n");
-    //luaL_typerror(L, index, FOO);
-    return 0;
-  }
-  const char * addr = lua_tostring (L, 2);
-  const char * port = lua_tostring (L, 3);
-  const char * type = lua_tostring (L, 4);
-  if (lua_type (L, 5) == LUA_TBOOLEAN) {
-    printf ("ssl missing cert for '%s:%s'\n", addr, port);
-    exit (1);
-  }
-  void * ctx = (void*)lua_topointer (L, 5);
-
-  hin_server_t * sock = httpd_create (addr, port, type, ctx);
-  sock->c.parent = server;
-  lua_pushlightuserdata (L, sock);
-
-  return 1;
-}
-
 #include <fcntl.h>
 
 hin_buffer_t * logs = NULL;
@@ -181,7 +119,7 @@ static int l_hin_create_log (lua_State *L) {
   int fd = openat (AT_FDCWD, path, O_WRONLY | O_APPEND | O_CLOEXEC | O_CREAT, 0660);
   if (fd < 0) {
     printf ("can't open '%s' %s\n", path, strerror (errno));
-    return 0;
+    exit (1);
   }
 
   if (master.debug & DEBUG_CONFIG)
@@ -251,31 +189,204 @@ static int l_hin_create_cert (lua_State *L) {
   }
   void * ctx = NULL;
 #endif
-  if (ctx) {
-    lua_pushlightuserdata (L, ctx);
-  } else {
+  if (ctx == NULL) {
     lua_pushboolean (L, 0);
+    return 1;
   }
+  hin_ssl_ctx_t * box = calloc (1, sizeof (*box));
+  box->cert = strdup (cert);
+  box->key = strdup (key);
+  box->ctx = ctx;
+  box->magic = HIN_CERT_MAGIC;
+  box->refcount++;
+  box->next = master.certs;
+  master.certs = box;
+  lua_pushlightuserdata (L, box);
   return 1;
 }
 
+static const char * l_hin_get_str (lua_State *L, int tpos, const char * name) {
+  const char * ret = NULL;
+  lua_pushstring (L, name);
+  lua_gettable (L, tpos);
+  if (lua_type (L, -1) == LUA_TSTRING) {
+    ret = lua_tostring (L, -1);
+  }
+  lua_pop (L, 1);
+  return ret;
+}
+
+static int l_hin_add_socket (lua_State *L, hin_vhost_t * vhost, int tpos) {
+  if (lua_type (L, tpos) != LUA_TTABLE) {
+    return -1;
+  }
+  int ssl = 0;
+  const char * bind = l_hin_get_str (L, tpos, "bind");
+  const char * port = l_hin_get_str (L, tpos, "port");
+  const char * sock_type = l_hin_get_str (L, tpos, "sock_type");
+
+  lua_pushstring (L, "ssl");
+  lua_gettable (L, tpos);
+  if (lua_type (L, -1) == LUA_TBOOLEAN) {
+    ssl = lua_toboolean (L, -1);
+  }
+  lua_pop (L, 1);
+
+  void * ctx = NULL;
+  if (ssl) {
+    hin_ssl_ctx_t * box = vhost->ssl;
+    if (box)
+      ctx = box->ctx;
+    if (ctx == NULL) return -1;
+  }
+
+  hin_server_t * sock = httpd_create (bind, port, sock_type, ctx);
+  sock->c.parent = vhost;
+
+  return 0;
+}
+
+static int l_hin_vhost_get_callback (lua_State *L, int tpos, const char * name) {
+  int ret = 0;
+  lua_pushstring (L, name);
+  lua_gettable (L, tpos);
+  if (lua_type (L, -1) == LUA_TNIL) {
+    char buffer[60];
+    snprintf (buffer, sizeof buffer, "default_%s_handler", name);
+    lua_getglobal (L, buffer);
+  }
+  if (lua_type (L, -1) != LUA_TFUNCTION) {
+    lua_pop (L, 1);
+  } else {
+    ret = luaL_ref (L, LUA_REGISTRYINDEX);
+  }
+  return ret;
+}
+
 static int l_hin_add_vhost (lua_State *L) {
-  size_t len = 0;
-  const char * name = lua_tolstring (L, 1, &len);
+  if (lua_type (L, 1) != LUA_TTABLE) {
+    printf ("add_vhost requires a table\n");
+    return 0;
+  }
 
   // TODO check if this is an actual ssl context
-  void * ctx = (void*)lua_topointer (L, 2);
+  hin_vhost_t * parent = NULL;
+  size_t len = 0;
+  int nsocket = 0;
+  const char * htdocs = NULL;
 
-  int hin_vhost_add (const char * name, int name_len, void* ptr);
-  int ret = hin_vhost_add (name, len, ctx);
+  lua_pushstring (L, "parent");
+  lua_gettable (L, 1);
+  if (lua_type (L, -1) == LUA_TLIGHTUSERDATA) {
+    parent = (void*)lua_topointer (L, -1);
+  }
+  lua_pop (L, 1);
 
-  lua_pushboolean (L, ret < 0 ? 0 : 1);
+  hin_vhost_t * vhost = calloc (1, sizeof (hin_vhost_t));
+
+  lua_pushstring (L, "cert");
+  lua_gettable (L, 1);
+  if (lua_type (L, -1) == LUA_TLIGHTUSERDATA) {
+    hin_ssl_ctx_t * box = (void*)lua_topointer (L, -1);
+    if (box && box->magic == HIN_CERT_MAGIC) {
+      vhost->ssl = box;
+      vhost->ssl_ctx = box->ctx;
+      box->refcount++;
+    }
+  }
+  lua_pop (L, 1);
+
+  // listen to sockets
+  lua_pushstring (L, "socket");
+  lua_gettable (L, 1);
+  if (lua_type (L, -1) == LUA_TTABLE) {
+    size_t sz = hin_lua_rawlen (L, -1);
+    for (int i = 1; i <= sz; i++) {
+      lua_rawgeti (L, -1, i);
+      if (l_hin_add_socket (L, vhost, lua_gettop (L)) >= 0) {
+        nsocket++;
+      }
+      lua_pop (L, 1);
+    }
+  }
+  lua_pop (L, 1);
+
+  if (nsocket == 0) {
+    if (parent == NULL) {
+      printf ("error! vhost requires parent\n");
+      return 0;
+    } else if (parent->magic != HIN_VHOST_MAGIC) {
+      printf ("error! vhost requires valid parent %x %x\n", parent->magic, HIN_VHOST_MAGIC);
+      return 0;
+    }
+  }
+
+  lua_pushstring (L, "host");
+  lua_gettable (L, 1);
+  if (lua_type (L, -1) == LUA_TTABLE) {
+    size_t sz = hin_lua_rawlen (L, -1);
+    for (int i = 1; i <= sz; i++) {
+      lua_rawgeti (L, -1, i);
+      const char * name = lua_tolstring (L, -1, &len);
+      if (i == 1) {
+        vhost->hostname = strdup (name);
+      }
+      if (master.debug & DEBUG_HTTP)
+        printf ("vhost '%s'\n", name);
+      if (hin_vhost_get (name, len)) {
+        printf ("error! vhost duplicate '%s'\n", name);
+        return 0;
+      }
+      int ret = hin_vhost_add (name, len, vhost);
+      if (ret < 0) {
+        printf ("error! vhost add '%s'\n", name);
+        // TODO cancel the whole host
+        return 0;
+      }
+      lua_pop (L, 1);
+    }
+  }
+  lua_pop (L, 1);
+
+  lua_pushstring (L, "htdocs");
+  lua_gettable (L, 1);
+  if (lua_type (L, -1) == LUA_TSTRING) {
+    htdocs = lua_tostring (L, -1);
+  } else {
+    htdocs = master.workdir_path;
+  }
+  lua_pop (L, 1);
+
+  vhost->request_callback = l_hin_vhost_get_callback (L, 1, "onRequest");
+  if (nsocket > 0 && vhost->request_callback == 0) {
+    printf ("error! missing onRequest handler\n");
+    return 0;
+  }
+  vhost->error_callback = l_hin_vhost_get_callback (L, 1, "onError");
+  vhost->finish_callback = l_hin_vhost_get_callback (L, 1, "onFinish");
+
+  vhost->L = L;
+  vhost->magic = HIN_VHOST_MAGIC;
+  vhost->timeout = HIN_HTTPD_TIMEOUT;
+  if (parent) {
+    vhost->debug = parent->debug;
+    vhost->disable = parent->disable;
+  } else {
+    vhost->debug = master.debug;
+  }
+  vhost->parent = parent;
+  lua_pushlightuserdata (L, vhost);
+
+  hin_server_set_work_dir (vhost, htdocs);
+
+  hin_vhost_t * prev = master.vhosts;
+  vhost->next = prev;
+  master.vhosts = vhost;
+
   return 1;
 }
 
 static lua_function_t functs [] = {
-{"create_httpd",	l_hin_create_httpd },
-{"listen",		l_hin_listen },
 {"create_log",		l_hin_create_log },
 {"redirect_log",	l_hin_redirect_log },
 {"create_cert",		l_hin_create_cert },

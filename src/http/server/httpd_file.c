@@ -270,13 +270,13 @@ int httpd_handle_file_request (hin_client_t * client, const char * path, off_t p
   buf->debug = http->debug;
 
   hin_server_t * socket = http->c.parent;
-  hin_server_data_t * data = socket->c.parent;
+  hin_vhost_t * vhost = socket->c.parent;
 
   if (HIN_HTTPD_ASYNC_OPEN) {
     buf->flags |= HIN_SYNC;
   }
   buf->callback = httpd_open_filefd_callback;
-  hin_request_openat (buf, data->cwd_fd, path, O_RDONLY | O_CLOEXEC, 0);
+  hin_request_openat (buf, vhost->cwd_fd, path, O_RDONLY | O_CLOEXEC, 0);
   return 0;
 }
 
