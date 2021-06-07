@@ -70,8 +70,7 @@ static int l_hin_require (lua_State *L) {
 finish:
   if (ret < 0) {
     const char * reason = lua_tostring (L, -1);
-    printf ("%s\n", reason);
-    exit (1);
+    return luaL_error (L, "error! %s\n", reason);
   }
   return 0;
 }

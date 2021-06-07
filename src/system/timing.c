@@ -64,7 +64,7 @@ int hin_timer_check () {
   hin_timer_t * next = NULL;
   for (hin_timer_t * timer = first; timer && (timer->time < tm);) {
     if (master.debug & DEBUG_TIMEOUT)
-      printf ("timeout %p\n", timer);
+      printf ("timeout %p\n", timer->ptr);
     next = timer->next;
     timer->callback (timer, tm);
     if (timer->time < tm) {

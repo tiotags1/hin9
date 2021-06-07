@@ -95,19 +95,22 @@ void hin_ssl_print_error () {
 static int hin_ssl_sni_callback (SSL *ssl, int *ad, void *arg) {
   if (ssl == NULL)
     return SSL_TLSEXT_ERR_NOACK;
+  uint32_t debug = master.debug;
 
   const char* servername = SSL_get_servername (ssl, TLSEXT_NAMETYPE_host_name);
   if (servername == NULL || servername[0] == '\0') {
-    printf ("ssl SNI null\n");
+    if (debug & (DEBUG_SSL|DEBUG_RW_ERROR))
+      printf ("ssl SNI null\n");
     return SSL_TLSEXT_ERR_NOACK;
   }
 
-  if (master.debug & HIN_SSL)
+  if (debug & (DEBUG_SSL))
     printf ("ssl SNI '%s'\n", servername);
 
   hin_vhost_t * vhost = hin_vhost_get (servername, strlen (servername));
   if (vhost == NULL || vhost->ssl_ctx == NULL) {
-    printf ("ssl can't find vhost '%s'\n", servername);
+    if (debug & (DEBUG_SSL|DEBUG_RW_ERROR))
+      printf ("ssl can't find vhost '%s'\n", servername);
     return SSL_TLSEXT_ERR_OK;
   }
   SSL_CTX * r = SSL_set_SSL_CTX (ssl, vhost->ssl_ctx);

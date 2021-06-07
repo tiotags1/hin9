@@ -1,4 +1,7 @@
 
+* more error handling, oh my we were forgetting about some errors
+
+commit 631df5f233190ab8033503ef32b0e78f4d01b85d
 * added an initial 'proper' vhost api
   seems like the idea of handling vhosts purely in lua is bad considering things
   like ssl sni and proper cwd handling

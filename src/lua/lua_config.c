@@ -118,8 +118,7 @@ static int l_hin_create_log (lua_State *L) {
   if (master.flags & HIN_PRETEND) path = "/dev/null";
   int fd = openat (AT_FDCWD, path, O_WRONLY | O_APPEND | O_CLOEXEC | O_CREAT, 0660);
   if (fd < 0) {
-    printf ("can't open '%s' %s\n", path, strerror (errno));
-    exit (1);
+    return luaL_error (L, "error! create_log '%s' %s\n", path, strerror (errno));
   }
 
   if (master.debug & DEBUG_CONFIG)
@@ -237,7 +236,9 @@ static int l_hin_add_socket (lua_State *L, hin_vhost_t * vhost, int tpos) {
     hin_ssl_ctx_t * box = vhost->ssl;
     if (box)
       ctx = box->ctx;
-    if (ctx == NULL) return -1;
+    if (ctx == NULL) {
+      return luaL_error (L, "error! vhost invalid cert\n");
+    }
   }
 
   hin_server_t * sock = httpd_create (bind, port, sock_type, ctx);
@@ -265,8 +266,7 @@ static int l_hin_vhost_get_callback (lua_State *L, int tpos, const char * name) 
 
 static int l_hin_add_vhost (lua_State *L) {
   if (lua_type (L, 1) != LUA_TTABLE) {
-    printf ("add_vhost requires a table\n");
-    return 0;
+    return luaL_error (L, "error! add_vhost requires a table\n");
   }
 
   // TODO check if this is an actual ssl context
@@ -293,6 +293,8 @@ static int l_hin_add_vhost (lua_State *L) {
       vhost->ssl_ctx = box->ctx;
       box->refcount++;
     }
+  } else if (lua_type (L, -1) == LUA_TBOOLEAN) {
+    return luaL_error (L, "error! vhost invalid cert\n");
   }
   lua_pop (L, 1);
 
@@ -305,6 +307,8 @@ static int l_hin_add_vhost (lua_State *L) {
       lua_rawgeti (L, -1, i);
       if (l_hin_add_socket (L, vhost, lua_gettop (L)) >= 0) {
         nsocket++;
+      } else {
+        return luaL_error (L, "error! vhost invalid socket\n");
       }
       lua_pop (L, 1);
     }
@@ -313,11 +317,9 @@ static int l_hin_add_vhost (lua_State *L) {
 
   if (nsocket == 0) {
     if (parent == NULL) {
-      printf ("error! vhost requires parent\n");
-      return 0;
+      return luaL_error (L, "error! vhost requires parent\n");
     } else if (parent->magic != HIN_VHOST_MAGIC) {
-      printf ("error! vhost requires valid parent %x %x\n", parent->magic, HIN_VHOST_MAGIC);
-      return 0;
+      return luaL_error (L, "error! vhost requires valid parent %x!=%x\n", parent->magic, HIN_VHOST_MAGIC);
     }
   }
 
@@ -335,13 +337,13 @@ static int l_hin_add_vhost (lua_State *L) {
         printf ("vhost '%s'\n", name);
       if (hin_vhost_get (name, len)) {
         printf ("error! vhost duplicate '%s'\n", name);
-        return 0;
+        return luaL_error (L, "error! vhost duplicate '%s'\n", name);
       }
       int ret = hin_vhost_add (name, len, vhost);
       if (ret < 0) {
         printf ("error! vhost add '%s'\n", name);
         // TODO cancel the whole host
-        return 0;
+        return luaL_error (L, "error! vhost add '%s'\n", name);
       }
       lua_pop (L, 1);
     }
@@ -359,8 +361,7 @@ static int l_hin_add_vhost (lua_State *L) {
 
   vhost->request_callback = l_hin_vhost_get_callback (L, 1, "onRequest");
   if (nsocket > 0 && vhost->request_callback == 0) {
-    printf ("error! missing onRequest handler\n");
-    return 0;
+    return luaL_error (L, "error! missing onRequest handler\n");
   }
   vhost->error_callback = l_hin_vhost_get_callback (L, 1, "onError");
   vhost->finish_callback = l_hin_vhost_get_callback (L, 1, "onFinish");

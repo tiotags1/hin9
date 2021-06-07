@@ -226,7 +226,9 @@ int main (int argc, const char * argv[], const char * envp[]) {
   hin_signal_install ();
 
   int lua_init ();
+  void hin_lua_report_error ();
   if (lua_init () < 0) {
+    hin_lua_report_error ();
     printf ("could not init lua\n");
     return -1;
   }
@@ -234,6 +236,7 @@ int main (int argc, const char * argv[], const char * envp[]) {
   int hin_conf_load (const char * path);
   if (master.debug & DEBUG_CONFIG) printf ("conf path '%s'\n", master.conf_path);
   if (hin_conf_load (master.conf_path) < 0) {
+    hin_lua_report_error ();
     return -1;
   }
 
