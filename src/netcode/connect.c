@@ -7,105 +7,91 @@
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <netdb.h>
 #include <unistd.h>
 #include <fcntl.h>
 
 #include "hin.h"
 
-typedef int (competion_callback_t) (hin_client_t * client, int ret);
+typedef struct {
+  struct addrinfo * rp, * base;
+  hin_callback_t callback;
+  struct sockaddr * ai_addr;
+  socklen_t * ai_addrlen;
+} hin_connect_t;
 
-static int complete (hin_buffer_t * buffer, int fd) {
-  hin_client_t * client = (hin_client_t*)buffer->parent;
+static int complete (hin_buffer_t * buf, int ret) {
+  hin_connect_t * conn = (hin_connect_t*)buf->buffer;
   char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
-  int err = getnameinfo (&client->ai_addr, client->ai_addrlen,
+  int err = getnameinfo (conn->ai_addr, *conn->ai_addrlen,
         hbuf, sizeof hbuf,
         sbuf, sizeof sbuf,
         NI_NUMERICHOST | NI_NUMERICSERV);
   if (err) {
-    printf ("getnameinfo2 err '%s'\n", gai_strerror (err));
+    hbuf[0] = sbuf[0] = '\0';
+    printf ("getnameinfo2 err '%s' len %d\n", gai_strerror (err), *conn->ai_addrlen);
   }
 
-  client->sockfd = fd;
-  if (master.debug & DEBUG_SOCKET) printf ("connect%s complete %d %s:%s\n", client->flags & HIN_SSL ? "(s)" : "", client->sockfd, hbuf, sbuf);
-
-  competion_callback_t * callback = (competion_callback_t*)buffer->prev;
-  int ret = callback (client, fd);
-
-  freeaddrinfo ((struct addrinfo *)buffer->data);
-  if (ret) free (client);
-  return 1;
-}
-
-static int fail (hin_buffer_t * buffer, int err) {
-  hin_client_t * client = (hin_client_t*)buffer->parent;
-  char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
-  int err1 = getnameinfo (&client->ai_addr, client->ai_addrlen,
-        hbuf, sizeof hbuf,
-        sbuf, sizeof sbuf,
-        NI_NUMERICHOST | NI_NUMERICSERV);
-  if (err1) {
-    printf ("getnameinfo3 err '%s'\n", gai_strerror (err));
+  if (ret >= 0) {
+    if (master.debug & DEBUG_SOCKET) printf ("connect %d %s:%s complete\n", ret, hbuf, sbuf);
+  } else {
+    if (master.debug & DEBUG_SOCKET) printf ("connect %s:%s failed! %s\n", hbuf, sbuf, strerror (-ret));
   }
 
-  printf ("connect%s failed %d %s:%s '%s'\n", client->flags & HIN_SSL ? "(s)" : "", client->sockfd, hbuf, sbuf, strerror (-err));
-
-  competion_callback_t * callback = (competion_callback_t*)buffer->prev;
-  int ret = callback (client, err);
-
-  freeaddrinfo ((struct addrinfo *)buffer->data);
-  if (ret) free (client);
-  return 1;
+  if (conn->callback (buf, ret)) {
+    freeaddrinfo ((struct addrinfo *)conn->base);
+    return 1;
+  }
+  return 0;
 }
 
-static int hin_connect_recheck (hin_buffer_t * buffer, int ret);
+static int hin_connect_try_next (hin_buffer_t * buf) {
+  hin_connect_t * conn = (hin_connect_t*)buf->buffer;
 
-static int hin_connect_try_next (hin_buffer_t * buffer) {
-  hin_client_t * client = (hin_client_t*)buffer->parent;
-
-  struct addrinfo * rp = (struct addrinfo*)buffer->ptr;
+  struct addrinfo * rp = conn->rp;
   for (; rp; rp = rp->ai_next) {
-    buffer->fd = socket (rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-    if (buffer->fd < 0) {
-      perror ("socket1");
+    buf->fd = socket (rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+    if (buf->fd < 0) {
+      perror ("socket");
       continue;
     }
 
-    client->ai_addr = *rp->ai_addr;
-    client->ai_addrlen = rp->ai_addrlen;
-    buffer->ptr = (char*)rp->ai_next;
-    buffer->callback = hin_connect_recheck;
-    if (hin_request_connect (buffer) < 0) {
+    conn->rp = rp->ai_next;
+    *conn->ai_addr = *rp->ai_addr;
+    *conn->ai_addrlen = rp->ai_addrlen;
+    if (hin_request_connect (buf, conn->ai_addr, *conn->ai_addrlen) < 0) {
       printf ("connect failed\n");
       return -1;
     }
     return 0;
   }
 
-  fail (buffer, 0);
+  complete (buf, -ENOSYS);
   return -1;
 }
 
-static int hin_connect_recheck (hin_buffer_t * buffer, int ret) {
+static int hin_connect_recheck (hin_buffer_t * buf, int ret) {
   if (ret == 0) {
-    return complete (buffer, buffer->fd);
+    return complete (buf, buf->fd);
   }
-  close (buffer->fd);
+  close (buf->fd);
 
-  if (buffer->ptr) {
-    hin_connect_try_next (buffer);
+  hin_connect_t * conn = (hin_connect_t*)buf->buffer;
+  if (conn->rp) {
+    hin_connect_try_next (buf);
     return 0;
   }
 
-  return fail (buffer, ret);
+  return complete (buf, ret);
 }
 
-int hin_connect (hin_client_t * client, const char * host, const char * port, int (*callback) (hin_client_t * client, int ret)) {
-  if (master.debug & DEBUG_SOCKET) printf ("connect%s start %s:%s\n", client->flags & HIN_SSL ? "(s)" : "", host, port);
+int hin_connect (const char * host, const char * port, hin_callback_t callback, void * parent, struct sockaddr * ai_addr, socklen_t * ai_addrlen) {
+  if (master.debug & DEBUG_SOCKET) printf ("connect start %s:%s\n", host, port);
   struct addrinfo hints;
   struct addrinfo *result;
   int s;
-  if (client == NULL || callback == NULL) {
+  if (parent == NULL || callback == NULL) {
     fprintf (stderr, "can't connect without a callback ?\n");
     return -1;
   }
@@ -122,18 +108,47 @@ int hin_connect (hin_client_t * client, const char * host, const char * port, in
     return -1;
   }
 
-  client->sockfd = -1;
-  client->magic = HIN_CONNECT_MAGIC;
+  hin_buffer_t * buf = calloc (1, sizeof *buf + sizeof (hin_connect_t));
+  buf->parent = parent;
+  buf->callback = hin_connect_recheck;
 
-  hin_buffer_t * buffer = calloc (1, sizeof *buffer + sizeof (void*));
-  buffer->data = buffer->ptr = (char*)result;
-  buffer->parent = client;
-  buffer->prev = (hin_buffer_t*)callback;
-  hin_connect_try_next (buffer);
+  hin_connect_t * conn = (hin_connect_t*)buf->buffer;
+  conn->rp = conn->base = result;
+  conn->callback = callback;
+  conn->ai_addr = ai_addr;
+  conn->ai_addrlen = ai_addrlen;
+  hin_connect_try_next (buf);
 
   return 0;
 }
 
+int hin_unix_sock (const char * path, hin_callback_t callback, void * parent) {
+  struct sockaddr_un * sock = NULL;
+  int len = strlen (path);
+  int sz = sizeof (sock->sun_family) + len;
+
+  hin_buffer_t * buf = calloc (1, sizeof *buf + sz);
+  buf->callback = callback;
+  buf->parent = parent;
+
+  sock = (struct sockaddr_un *)buf->buffer;
+
+  if ((buf->fd = socket (AF_UNIX, SOCK_STREAM, 0)) == -1) {
+    perror("socket");
+    return -1;
+  }
+
+  sock->sun_family = AF_UNIX;
+  memcpy (sock->sun_path, path, len);
+  sock->sun_path[len] = '\0';
+
+  if (hin_request_connect (buf, sock, sz) < 0) {
+    printf ("connect unix failed\n");
+    return -1;
+  }
+
+  return 0;
+}
 
 
 

@@ -113,10 +113,10 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer) {
     if (find_line (&source, &line) == 0) { return 0; }
     if (line.len == 0) break;
     if (http->debug & DEBUG_PROXY)
-      printf (" %ld '%.*s'\n", line.len, (int)line.len, line.ptr);
+      printf (" %zd '%.*s'\n", line.len, (int)line.len, line.ptr);
     if (matchi_string_equal (&line, "Content-Length: (%d+)", &param1) > 0) {
       sz = atoi (param1.ptr);
-      if (http->debug & DEBUG_PROXY) printf ("  size is %ld\n", sz);
+      if (http->debug & DEBUG_PROXY) printf ("  size is %lld\n", (long long)sz);
     } else if (matchi_string_equal (&line, "Transfer-Encoding: (%w+)", &param1) > 0) {
       if (matchi_string_equal (&param1, "chunked") > 0) {
         http1->flags |= HIN_HTTP_CHUNKED;
@@ -232,6 +232,7 @@ static int http_client_sent_callback (hin_buffer_t * buffer, int ret) {
   http_client_t * proxy = buffer->parent;
   httpd_client_t * http = proxy->c.parent;
 
+  if (http == NULL) return 1;
   if (http->method != HIN_HTTP_POST) return 1;
 
   string_t source = http->headers, line;
@@ -242,7 +243,7 @@ static int http_client_sent_callback (hin_buffer_t * buffer, int ret) {
     if (line.len == 0) break;
   }
 
-  if (http->debug & (DEBUG_PROXY|DEBUG_POST)) printf ("proxy post %d>%d sz is %ld\n", http->c.sockfd, proxy->c.sockfd, http->post_sz);
+  if (http->debug & (DEBUG_PROXY|DEBUG_POST)) printf ("proxy post %d>%d sz is %lld\n", http->c.sockfd, proxy->c.sockfd, (long long)http->post_sz);
 
   off_t sz = http->post_sz;
   int len = source.len;

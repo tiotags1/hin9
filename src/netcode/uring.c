@@ -169,20 +169,18 @@ int hin_request_accept (hin_buffer_t * buffer, int flags) {
   return 0;
 }
 
-int hin_request_connect (hin_buffer_t * buffer) {
-  hin_client_t * client = (hin_client_t*)buffer->parent;
-
+int hin_request_connect (hin_buffer_t * buffer, struct sockaddr * ai_addr, int ai_addrlen) {
   if (buffer->flags & HIN_EPOLL) {
     if (hin_epoll_request_read (buffer) < 0) return -1;
     return 0;
   }
   if (buffer->flags & HIN_SYNC) {
-    int ret = connect (buffer->fd, &client->ai_addr, client->ai_addrlen);
+    int ret = connect (buffer->fd, ai_addr, ai_addrlen);
     return hin_request_callback (buffer, ret);
   }
 
   struct io_uring_sqe *sqe = hin_request_sqe ();
-  io_uring_prep_connect (sqe, buffer->fd, &client->ai_addr, client->ai_addrlen);
+  io_uring_prep_connect (sqe, buffer->fd, ai_addr, ai_addrlen);
   io_uring_sqe_set_data (sqe, buffer);
   if (buffer->debug & DEBUG_URING) printf ("req%d connect buf %p cb %p\n", master.id, buffer, buffer->callback);
   return 0;

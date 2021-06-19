@@ -34,7 +34,7 @@ static hin_buffer_t * new_buffer (hin_buffer_t * buffer, int min_sz) {
   return buf;
 }
 
-static int vheader (hin_buffer_t * buffer, const char * fmt, va_list ap) {
+int vheader (hin_buffer_t * buffer, const char * fmt, va_list ap) {
   if (buffer->next) return vheader (buffer->next, fmt, ap);
   int pos = buffer->count;
   int sz = buffer->sz - buffer->count;
@@ -81,6 +81,25 @@ int header_raw (hin_buffer_t * buffer, const char * data, int len) {
   memcpy (buffer->ptr + pos, data, len);
   buffer->count += len;
   return len;
+}
+
+void * header_ptr (hin_buffer_t * buffer, int len) {
+  if (buffer->next) return header_ptr (buffer->next, len);
+
+  int pos = buffer->count;
+  int sz = buffer->sz - buffer->count;
+  if (len > HIN_HTTPD_MAX_HEADER_LINE_SIZE) {
+    printf ("'header_raw1' failed to write more\n");
+    return NULL;
+  }
+  if (len > sz) {
+    hin_buffer_t * buf = new_buffer (buffer, len);
+    return header_ptr (buf, len);
+  }
+
+  char * ptr = buffer->ptr + pos;
+  buffer->count += len;
+  return ptr;
 }
 
 int header_date (hin_buffer_t * buf, const char * name, time_t time) {

@@ -63,7 +63,7 @@ hin_cache_store_t * hin_cache_create () {
   hin_cache_store_t * store = calloc (1, sizeof (hin_cache_store_t));
   uintptr_t seed;
   hin_random ((uint8_t*)&seed, sizeof (seed));
-  if (master.debug & DEBUG_CONFIG) printf ("cache seed is %lx\n", seed);
+  if (master.debug & DEBUG_CONFIG) printf ("cache seed is %zx\n", seed);
   if (basic_ht_init (&store->ht, 1024, seed) < 0) {
     printf ("error in hashtable init\n");
   }
@@ -76,11 +76,11 @@ hin_cache_store_t * hin_cache_create () {
 
 void hin_cache_item_clean (hin_cache_item_t * item) {
   if (item->fd > 0) close (item->fd);
-  if (master.debug & DEBUG_CACHE) printf ("cache %lx_%lx free\n", item->cache_key1, item->cache_key2);
+  if (master.debug & DEBUG_CACHE) printf ("cache %zx_%zx free\n", item->cache_key1, item->cache_key2);
 
   if (HIN_HTTPD_CACHE_CLEAN_ON_EXIT) {
     char buffer[sizeof (HIN_HTTPD_CACHE_DIRECTORY) + 70];
-    snprintf (buffer, sizeof buffer, HIN_HTTPD_CACHE_DIRECTORY "/%lx_%lx", item->cache_key1, item->cache_key2);
+    snprintf (buffer, sizeof buffer, HIN_HTTPD_CACHE_DIRECTORY "/%zx_%zx", item->cache_key1, item->cache_key2);
     if (unlinkat (AT_FDCWD, buffer, 0) < 0) perror ("unlinkat");
   }
 
@@ -100,7 +100,7 @@ void hin_cache_unref (hin_cache_item_t * item) {
   } else if (item->refcount < 0) {
     printf ("cache error refcount < 0\n");
   } else {
-    if (master.debug & DEBUG_CACHE) printf ("cache %lx_%lx refcount --%d\n", item->cache_key1, item->cache_key2, item->refcount);
+    if (master.debug & DEBUG_CACHE) printf ("cache %zx_%zx refcount --%d\n", item->cache_key1, item->cache_key2, item->refcount);
   }
 }
 
@@ -143,7 +143,7 @@ void hin_cache_timer (int seconds) {
     hin_cache_item_t * item = (void*)pair->value1;
     if (item->flags & HIN_CACHE_DONE)
       item->lifetime -= seconds;
-    if (master.debug & DEBUG_CACHE) printf ("cache %lx_%lx item life %ld\n", item->cache_key1, item->cache_key2, item->lifetime);
+    if (master.debug & DEBUG_CACHE) printf ("cache %zx_%zx item life %lld\n", item->cache_key1, item->cache_key2, (long long)item->lifetime);
     if (item->lifetime <= 0) {
       prev = item;
     }
@@ -165,7 +165,7 @@ static int hin_cache_pipe_error_callback (hin_pipe_t * pipe) {
   hin_cache_item_t * item = (hin_cache_item_t*)pipe->parent;
   hin_cache_store_t * store = item->parent;
 
-  printf ("cache %lx_%lx error in generating\n", item->cache_key1, item->cache_key2);
+  printf ("cache %zx_%zx error in generating\n", item->cache_key1, item->cache_key2);
 
   hin_cache_client_queue_t * next;
   for (hin_cache_client_queue_t * queue = item->client_queue; queue; queue = next) {
@@ -206,7 +206,7 @@ int hin_cache_save (hin_cache_store_t * store, hin_pipe_t * pipe) {
     queue->next = item->client_queue;
     item->client_queue = queue;
     item->refcount++;
-    if (master.debug & DEBUG_CACHE) printf ("cache %lx_%lx queue event\n", http->cache_key1, http->cache_key2);
+    if (master.debug & DEBUG_CACHE) printf ("cache %zx_%zx queue event\n", http->cache_key1, http->cache_key2);
     return 0;
   }
 
@@ -225,9 +225,9 @@ int hin_cache_save (hin_cache_store_t * store, hin_pipe_t * pipe) {
     if (item->fd < 0) perror ("openat");
   } else {
     char buffer[sizeof (HIN_HTTPD_CACHE_DIRECTORY) + 70];
-    snprintf (buffer, sizeof buffer, HIN_HTTPD_CACHE_DIRECTORY "/%lx_%lx", http->cache_key1, http->cache_key2);
+    snprintf (buffer, sizeof buffer, HIN_HTTPD_CACHE_DIRECTORY "/%zx_%zx", http->cache_key1, http->cache_key2);
     item->fd = openat (AT_FDCWD, buffer, O_RDWR | O_CREAT | O_TRUNC, 0600);
-    if (master.debug & DEBUG_CACHE) printf ("cache %lx_%lx create fd %d path '%s'\n", http->cache_key1, http->cache_key2, item->fd, buffer);
+    if (master.debug & DEBUG_CACHE) printf ("cache %zx_%zx create fd %d path '%s'\n", http->cache_key1, http->cache_key2, item->fd, buffer);
     if (item->fd < 0) perror ("openat");
   }
 
@@ -264,7 +264,7 @@ int hin_cache_finish (httpd_client_t * client, hin_pipe_t * pipe) {
   item->etag = pipe->hash;
   item->flags |= HIN_CACHE_DONE;
   time (&item->modified);
-  if (master.debug & DEBUG_CACHE) printf ("cache %lx_%lx ready sz %ld etag %lx\n", item->cache_key1, item->cache_key2, item->size, item->etag);
+  if (master.debug & DEBUG_CACHE) printf ("cache %zx_%zx ready sz %lld etag %llx\n", item->cache_key1, item->cache_key2, (long long)item->size, (long long)item->etag);
 
   hin_cache_store_t * store = item->parent;
   store->size += item->size;
@@ -291,7 +291,7 @@ int hin_cache_check (hin_cache_store_t * store, httpd_client_t * http) {
   hin_cache_item_t * item = hin_cache_get (store, http->cache_key1, http->cache_key2);
   if (item == NULL) return 0;
 
-  if (master.debug & DEBUG_CACHE) printf ("cache %lx_%lx present\n", http->cache_key1, http->cache_key2);
+  if (master.debug & DEBUG_CACHE) printf ("cache %zx_%zx present\n", http->cache_key1, http->cache_key2);
 
   item->refcount++;
 

@@ -237,7 +237,11 @@ static int l_hin_add_socket (lua_State *L, hin_vhost_t * vhost, int tpos) {
     if (box)
       ctx = box->ctx;
     if (ctx == NULL) {
-      return luaL_error (L, "error! vhost invalid cert\n");
+      #if HIN_HTTPD_ERROR_ON_MISSING_CERT
+      return luaL_error (L, "error! vhost %s:%s no cert\n", bind, port);
+      #endif
+      printf ("error! vhost %s:%s no cert\n", bind, port);
+      return 0;
     }
   }
 
@@ -294,7 +298,12 @@ static int l_hin_add_vhost (lua_State *L) {
       box->refcount++;
     }
   } else if (lua_type (L, -1) == LUA_TBOOLEAN) {
+    #if HIN_HTTPD_ERROR_ON_MISSING_CERT
     return luaL_error (L, "error! vhost invalid cert\n");
+    #else
+    printf ("error! vhost invalid cert\n");
+    #endif
+    vhost->ssl = vhost->ssl_ctx = NULL;
   }
   lua_pop (L, 1);
 

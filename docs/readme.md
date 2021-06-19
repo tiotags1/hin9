@@ -9,8 +9,7 @@ uses lua for everything related to configuration
 
 fun features that can be implemented just in lua and have been left out as an excercise to the user
 * rewrites
-* virtual hosts
-* virtual hosts per host logging
+* per vhost logging
 * zero or full logging and everything in between
 * basic auth
 * most kinds of load balancing

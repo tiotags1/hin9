@@ -39,7 +39,7 @@ static int httpd_pipe_error_callback (hin_pipe_t * pipe) {
 extern basic_vfs_t * vfs;
 
 static int done_file (hin_pipe_t * pipe) {
-  if (pipe->debug & DEBUG_PIPE) printf ("pipe %d>%d file transfer finished bytes %ld\n", pipe->in.fd, pipe->out.fd, pipe->count);
+  if (pipe->debug & DEBUG_PIPE) printf ("pipe %d>%d file transfer finished bytes %lld\n", pipe->in.fd, pipe->out.fd, (long long)pipe->count);
   httpd_client_finish_request (pipe->parent);
   void hin_cache_unref (void *);
   if (pipe->parent1) hin_cache_unref (pipe->parent1);
@@ -80,7 +80,7 @@ int httpd_send_file (httpd_client_t * http, hin_cache_item_t * item, hin_buffer_
   }
 
   if (http->debug & DEBUG_PIPE) {
-    printf ("sending file '%s' size %ld sockfd %d filefd %d\n", http->file_path, sz, http->c.sockfd, item->fd);
+    printf ("sending file '%s' size %lld sockfd %d filefd %d\n", http->file_path, (long long)sz, http->c.sockfd, item->fd);
   }
 
   // do you need to check http->status for 200 or can you return a 304 for a 206
@@ -143,16 +143,16 @@ int httpd_send_file (httpd_client_t * http, hin_cache_item_t * item, hin_buffer_
     header_date (buf, "Last-Modified", item->modified);
   }
   if ((http->disable & HIN_HTTP_ETAG) == 0 && item->etag) {
-    header (buf, "ETag: \"%lx\"\r\n", item->etag);
+    header (buf, "ETag: \"%llx\"\r\n", item->etag);
   }
   if ((http->peer_flags & HIN_HTTP_CHUNKED) == 0) {
-    header (buf, "Content-Length: %ld\r\n", sz);
+    header (buf, "Content-Length: %lld\r\n", sz);
   }
   if ((http->disable & HIN_HTTP_RANGE) == 0 && (http->peer_flags & HIN_HTTP_CHUNKED) == 0) {
     header (buf, "Accept-Ranges: bytes\r\n");
   }
   if (http->status == 206) {
-    header (buf, "Content-Range: bytes %ld-%ld/%ld\r\n", http->pos, http->pos+http->count-1, sz);
+    header (buf, "Content-Range: bytes %lld-%lld/%lld\r\n", http->pos, http->pos+http->count-1, sz);
   }
 
   header (buf, "\r\n");

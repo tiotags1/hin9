@@ -4,17 +4,19 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "hin.h"
-
-#include <sys/types.h>
 #include <sys/stat.h>
-#include <unistd.h>
-#include <fcntl.h>
 
 // musl doesn't define statx, what is the proper way to use statx on posix ?
 #ifndef STATX_MTIME
 #include <linux/stat.h>
 #include <sys/syscall.h>
+
+#include "basic_vfs.h"
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <fcntl.h>
 
 // TODO this code works only with x86, arm64 and x86_64
 // I don't know enought about kernel development to get this in a generic way

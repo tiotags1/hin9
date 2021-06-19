@@ -18,7 +18,8 @@ addgroup -g 1000 -S $USER
 adduser -S --disabled-password -G $USER -u 1000 -s /bin/sh -h $DIR $USER
 
 # needs access to build (for logs)
-chown $USER:$USER $DIR/build
+mkdir $DIR/workdir/logs
+chown $USER:$USER $DIR/workdir/logs
 chown $USER:$USER $DIR/htdocs
 chmod +x -R $DIR/scripts
 

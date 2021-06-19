@@ -127,8 +127,11 @@ static int hin_vfs_event_init (int inotify_fd) {
 }
 
 int hin_vfs_clean () {
-  basic_vfs_clean (vfs);
-  free (vfs);
+  if (vfs) {
+    basic_vfs_clean (vfs);
+    free (vfs);
+    vfs = NULL;
+  }
   if (inotify_buffer) hin_buffer_clean (inotify_buffer);
   return 0;
 }

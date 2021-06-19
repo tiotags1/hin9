@@ -40,7 +40,7 @@ int hin_pipe_decode_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, 
 
   if (pipe->debug & DEBUG_HTTP_FILTER) printf ("pipe %d>%d decode chunk sz %d left %d %s\n", pipe->in.fd, pipe->out.fd, num, decode->left_over, flush ? "flush" : "cont");
   while (1) {
-    if (pipe->debug & DEBUG_HTTP_FILTER) printf ("  chunk sz left %ld\n", decode->chunk_sz);
+    if (pipe->debug & DEBUG_HTTP_FILTER) printf ("  chunk sz left %lld\n", (long long)decode->chunk_sz);
     if (decode->chunk_sz > 0) {
       int consume = decode->chunk_sz;
       if (consume > source.len) consume = source.len;
@@ -77,7 +77,7 @@ int hin_pipe_decode_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, 
       return -1;
     }
     decode->chunk_sz = strtol (param1.ptr, NULL, 16);
-    if (pipe->debug & DEBUG_HTTP_FILTER) printf ("  chunk sz %ld found\n", decode->chunk_sz);
+    if (pipe->debug & DEBUG_HTTP_FILTER) printf ("  chunk sz %lld found\n", (long long)decode->chunk_sz);
     if (decode->chunk_sz == 0 && param1.len > 0) {
       int ret = pipe->read_callback (pipe, buffer, 0, 1);
       pipe->in.flags |= HIN_DONE;

@@ -53,8 +53,8 @@ int httpd_client_start_request (httpd_client_t * http) {
   httpd_vhost_switch (http, vhost);
 
   if (http->debug & DEBUG_HTTP) {
-    printf ("http%sd %d request begin %ld\n", (http->c.flags & HIN_SSL) ? "s" : "",
-      http->c.sockfd, time (NULL));
+    printf ("http%sd %d request begin %lld\n", (http->c.flags & HIN_SSL) ? "s" : "",
+      http->c.sockfd, (long long)time (NULL));
   }
   return 0;
 }

@@ -143,8 +143,8 @@ static int l_hin_proxy (lua_State *L) {
 }
 
 static int l_hin_cgi (lua_State *L) {
-  hin_client_t *client = (hin_client_t*)lua_touserdata (L, 1);
-  if (client == NULL || client->magic != HIN_CLIENT_MAGIC) {
+  httpd_client_t *http = (httpd_client_t*)lua_touserdata (L, 1);
+  if (http == NULL || http->c.magic != HIN_CLIENT_MAGIC) {
     printf ("lua hin_cgi need a valid client\n");
     return 0;
   }
@@ -155,8 +155,23 @@ static int l_hin_cgi (lua_State *L) {
   const char * path_info = lua_tostring (L, 5);
   if (exe_path == NULL) return 0;
 
-  int hin_cgi (hin_client_t * client, const char * exe_path, const char * root, const char * path, const char * path_info);
-  if (hin_cgi (client, exe_path, root_path, script_path, path_info) < 0) {
+  if (hin_cgi (http, exe_path, root_path, script_path, path_info) < 0) {
+  }
+  return 0;
+}
+
+static int l_hin_fastcgi (lua_State *L) {
+  httpd_client_t *http = (httpd_client_t*)lua_touserdata (L, 1);
+  if (http == NULL || http->c.magic != HIN_CLIENT_MAGIC) {
+    printf ("lua hin_cgi need a valid client\n");
+    return 0;
+  }
+
+  void * group = lua_touserdata (L, 2);
+  const char * script_path = lua_tostring (L, 3);
+  const char * path_info = lua_tostring (L, 4);
+
+  if (hin_fastcgi (http, group, script_path, path_info) < 0) {
   }
   return 0;
 }
@@ -330,6 +345,7 @@ static lua_function_t functs [] = {
 {"send_file",		l_hin_send_file },
 {"proxy",		l_hin_proxy },
 {"cgi",			l_hin_cgi },
+{"fastcgi",		l_hin_fastcgi },
 {"respond",		l_hin_respond },
 {"sanitize_path",	l_hin_sanitize_path },
 {"remote_address",	l_hin_remote_address },

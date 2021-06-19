@@ -41,6 +41,8 @@ void hin_clean () {
   hin_socket_clean ();
   void hin_vhost_clean ();
   hin_vhost_clean ();
+  void hin_fcgi_clean ();
+  hin_fcgi_clean ();
   // shouldn't clean pidfile it can incur a race condition
   free ((void*)master.exe_path);
   free ((void*)master.logdir_path);
@@ -91,10 +93,10 @@ int hin_process_argv (int argc, const char * argv[]) {
   for (int i = 1; i < argc; i++) {
     if (my_strcmp (argv[i], "--version", NULL)) {
       printf ("%s\n", HIN_HTTPD_SERVER_BANNER);
-      return -1;
+      return 1;
     } else if (my_strcmp (argv[i], "--help", NULL)) {
       print_help ();
-      return -1;
+      return 1;
     } else if (my_strcmp (argv[i], "--pidfile", NULL)) {
       i++;
       if (i >= argc) {
@@ -208,8 +210,11 @@ int main (int argc, const char * argv[], const char * envp[]) {
   hin_directory_path (HIN_LOGDIR_PATH, &master.logdir_path);
   hin_directory_path (HIN_WORKDIR_PATH, &master.workdir_path);
 
-  if (hin_process_argv (argc, argv) < 0)
+  int ret = hin_process_argv (argc, argv);
+  if (ret) {
+    if (ret > 0) return 0;
     return -1;
+  }
 
   if (master.debug & DEBUG_BASIC)
     printf ("hin start ...\n");
@@ -273,6 +278,8 @@ int main (int argc, const char * argv[], const char * envp[]) {
   //http_download ("https://localhost:28006/cgi-bin/test.php", "/tmp/dl.txt", NULL);
   //http_download ("http://localhost:28005/", "/tmp/dl.txt", NULL);
   //http_download ("https://localhost:28006/", "/tmp/dl.txt", NULL);
+  void * hin_fcgi_start ();
+  hin_fcgi_start ();
 
   void hin_event_loop ();
   hin_event_loop ();

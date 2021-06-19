@@ -90,6 +90,8 @@ int hin_pipe_copy_raw (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int fl
 
 static int hin_pipe_read_next (hin_buffer_t * buffer) {
   hin_pipe_t * pipe = (hin_pipe_t*)buffer->parent;
+  if (pipe->flags & HIN_NO_READ) return -1;
+
   buffer->fd = pipe->in.fd;
   buffer->ssl = pipe->in.ssl;
   buffer->flags = pipe->in.flags;
@@ -143,9 +145,13 @@ int hin_pipe_advance (hin_pipe_t * pipe) {
   }
 
   if (pipe->debug & DEBUG_PIPE) printf ("pipe %d>%d advance done %d read %d write %d\n", pipe->in.fd, pipe->out.fd, pipe->in.flags & HIN_DONE, pipe->num_read, pipe->num_write);
+
   if ((pipe->in.flags & HIN_DONE) == 0 && pipe->num_read < 1 && pipe->num_write < 1) {
     hin_buffer_t * new = pipe->buffer_callback (pipe, READ_SZ);
-    if (hin_pipe_read_next (new) < 0) return -1;
+    if (hin_pipe_read_next (new) < 0) {
+      hin_buffer_clean (new);
+      return -1;
+    }
   }
 
   if (pipe->write) {
@@ -165,7 +171,7 @@ int hin_pipe_write_callback (hin_buffer_t * buffer, int ret) {
     hin_pipe_close (pipe);
     return -1;
   }
-  if (pipe->debug & DEBUG_PIPE) printf ("pipe %d>%d write %d/%d pos %ld left %ld\n", pipe->in.fd, pipe->out.fd, ret, buffer->count, pipe->out.pos, pipe->left);
+  if (pipe->debug & DEBUG_PIPE) printf ("pipe %d>%d write %d/%d pos %lld left %lld\n", pipe->in.fd, pipe->out.fd, ret, buffer->count, (long long)pipe->out.pos, (long long)pipe->left);
   pipe->count += ret;
   if (pipe->flags & HIN_HASH) {
     uint8_t * start = (uint8_t*)buffer->ptr;
@@ -217,8 +223,8 @@ int hin_pipe_read_callback (hin_buffer_t * buffer, int ret) {
 
   pipe->num_read--;
 
-  if (pipe->debug & DEBUG_PIPE) printf ("pipe %d>%d read  %d/%d pos %ld left %ld %s\n",
-    pipe->in.fd, pipe->out.fd, ret, buffer->count, pipe->in.pos, pipe->left, pipe->in.flags & HIN_DONE ? "flush" : "cont");
+  if (pipe->debug & DEBUG_PIPE) printf ("pipe %d>%d read  %d/%d pos %lld left %lld %s\n",
+    pipe->in.fd, pipe->out.fd, ret, buffer->count, (long long)pipe->in.pos, (long long)pipe->left, pipe->in.flags & HIN_DONE ? "flush" : "cont");
 
   if (pipe->in.flags & HIN_OFFSETS) {
     pipe->in.pos += ret;

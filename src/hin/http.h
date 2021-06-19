@@ -81,9 +81,12 @@ typedef struct {
 #define HIN_HTTP_PATH_ACCEPT "[%w_%-/%.%+%%&#$?=,;]+"
 
 #include <basic_pattern.h>
+#include <stdarg.h>
 
+int vheader (hin_buffer_t * buffer, const char * fmt, va_list ap);
 int header (hin_buffer_t * buffer, const char * fmt, ...);
 int header_raw (hin_buffer_t * buffer, const char * data, int len);
+void * header_ptr (hin_buffer_t * buffer, int len);
 int header_date (hin_buffer_t * buffer, const char * name, time_t time);
 int header_cache_control (hin_buffer_t * buf, uint32_t flags, time_t max_age);
 int httpd_write_common_headers (httpd_client_t * http, hin_buffer_t * buf);
@@ -108,6 +111,9 @@ int httpd_client_shutdown (httpd_client_t * http);
 int http_client_shutdown (http_client_t * http);
 
 //int hin_request_headers (hin_client_t * client);
+
+int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_path, const char * script_path, const char * path_info);
+int hin_fastcgi (httpd_client_t * http, void * fcgi_group, const char * script_path, const char * path_info);
 
 // download
 hin_server_t * httpd_create (const char * addr, const char * port, const char * sock_type, void * ssl_ctx);

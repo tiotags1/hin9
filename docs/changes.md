@@ -1,4 +1,14 @@
 
+* cache_test.php to test if caching still works
+* made connect slightly more general purpose
+* added compile time option to start despite ssl vhosts without certificates
+* --help and --version no longer exit with error code
+* moved statx musl compatibility layer to basic_vfs
+* forced in large file support mode for 32bit
+* bugfix segfault on exit
+* bugfix 32bit segfaults, should now work on 32bit
+
+commit 0c5d5ce4e84d58ab15d9ff5d08beb2a216bd2904
 * more error handling, oh my we were forgetting about some errors
 
 commit 631df5f233190ab8033503ef32b0e78f4d01b85d

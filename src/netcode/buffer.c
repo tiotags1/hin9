@@ -17,7 +17,7 @@ void hin_buffer_clean (hin_buffer_t * buffer) {
 }
 
 hin_buffer_t * hin_buffer_create_from_data (void * parent, const char * ptr, int sz) {
-  hin_buffer_t * buf = calloc (1, sizeof *buf + sz);
+  hin_buffer_t * buf = malloc (sizeof *buf + sz);
   memset (buf, 0, sizeof (*buf));
   buf->count = buf->sz = sz;
   buf->ptr = buf->buffer;

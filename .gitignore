@@ -7,6 +7,7 @@ build/*
 
 htdocs/*
 !htdocs/index.html
+!htdocs/cache_test.php
 
 src/*
 !src/hin
@@ -39,5 +40,6 @@ workdir/logs/*
 
 perf.data*
 *.c1
+*.h1
 
 /mark.lua

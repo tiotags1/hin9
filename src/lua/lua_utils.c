@@ -9,6 +9,8 @@
 #include "hin.h"
 #include "hin_lua.h"
 
+#include <basic_vfs.h>
+
 int lua_add_functions (lua_State * L, lua_function_t * func) {
   while (1) {
     if (func == NULL || func->name == NULL || func->ptr == NULL) break;

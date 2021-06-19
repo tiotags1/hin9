@@ -72,6 +72,14 @@ basic_vfs_node_t * basic_vfs_add (basic_vfs_t * vfs, basic_vfs_dir_t * dir, int 
 
 int basic_vfs_event (basic_vfs_t * vfs, char * buf, int len);
 
+#include <sys/stat.h>
+
+#ifndef STATX_MTIME
+#include <linux/stat.h>
+int statx(int dirfd, const char *restrict pathname, int flags,
+                 unsigned int mask, struct statx *restrict statxbuf);
+#endif
+
 #endif
 
 

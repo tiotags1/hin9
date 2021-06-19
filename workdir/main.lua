@@ -23,7 +23,7 @@ function default_onRequest_handler (req)
   elseif (path == "/hello") then
     return respond (req, 200, "Hello world")
   elseif (path == "/fcgi") then
-    return cgi (req, "./build/fcgi_test", nil, "index.html")
+    return fastcgi (req, nil, "index.php")
   end
 
   local dir_path, file_name, ext, path_info = set_path (req, path, "index.php", "index.html")
@@ -44,6 +44,7 @@ function default_onRequest_handler (req)
 
   if (ext == "php") then
     return cgi (req, php_bin, nil, nil, path_info)
+    --return fastcgi (req, nil, "index.php", path_info)
   elseif (to_cache[ext]) then
     set_option (req, "cache", 604800)
   end

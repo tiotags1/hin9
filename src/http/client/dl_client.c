@@ -134,13 +134,14 @@ int http_client_finish_request (http_client_t * http) {
   return 0;
 }
 
-static int connected (hin_client_t * client, int ret) {
-  http_client_t * http = (http_client_t*)client;
+static int connected (hin_buffer_t * buffer, int ret) {
+  http_client_t * http = (http_client_t*)buffer->parent;
 
   master.num_connection++;
   int (*finish_callback) (http_client_t * http, int ret) = (void*)http->read_buffer;
   http->read_buffer = NULL;
 
+  http->c.sockfd = ret;
   if (ret < 0) {
     finish_callback (http, ret);
     http_client_unlink (http);
@@ -167,7 +168,7 @@ static int connected (hin_client_t * client, int ret) {
   if (hin_request_read (buf) < 0) {
     finish_callback (http, -EPROTO);
     http_client_unlink (http);
-    return -1;
+    return 0;
   }
 
   finish_callback (http, http->c.sockfd);
@@ -195,7 +196,11 @@ http_client_t * hin_http_connect (http_client_t * prev, string_t * host, string_
   if (http->read_buffer) printf ("http %d shouldn't be using read buffer\n", http->c.sockfd);
   http->read_buffer = (hin_buffer_t*)finish_callback;
 
-  int ret = hin_connect (&http->c, http->host, http->port, &connected);
+  http->c.sockfd = -1;
+  http->c.magic = HIN_CONNECT_MAGIC;
+  http->c.ai_addrlen = sizeof (http->c.ai_addr);
+
+  int ret = hin_connect (http->host, http->port, &connected, http, &http->c.ai_addr, &http->c.ai_addrlen);
   if (ret < 0) { printf ("http %d can't create connection\n", http->c.sockfd); return NULL; }
 
   return http;

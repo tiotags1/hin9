@@ -30,7 +30,7 @@ typedef struct hin_pipe_struct hin_pipe_t;
 enum {
 HIN_DONE = 0x1, HIN_SOCKET = 0x2, HIN_FILE = 0x4, HIN_OFFSETS = 0x8,
 HIN_SSL = 0x10, HIN_COUNT = 0x20, HIN_HASH = 0x40, HIN_SYNC = 0x80,
-HIN_EPOLL_READ = 0x100, HIN_EPOLL_WRITE = 0x200,
+HIN_EPOLL_READ = 0x100, HIN_EPOLL_WRITE = 0x200, HIN_NO_READ = 0x400,
 };
 
 #define HIN_EPOLL (HIN_EPOLL_READ | HIN_EPOLL_WRITE)
@@ -122,7 +122,8 @@ typedef struct {
   int (*close_callback) (hin_buffer_t * buffer, int ret);
 } hin_lines_t;
 
-int hin_connect (hin_client_t * client, const char * host, const char * port, int (*callback) (hin_client_t * client, int ret));
+int hin_connect (const char * host, const char * port, hin_callback_t callback, void * parent, struct sockaddr * ai_addr, socklen_t * ai_addrlen);
+int hin_unix_sock (const char * path, hin_callback_t callback, void * parent);
 int hin_socket_listen (const char * address, const char * port, const char * sock_type, hin_client_t * client);
 
 int hin_socket_request_listen (const char * addr, const char *port, const char * sock_type, hin_server_t * client);
@@ -136,7 +137,7 @@ int hin_request_read (hin_buffer_t * buffer);
 int hin_request_write_fixed (hin_buffer_t * buffer);
 int hin_request_read_fixed (hin_buffer_t * buffer);
 int hin_request_accept (hin_buffer_t * buffer, int flags);
-int hin_request_connect (hin_buffer_t * buffer);
+int hin_request_connect (hin_buffer_t * buffer, struct sockaddr * ai_addr, int ai_addrlen);
 int hin_request_close (hin_buffer_t * buffer);
 int hin_request_openat (hin_buffer_t * buffer, int dfd, const char * path, int flags, int mode);
 int hin_request_statx (hin_buffer_t * buffer, int dfd, const char * path, int flags, int mask);

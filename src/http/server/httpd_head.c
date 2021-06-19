@@ -55,12 +55,12 @@ int httpd_parse_headers_line (httpd_client_t * http, string_t * line) {
       } else {
         http->count = -1;
       }
-      if (http->debug & (DEBUG_HTTP|DEBUG_HTTP_FILTER)) printf ("  range requested is %ld-%ld\n", http->pos, http->count);
+      if (http->debug & (DEBUG_HTTP|DEBUG_HTTP_FILTER)) printf ("  range requested is %lld-%lld\n", (long long)http->pos, (long long)http->count);
     }
   } else if (http->method == HIN_HTTP_POST) {
     if (match_string (line, "Content-Length: (%d+)", &param) > 0) {
       http->post_sz = atoi (param.ptr);
-      if (http->debug & (DEBUG_HTTP|DEBUG_POST)) printf ("  post length is %ld\n", http->post_sz);
+      if (http->debug & (DEBUG_HTTP|DEBUG_POST)) printf ("  post length is %lld\n", (long long)http->post_sz);
     } else if (match_string (line, "Content-Type:%s*multipart/form-data;%s*boundary=%\"?([%-%w]+)%\"?", &param) > 0) {
       char * new = malloc (param.len + 2 + 1);
       new[0] = '-';
@@ -153,7 +153,7 @@ int httpd_parse_headers (httpd_client_t * http, string_t * source) {
     httpd_respond_fatal (http, 411, NULL);
     return -1;
   } else if (HIN_HTTPD_MAX_POST_SIZE && http->post_sz >= HIN_HTTPD_MAX_POST_SIZE) {
-    printf ("httpd post size %ld >= %ld\n", http->post_sz, (long)HIN_HTTPD_MAX_POST_SIZE);
+    printf ("httpd post size %lld >= %ld\n", (long long)http->post_sz, (long)HIN_HTTPD_MAX_POST_SIZE);
     httpd_respond_fatal (http, 413, NULL);
     return -1;
   }
