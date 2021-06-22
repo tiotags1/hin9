@@ -9,12 +9,10 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#ifndef STATX_MTIME
-#include <linux/stat.h>
-#endif
-
 #include "hin.h"
 #include "conf.h"
+
+#include <basic_vfs.h> // for statx on musl
 
 struct io_uring ring;
 

@@ -114,14 +114,15 @@ int hin_redirect_log (const char * path) {
     return -1;
   }
 
-  if (master.debug & DEBUG_CONFIG)
-    printf ("create log on %d '%s'\n", fd, path);
-
   fflush (stdout);
   fflush (stderr);
   if (dup2 (fd, STDOUT_FILENO) < 0) perror ("dup2 stdout");
   if (dup2 (fd, STDERR_FILENO) < 0) perror ("dup2 stderr");
   close (fd);
+
+  if (master.debug & DEBUG_CONFIG)
+    printf ("create log on %d '%s'\n", fd, path);
+
   return 0;
 }
 

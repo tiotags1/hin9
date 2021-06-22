@@ -142,7 +142,7 @@ int hin_unix_sock (const char * path, hin_callback_t callback, void * parent) {
   memcpy (sock->sun_path, path, len);
   sock->sun_path[len] = '\0';
 
-  if (hin_request_connect (buf, sock, sz) < 0) {
+  if (hin_request_connect (buf, (struct sockaddr *)sock, sz) < 0) {
     printf ("connect unix failed\n");
     return -1;
   }

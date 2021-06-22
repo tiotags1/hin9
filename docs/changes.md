@@ -1,4 +1,8 @@
 
+* removed debug message when redirecting to console
+* removed a few compiler warnings
+
+commit f5671c1c7a2190967314b355be95eb7a04a860b4
 * cache_test.php to test if caching still works
 * made connect slightly more general purpose
 * added compile time option to start despite ssl vhosts without certificates

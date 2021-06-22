@@ -76,6 +76,8 @@ int basic_vfs_event (basic_vfs_t * vfs, char * buf, int len);
 
 #ifndef STATX_MTIME
 #include <linux/stat.h>
+#include <unistd.h>
+#include <fcntl.h>
 int statx(int dirfd, const char *restrict pathname, int flags,
                  unsigned int mask, struct statx *restrict statxbuf);
 #endif

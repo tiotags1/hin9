@@ -38,7 +38,7 @@ static int basic_vfs_event_single (basic_vfs_t * vfs, const struct inotify_event
       free (node->inode);
       node->inode = NULL;
     }
-    void * ret = basic_vfs_stat (vfs, node, path);
+    basic_vfs_stat (vfs, node, path);
     free (path);
   }
   if (event->mask & (IN_DELETE | IN_MOVED_FROM)) {
