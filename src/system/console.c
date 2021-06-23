@@ -107,10 +107,8 @@ static int hin_timer_callback (hin_buffer_t * buffer, int ret) {
 
   int hin_timeout_callback (float dt);
   hin_timeout_callback (1);
-  void hin_cache_timer (int num);
   int hin_timer_check ();
   hin_timer_check ();
-  hin_cache_timer (new - tm->time);
   tm->time = new;
 
   return 0;

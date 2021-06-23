@@ -25,7 +25,7 @@ typedef struct hin_cache_item_struct {
   int refcount;
 
   basic_ht_hash_t cache_key1, cache_key2;
-  time_t lifetime;
+  hin_timer_t timer;
 
   time_t modified;
   off_t size;

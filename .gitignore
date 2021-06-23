@@ -7,7 +7,7 @@ build/*
 
 htdocs/*
 !htdocs/index.html
-!htdocs/cache_test.php
+!htdocs/tests
 
 src/*
 !src/hin
@@ -20,6 +20,7 @@ external/*
 !external/basic
 !external/ebuild
 !external/docker
+!external/tests
 
 workdir/config.lua
 

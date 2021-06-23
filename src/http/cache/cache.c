@@ -128,32 +128,6 @@ void hin_cache_clean () {
   default_store = NULL;
 }
 
-void hin_cache_timer (int seconds) {
-  basic_ht_iterator_t iter;
-  basic_ht_pair_t * pair;
-  hin_cache_store_t * store = default_store;
-  hin_cache_item_t * prev = NULL;
-  if (store == NULL) { return ; }
-  memset (&iter, 0, sizeof iter);
-  while ((pair = basic_ht_iterate_pair (&store->ht, &iter)) != NULL) {
-    if (prev) {
-      hin_cache_remove (store, prev);
-      prev = NULL;
-    }
-    hin_cache_item_t * item = (void*)pair->value1;
-    if (item->flags & HIN_CACHE_DONE)
-      item->lifetime -= seconds;
-    if (master.debug & DEBUG_CACHE) printf ("cache %zx_%zx item life %lld\n", item->cache_key1, item->cache_key2, (long long)item->lifetime);
-    if (item->lifetime <= 0) {
-      prev = item;
-    }
-  }
-  if (prev) {
-    hin_cache_remove (store, prev);
-    prev = NULL;
-  }
-}
-
 hin_cache_item_t * hin_cache_get (hin_cache_store_t * store, basic_ht_hash_t key1, basic_ht_hash_t key2) {
   basic_ht_pair_t * pair = basic_ht_get_pair (&store->ht, key1, key2);
   if (pair == NULL) return NULL;
@@ -186,6 +160,17 @@ static int hin_cache_pipe_error_callback (hin_pipe_t * pipe) {
   return 0;
 }
 
+int hin_cache_timeout_callback (hin_timer_t * timer, time_t time) {
+  hin_cache_item_t * item = timer->ptr;
+  hin_cache_store_t * store = item->parent;
+  if (store == NULL) store = default_store;
+
+  if (master.debug & (DEBUG_CACHE|DEBUG_TIMEOUT))
+    printf ("cache %zx_%zx timeout for %p\n", item->cache_key1, item->cache_key2, item);
+  hin_cache_remove (store, item);
+  return 0;
+}
+
 int hin_cache_save (hin_cache_store_t * store, hin_pipe_t * pipe) {
   if (store == NULL) store = default_store;
   httpd_client_t * http = pipe->parent;
@@ -215,10 +200,17 @@ int hin_cache_save (hin_cache_store_t * store, hin_pipe_t * pipe) {
   item->refcount = 2;
   item->cache_key1 = http->cache_key1;
   item->cache_key2 = http->cache_key2;
-  item->lifetime = http->cache;
   item->parent = store;
   item->client_queue = queue;
   basic_ht_set_pair (&store->ht, http->cache_key1, http->cache_key2, (uintptr_t)item, 0);
+
+  hin_timer_t * timer = &item->timer;
+  timer->callback = hin_cache_timeout_callback;
+  timer->ptr = item;
+  hin_timer_update (timer, time (NULL) + http->cache);
+
+  if (master.debug & (DEBUG_TIMEOUT|DEBUG_CACHE))
+    printf ("cache %zx_%zx timeout %p at %lld\n", http->cache_key1, http->cache_key2, timer->ptr, (long long)timer->time);
 
   if (HIN_HTTPD_CACHE_TMPFILE) {
     item->fd = openat (AT_FDCWD, HIN_HTTPD_CACHE_DIRECTORY, O_RDWR | O_TMPFILE, 0600);
@@ -248,8 +240,9 @@ int httpd_send_file (httpd_client_t * http, hin_cache_item_t * item, hin_buffer_
 void hin_cache_serve_client (httpd_client_t * http, hin_cache_item_t * item) {
   http->peer_flags &= ~(HIN_HTTP_CHUNKED);
   http->status = 200;
+  hin_timer_t * timer = &item->timer;
   void hin_cache_set_number (httpd_client_t * http, time_t num);
-  hin_cache_set_number (http, item->lifetime);
+  hin_cache_set_number (http, timer->time - time (NULL));
   httpd_send_file (http, item, NULL);
 }
 

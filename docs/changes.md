@@ -1,4 +1,8 @@
 
+* ab tests
+* cache switched to use the new timing api
+
+commit 90ef43094295760d20128956853394d596813455
 * removed debug message when redirecting to console
 * removed a few compiler warnings
 
