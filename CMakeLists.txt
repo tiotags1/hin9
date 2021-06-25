@@ -26,12 +26,17 @@ external/basic/vfs/inotify.c
 external/basic/vfs/stat.c
 external/basic/vfs/path.c
 external/basic/vfs/compat.c
+external/basic/basic_endianness.c
 external/basic/basic_hashtable.c
 external/basic/basic_pattern.c
 external/basic/basic_timer.c
 )
 
 set (hin_src
+src/http/cgi/fcgi.c
+src/http/cgi/fcgi_read.c
+src/http/cgi/fcgi_write.c
+src/http/cgi/fcgi_util.c
 src/http/cgi/cgi_parse.c
 src/http/cgi/httpd_cgi.c
 src/http/client/dl_head.c

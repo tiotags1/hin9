@@ -204,14 +204,6 @@ int hin_cache_save (hin_cache_store_t * store, hin_pipe_t * pipe) {
   item->client_queue = queue;
   basic_ht_set_pair (&store->ht, http->cache_key1, http->cache_key2, (uintptr_t)item, 0);
 
-  hin_timer_t * timer = &item->timer;
-  timer->callback = hin_cache_timeout_callback;
-  timer->ptr = item;
-  hin_timer_update (timer, time (NULL) + http->cache);
-
-  if (master.debug & (DEBUG_TIMEOUT|DEBUG_CACHE))
-    printf ("cache %zx_%zx timeout %p at %lld\n", http->cache_key1, http->cache_key2, timer->ptr, (long long)timer->time);
-
   if (HIN_HTTPD_CACHE_TMPFILE) {
     item->fd = openat (AT_FDCWD, HIN_HTTPD_CACHE_DIRECTORY, O_RDWR | O_TMPFILE, 0600);
     if (item->fd < 0) perror ("openat");
@@ -220,8 +212,19 @@ int hin_cache_save (hin_cache_store_t * store, hin_pipe_t * pipe) {
     snprintf (buffer, sizeof buffer, HIN_HTTPD_CACHE_DIRECTORY "/%zx_%zx", http->cache_key1, http->cache_key2);
     item->fd = openat (AT_FDCWD, buffer, O_RDWR | O_CREAT | O_TRUNC, 0600);
     if (master.debug & DEBUG_CACHE) printf ("cache %zx_%zx create fd %d path '%s'\n", http->cache_key1, http->cache_key2, item->fd, buffer);
-    if (item->fd < 0) perror ("openat");
+    if (item->fd < 0) {
+      perror ("openat");
+      return -1;
+    }
   }
+
+  hin_timer_t * timer = &item->timer;
+  timer->callback = hin_cache_timeout_callback;
+  timer->ptr = item;
+  hin_timer_update (timer, time (NULL) + http->cache);
+
+  if (master.debug & (DEBUG_TIMEOUT|DEBUG_CACHE))
+    printf ("cache %zx_%zx timeout %p at %lld\n", http->cache_key1, http->cache_key2, timer->ptr, (long long)timer->time);
 
   pipe->flags |= HIN_HASH;
   pipe->out.fd = item->fd;

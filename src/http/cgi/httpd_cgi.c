@@ -243,6 +243,10 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
     fprintf (stderr, "getnameinfo2 err '%s'\n", gai_strerror (err));
   }
 
+  if (client->flags & HIN_SSL) {
+    var (&env, "HTTPS=%d", 1);
+  }
+
   string_t hostname;
   memset (&hostname, 0, sizeof (string_t));
   while (find_line (&source, &line)) {
@@ -274,7 +278,7 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
   exit (-1);
 }
 
-#if 1
+#if 0
 void * hin_fcgi_start () {
   return NULL;
 }

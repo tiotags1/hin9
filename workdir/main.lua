@@ -20,10 +20,11 @@ function default_onRequest_handler (req)
     return proxy (req, "http://localhost:28005/" .. (sub_path or ""))
   elseif (app_path == "testing") then
     return cgi (req, php_bin, nil, "test.php")
+  elseif (path == "/fcgi") then
+    set_path (req, "/tests/min.php", "index.php")
+    return fastcgi (req)
   elseif (path == "/hello") then
     return respond (req, 200, "Hello world")
-  elseif (path == "/fcgi") then
-    return fastcgi (req, nil, "index.php")
   end
 
   local dir_path, file_name, ext, path_info = set_path (req, path, "index.php", "index.html")
