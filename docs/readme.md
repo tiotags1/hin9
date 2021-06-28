@@ -31,6 +31,12 @@ install & run
 * mkdir -p build && cd build && cmake .. && make && cd .. && build/hin9
 
 
+configuration
+-------------
+
+* cmake options: enable/disable ssl via openssl
+* lots of knobs can be found in src/hin/conf.h
+
 roadmap
 -------
 

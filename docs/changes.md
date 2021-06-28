@@ -1,4 +1,7 @@
 
+* removed old ebuild and just added an initd script
+
+commit b82656f1d4e8b306a2d6c905ae41e6955cd75bab
 * fcgi fpm connections initial
 * fcgi doesn't output headers or output properly
 * renamed endianess to endianness

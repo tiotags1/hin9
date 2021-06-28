@@ -18,7 +18,7 @@ src/*
 
 external/*
 !external/basic
-!external/ebuild
+!external/packaging
 !external/docker
 !external/tests
 

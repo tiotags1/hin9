@@ -239,7 +239,8 @@ int main (int argc, const char * argv[], const char * envp[]) {
   }
 
   int hin_conf_load (const char * path);
-  if (master.debug & DEBUG_CONFIG) printf ("conf path '%s'\n", master.conf_path);
+  if (master.debug & DEBUG_CONFIG)
+    printf ("loading config '%s'\n", master.conf_path);
   if (hin_conf_load (master.conf_path) < 0) {
     hin_lua_report_error ();
     return -1;
