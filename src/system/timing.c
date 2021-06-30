@@ -42,6 +42,7 @@ int hin_timer_remove (hin_timer_t * timer) {
     last = timer->prev;
   }
   timer->next = timer->prev = NULL;
+  timer->time = 0;
   return 0;
 }
 

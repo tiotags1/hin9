@@ -1,4 +1,8 @@
 
+* docker changed to using binary packages, reducing size by a lot
+* bugfix timers not being removed properly caused the server to keep them forever
+
+commit fcf50de3ee618191d64e1450578c831ee88e9a83
 * removed old ebuild and just added an initd script
 
 commit b82656f1d4e8b306a2d6c905ae41e6955cd75bab
