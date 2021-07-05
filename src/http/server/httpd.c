@@ -202,7 +202,7 @@ int httpd_client_accept (hin_client_t * client) {
 #else
   httpd_client_start_request (http);
 
-  hin_buffer_t * buf = hin_lines_create_raw ();
+  hin_buffer_t * buf = hin_lines_create_raw (READ_SZ);
   buf->fd = http->c.sockfd;
   buf->parent = http;
   buf->flags = HIN_SOCKET | (http->c.flags & HIN_SSL);
@@ -211,7 +211,7 @@ int httpd_client_accept (hin_client_t * client) {
   http->read_buffer = buf;
 
   hin_lines_t * lines = (hin_lines_t*)&buf->buffer;
-  int httpd_client_read_callback (hin_buffer_t * buffer);
+  int httpd_client_read_callback (hin_buffer_t * buffer, int received);
   lines->read_callback = httpd_client_read_callback;
   lines->close_callback = httpd_client_buffer_close_callback;
   lines->eat_callback = httpd_client_buffer_eat_callback;

@@ -59,7 +59,7 @@ static int httpd_proxy_pipe_post_close (hin_pipe_t * pipe) {
 
 static int httpd_proxy_pipe_in_error (hin_pipe_t * pipe) {
   if (pipe->debug & DEBUG_PROXY) printf ("pipe %d>%d proxy server connection error\n", pipe->in.fd, pipe->out.fd);
-  int http_client_shutdown (http_client_t * http);
+  printf ("proxy in error\n");
   return http_client_shutdown (pipe->parent1);
 }
 
@@ -72,12 +72,14 @@ static int httpd_proxy_buffer_close (hin_buffer_t * buffer, int ret) {
   http_client_t * http = (http_client_t*)buffer->parent;
   if (http->debug & DEBUG_PROXY) printf ("proxy close %d buffer\n", buffer->fd);
   if (ret < 0) printf ("proxy close %d error %s\n", buffer->fd, strerror (-ret));
+  hin_buffer_clean (http->read_buffer);
+  http->read_buffer = NULL;
   if (http->c.parent)
     httpd_proxy_close (http);
   return http_client_shutdown (http);
 }
 
-static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer) {
+static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer, int received) {
   hin_client_t * client1 = (hin_client_t*)buffer->parent;
   http_client_t * http1 = (http_client_t*)client1;
   hin_client_t * client = (hin_client_t*)client1->parent;

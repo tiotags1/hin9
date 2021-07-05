@@ -22,9 +22,9 @@ static int param (hin_buffer_t * buf, const char * name, const char * fmt, ...) 
   va_start (ap1, fmt);
   va_copy (ap2, ap1);
 
-  uint8_t * ptr = (uint8_t*)buf->ptr;
+  char * ptr = NULL;
   int name_len = strlen (name);
-  int value_len = vsnprintf ((char*)ptr, 0, fmt, ap2);
+  int value_len = vsnprintf (NULL, 0, fmt, ap2);
   int num = 0;
 
   if (name_len >= 127) {
@@ -217,7 +217,7 @@ int hin_fcgi_write_request (hin_fcgi_worker_t * worker) {
   buf->flags = HIN_SOCKET;
   buf->fd = socket->fd;
   buf->sz = READ_SZ * 4;
-  buf->ptr = buf->data = buf->buffer;
+  buf->ptr = buf->buffer;
   buf->parent = socket;
   buf->debug = http->debug;
   buf->callback = hin_fcgi_write_callback;
@@ -246,6 +246,9 @@ int hin_fcgi_write_request (hin_fcgi_worker_t * worker) {
     printf ("uring error!\n");
     return -1;
   }
+
+  int hin_fcgi_pipe_init (hin_fcgi_worker_t * worker);
+  hin_fcgi_pipe_init (worker);
 
   return 0;
 }

@@ -73,7 +73,7 @@ int http_client_send_data (http_client_t * http, string_t * source) {
   return len;
 }
 
-int http_client_headers_read_callback (hin_buffer_t * buffer) {
+int http_client_headers_read_callback (hin_buffer_t * buffer, int received) {
   http_client_t * http = (http_client_t*)buffer->parent;
   string_t data;
   data.ptr = buffer->data;

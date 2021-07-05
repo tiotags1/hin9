@@ -72,7 +72,7 @@ static int hin_cgi_location (httpd_client_t * http, hin_buffer_t * buf, string_t
   return 0;
 }
 
-static int hin_cgi_headers_read_callback (hin_buffer_t * buffer) {
+static int hin_cgi_headers_read_callback (hin_buffer_t * buffer, int received) {
   hin_worker_t * worker = (hin_worker_t *)buffer->parent;
   hin_client_t * client = (hin_client_t*)worker->data;
   httpd_client_t * http = (httpd_client_t*)client;
@@ -228,7 +228,7 @@ static int hin_cgi_headers_eat_callback (hin_buffer_t * buffer, int num) {
 }
 
 int hin_cgi_send (httpd_client_t * http, hin_worker_t * worker, int fd) {
-  hin_buffer_t * buf = hin_lines_create_raw ();
+  hin_buffer_t * buf = hin_lines_create_raw (READ_SZ);
   buf->fd = fd;
   buf->parent = (hin_client_t*)worker;
   buf->flags = 0;

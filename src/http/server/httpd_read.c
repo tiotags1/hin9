@@ -10,7 +10,7 @@
 #include "http.h"
 #include "conf.h"
 
-int httpd_client_read_callback (hin_buffer_t * buffer);
+int httpd_client_read_callback (hin_buffer_t * buffer, int received);
 
 int httpd_client_reread (httpd_client_t * http) {
   hin_buffer_t * buffer = http->read_buffer;
@@ -20,7 +20,7 @@ int httpd_client_reread (httpd_client_t * http) {
   int len = buffer->ptr - buffer->data;
   int num = 0;
   if (len > 0) {
-    num = httpd_client_read_callback (buffer);
+    num = httpd_client_read_callback (buffer, len);
   }
   if (num > 0) {
   } else if (num == 0) {
@@ -89,7 +89,7 @@ static int httpd_client_handle_post (httpd_client_t * http, string_t * source) {
   return consume;
 }
 
-int httpd_client_read_callback (hin_buffer_t * buffer) {
+int httpd_client_read_callback (hin_buffer_t * buffer, int received) {
   string_t source1, * source = &source1;
   source->ptr = buffer->data;
   source->len = buffer->ptr - buffer->data;

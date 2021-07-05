@@ -1,4 +1,9 @@
 
+* bugfix proxy crashing due to double free (incomplete)
+* fcgi switched to pipes (bad atm)
+* changed some function prototypes to take a size parameter
+
+commit 46ad0263fd23433434e16c76a9c0e637f0385210
 * docker changed to using binary packages, reducing size by a lot
 * bugfix timers not being removed properly caused the server to keep them forever
 

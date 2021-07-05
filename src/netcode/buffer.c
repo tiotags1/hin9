@@ -132,7 +132,7 @@ static int hin_lines_read_callback (hin_buffer_t * buffer, int ret) {
   buffer->ptr += ret;
   buffer->count -= ret;
 
-  int num = lines->read_callback (buffer);
+  int num = lines->read_callback (buffer, ret);
 
   if (lines->eat_callback (buffer, num)) {
     hin_buffer_clean (buffer);
@@ -141,11 +141,11 @@ static int hin_lines_read_callback (hin_buffer_t * buffer, int ret) {
   return 0;
 }
 
-hin_buffer_t * hin_lines_create_raw () {
+hin_buffer_t * hin_lines_create_raw (int sz) {
   hin_buffer_t * buf = calloc (1, sizeof *buf + sizeof (hin_lines_t));
   buf->type = HIN_DYN_BUFFER;
   buf->flags = 0;
-  buf->count = buf->sz = READ_SZ;
+  buf->count = buf->sz = sz;
   buf->pos = 0;
   buf->data = malloc (buf->sz);
   buf->ptr = buf->data;

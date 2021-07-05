@@ -1,6 +1,7 @@
-
 #ifndef HIN_FCGI_H
 #define HIN_FCGI_H
+
+#include "hin.h"
 
 #define FCGI_VERSION_1           1
 
@@ -57,6 +58,8 @@ typedef struct __attribute__((__packed__)) {
 typedef struct {
   int req_id;
   httpd_client_t * http;
+
+  hin_pipe_t * out;
 
   struct hin_fcgi_socket_struct * socket;
 } hin_fcgi_worker_t;

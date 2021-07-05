@@ -14,7 +14,6 @@ WORKDIR /app
 # you need to run 'sh getsources.sh' first
 ADD conf.tar.gz /app
 ADD scripts /app/scripts
-ADD htdocs /app/htdocs
 RUN sh /app/scripts/setup.sh
 
 # build from source

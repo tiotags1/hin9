@@ -10,17 +10,73 @@
 
 #include "fcgi.h"
 
-static int hin_fcgi_write_callback (hin_buffer_t * buf, int ret) {
-  if (ret < 0) {
-    printf ("fcgi %d error! write '%s'\n", buf->fd, strerror (-ret));
-    return -1;
-  }
-  hin_fcgi_worker_t * worker = buf->parent;
+static int hin_fcgi_pipe_finish_callback (hin_pipe_t * pipe) {
+  hin_fcgi_worker_t * worker = pipe->parent;
   hin_fcgi_socket_t * socket = worker->socket;
-  if (buf->debug & DEBUG_CGI)
+  httpd_client_t * http = worker->http;
+  if (http && http->debug & DEBUG_CGI)
     printf ("fcgi %d worker %d done.\n", socket->fd, worker->req_id);
   hin_fcgi_worker_reset (worker);
-  return 1;
+  return 0;
+}
+
+int hin_fcgi_pipe_init (hin_fcgi_worker_t * worker) {
+  httpd_client_t * http = worker->http;
+
+  hin_pipe_t * pipe = calloc (1, sizeof (*pipe));
+  hin_pipe_init (pipe);
+  pipe->in.fd = -1;
+  pipe->in.flags = HIN_INACTIVE;
+  pipe->in.pos = 0;
+  pipe->out.fd = http->c.sockfd;
+  pipe->out.flags = HIN_SOCKET | (http->c.flags & HIN_SSL);
+  pipe->out.ssl = &http->c.ssl;
+  pipe->out.pos = 0;
+  pipe->parent = worker;
+  pipe->finish_callback = hin_fcgi_pipe_finish_callback;
+  pipe->debug = http->debug;
+
+  hin_buffer_t * buf = malloc (sizeof *buf + READ_SZ);
+  memset (buf, 0, sizeof (*buf));
+  buf->fd = http->c.sockfd;
+  buf->flags = HIN_SOCKET | (http->c.flags & HIN_SSL);
+  buf->sz = READ_SZ;
+  buf->ptr = buf->buffer;
+  buf->parent = pipe;
+  buf->debug = http->debug;
+  buf->ssl = &http->c.ssl;
+  header (buf, "HTTP/1.1 200 OK\r\n");
+  hin_pipe_write (pipe, buf);
+
+  hin_pipe_start (pipe);
+
+  worker->out = pipe;
+
+  return 0;
+}
+
+static int hin_fcgi_pipe_write (hin_fcgi_worker_t * worker, FCGI_Header * head) {
+  printf ("payload '%.*s'\n", head->length, head->data);
+  hin_buffer_t * buf = hin_buffer_create_from_data (worker->out, (char*)head->data, head->length);
+  hin_pipe_write (worker->out, buf);
+  hin_pipe_advance (worker->out);
+  return 0;
+}
+
+static int hin_fcgi_pipe_end (hin_fcgi_worker_t * worker, FCGI_Header * head) {
+  hin_fcgi_socket_t * socket = worker->socket;
+  httpd_client_t * http = worker->http;
+  FCGI_EndRequestBody * req = (FCGI_EndRequestBody*)head->data;
+  req->appStatus = endian_swap32 (req->appStatus);
+  if (http->debug & DEBUG_CGI)
+    printf ("fcgi %d req_id %d status %d proto %d end\n", socket->fd, head->request_id, req->appStatus, req->protocolStatus);
+
+  hin_pipe_t * pipe = worker->out;
+  pipe->in.flags |= HIN_DONE;
+  //hin_pipe_advance (pipe);
+  worker->out = NULL;
+
+  return 0;
 }
 
 int hin_fcgi_read_rec (hin_buffer_t * buf, char * ptr, int left) {
@@ -39,32 +95,11 @@ int hin_fcgi_read_rec (hin_buffer_t * buf, char * ptr, int left) {
     return used + 8 + head->padding;
   }
   hin_fcgi_worker_t * worker = sock->worker[req_id];
-  httpd_client_t * http = worker->http;
-  // TODO
 
   if (head->type == FCGI_END_REQUEST) {
-    if (buf->debug & DEBUG_CGI)
-      printf ("fcgi %d req_id %d end\n", buf->fd, head->request_id);
-    FCGI_EndRequestBody * req = (FCGI_EndRequestBody*)head->data;
-    req->appStatus = endian_swap32 (req->appStatus);
-    if (buf->debug & DEBUG_CGI)
-      printf (" status app %d proto %d\n", req->appStatus, req->protocolStatus);
-    // TODO request pipe end
+    hin_fcgi_pipe_end (worker, head);
   } else {
-    printf ("payload '%.*s'\n", used, head->data);
-    hin_buffer_t * buf = malloc (sizeof *buf + READ_SZ);
-    memset (buf, 0, sizeof (*buf));
-    buf->fd = http->c.sockfd;
-    buf->flags = HIN_SOCKET | (http->c.flags & HIN_SSL);
-    buf->sz = READ_SZ;
-    buf->ptr = buf->buffer;
-    buf->parent = worker;
-    buf->debug = http->debug;
-    buf->ssl = &http->c.ssl;
-    buf->callback = hin_fcgi_write_callback;
-    header (buf, "HTTP/1.1 200 OK\r\n");
-    header_raw (buf, (char*)head->data, used);
-    hin_request_write (buf);
+    hin_fcgi_pipe_write (worker, head);
   }
   return used + 8 + head->padding;
 }

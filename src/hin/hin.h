@@ -30,7 +30,7 @@ typedef struct hin_pipe_struct hin_pipe_t;
 enum {
 HIN_DONE = 0x1, HIN_SOCKET = 0x2, HIN_FILE = 0x4, HIN_OFFSETS = 0x8,
 HIN_SSL = 0x10, HIN_COUNT = 0x20, HIN_HASH = 0x40, HIN_SYNC = 0x80,
-HIN_EPOLL_READ = 0x100, HIN_EPOLL_WRITE = 0x200, HIN_NO_READ = 0x400,
+HIN_EPOLL_READ = 0x100, HIN_EPOLL_WRITE = 0x200, HIN_INACTIVE = 0x400,
 };
 
 #define HIN_EPOLL (HIN_EPOLL_READ | HIN_EPOLL_WRITE)
@@ -50,7 +50,6 @@ typedef int (*hin_callback_t) (hin_buffer_t * buffer, int ret);
 struct hin_buffer_struct {
   int type;
   int fd;
-  int buf_index;
   uint32_t flags;
   uint32_t debug;
   hin_callback_t callback;
@@ -78,6 +77,7 @@ struct hin_pipe_struct {
   int num_write, num_read;
   int (*decode_callback) (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush);
   int (*read_callback) (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush);
+  int (*in_callback) (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush);
   int (*finish_callback) (hin_pipe_t * pipe);
   int (*out_error_callback) (hin_pipe_t * pipe);
   int (*in_error_callback) (hin_pipe_t * pipe);
@@ -117,7 +117,7 @@ typedef struct hin_server_struct {
 } hin_server_t;
 
 typedef struct {
-  int (*read_callback) (hin_buffer_t * buffer);
+  int (*read_callback) (hin_buffer_t * buffer, int received);
   int (*eat_callback) (hin_buffer_t * buffer, int num);
   int (*close_callback) (hin_buffer_t * buffer, int ret);
 } hin_lines_t;
@@ -171,7 +171,7 @@ int hin_buffer_eat (hin_buffer_t * buffer, int num);
 
 int hin_lines_request (hin_buffer_t * buffer);
 int hin_lines_reread (hin_client_t * client);
-hin_buffer_t * hin_lines_create_raw ();
+hin_buffer_t * hin_lines_create_raw (int sz);
 
 // timing
 struct hin_timer_struct;

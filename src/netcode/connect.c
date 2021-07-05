@@ -40,10 +40,9 @@ static int complete (hin_buffer_t * buf, int ret) {
   }
 
   if (conn->callback (buf, ret)) {
-    freeaddrinfo ((struct addrinfo *)conn->base);
-    return 1;
   }
-  return 0;
+  freeaddrinfo ((struct addrinfo *)conn->base);
+  return 1;
 }
 
 static int hin_connect_try_next (hin_buffer_t * buf) {

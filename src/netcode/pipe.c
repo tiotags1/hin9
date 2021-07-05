@@ -7,6 +7,8 @@
 
 #include "hin.h"
 
+#define USE_LINES 0
+
 int hin_pipe_read_callback (hin_buffer_t * buffer, int ret);
 int hin_pipe_write_callback (hin_buffer_t * buffer, int ret);
 int hin_pipe_copy_raw (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush);
@@ -18,12 +20,16 @@ void hin_pipe_close (hin_pipe_t * pipe) {
 }
 
 hin_buffer_t * hin_pipe_get_buffer (hin_pipe_t * pipe, int sz) {
+#if USE_LINES
+  hin_buffer_t * buf = hin_lines_create_raw (sz);
+#else
   hin_buffer_t * buf = malloc (sizeof *buf + sz);
   memset (buf, 0, sizeof (*buf));
-  buf->parent = (void*)pipe;
   buf->flags = 0;
   buf->ptr = buf->buffer;
   buf->count = buf->sz = sz;
+#endif
+  buf->parent = (void*)pipe;
   buf->debug = pipe->debug;
   return buf;
 }
@@ -90,15 +96,21 @@ int hin_pipe_copy_raw (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int fl
 
 static int hin_pipe_read_next (hin_buffer_t * buffer) {
   hin_pipe_t * pipe = (hin_pipe_t*)buffer->parent;
-  if (pipe->flags & HIN_NO_READ) return -1;
+  if (pipe->in.flags & HIN_INACTIVE) return 0;
 
   buffer->fd = pipe->in.fd;
   buffer->ssl = pipe->in.ssl;
   buffer->flags = pipe->in.flags;
+
+#if USE_LINES
+  hin_lines_t * lines = (hin_lines_t*)&buffer->buffer;
+  lines->read_callback = hin_pipe_read_callback;
+#else
   buffer->callback = hin_pipe_read_callback;
+  buffer->count = buffer->sz;
+#endif
 
   buffer->pos = pipe->in.pos;
-  buffer->count = buffer->sz = READ_SZ;
   if ((pipe->in.flags & HIN_COUNT) && pipe->left < READ_SZ) buffer->count = pipe->left;
 
   pipe->num_read++;
@@ -146,7 +158,8 @@ int hin_pipe_advance (hin_pipe_t * pipe) {
 
   if (pipe->debug & DEBUG_PIPE) printf ("pipe %d>%d advance done %d read %d write %d\n", pipe->in.fd, pipe->out.fd, pipe->in.flags & HIN_DONE, pipe->num_read, pipe->num_write);
 
-  if ((pipe->in.flags & HIN_DONE) == 0 && pipe->num_read < 1 && pipe->num_write < 1) {
+  if ((pipe->in.flags & (HIN_DONE|HIN_INACTIVE)) == 0
+    && pipe->num_read < 1 && pipe->num_write < 1) {
     hin_buffer_t * new = pipe->buffer_callback (pipe, READ_SZ);
     if (hin_pipe_read_next (new) < 0) {
       hin_buffer_clean (new);

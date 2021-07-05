@@ -8,7 +8,7 @@
 #include "http.h"
 #include "conf.h"
 
-int http_client_headers_read_callback (hin_buffer_t * buffer);
+int http_client_headers_read_callback (hin_buffer_t * buffer, int received);
 
 void http_client_clean (http_client_t * http) {
   if (http->debug & DEBUG_MEMORY) printf ("http %d clean\n", http->c.sockfd);
@@ -67,7 +67,6 @@ int http_client_shutdown (http_client_t * http) {
 }
 
 int http_client_buffer_close (hin_buffer_t * buf, int ret) {
-  printf ("http %d buffer close %s\n", buf->fd, strerror (-ret));
   http_client_shutdown (buf->parent);
   return 0;
 }
@@ -142,6 +141,7 @@ static int connected (hin_buffer_t * buffer, int ret) {
   http->read_buffer = NULL;
 
   http->c.sockfd = ret;
+
   if (ret < 0) {
     finish_callback (http, ret);
     http_client_unlink (http);
@@ -157,7 +157,7 @@ static int connected (hin_buffer_t * buffer, int ret) {
     }
   }
 
-  hin_buffer_t * buf = hin_lines_create_raw ();
+  hin_buffer_t * buf = hin_lines_create_raw (READ_SZ);
   buf->flags = HIN_SOCKET | (http->c.flags & HIN_SSL);
   buf->fd = http->c.sockfd;
   buf->parent = http;
@@ -193,6 +193,7 @@ http_client_t * hin_http_connect (http_client_t * prev, string_t * host, string_
   }
 
   http = prev;
+
   if (http->read_buffer) printf ("http %d shouldn't be using read buffer\n", http->c.sockfd);
   http->read_buffer = (hin_buffer_t*)finish_callback;
 
