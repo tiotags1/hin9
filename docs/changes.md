@@ -1,4 +1,8 @@
 
+* better bugfix to proxy crash on double free, cleaning state
+* moved proxy into it's own folder
+
+commit a7c98aabab76cb3c423ec7a928cbef0edefb1f48
 * bugfix proxy crashing due to double free (incomplete)
 * fcgi switched to pipes (bad atm)
 * changed some function prototypes to take a size parameter

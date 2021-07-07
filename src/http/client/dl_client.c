@@ -22,11 +22,11 @@ void http_client_clean (http_client_t * http) {
     close (http->save_fd);
     http->save_fd = 0;
   }
+  http->io_state &= (~HIN_REQ_END);
 }
 
 void http_client_unlink (http_client_t * http) {
   if (http->debug & DEBUG_HTTP) printf ("http %d unlink\n", http->c.sockfd);
-  hin_client_list_remove (&master.connection_list, (hin_client_t*)http);
   http_client_clean (http);
   if (http->read_buffer) {
     hin_buffer_clean (http->read_buffer);
@@ -48,6 +48,9 @@ static int http_client_close_callback (hin_buffer_t * buffer, int ret) {
 }
 
 int http_client_shutdown (http_client_t * http) {
+  if (http->io_state & HIN_REQ_END) return 0;
+  http->io_state |= HIN_REQ_END;
+
   if (http->debug & DEBUG_HTTP) printf ("http %d shutdown\n", http->c.sockfd);
   hin_buffer_t * buf = malloc (sizeof *buf);
   memset (buf, 0, sizeof (*buf));
@@ -96,8 +99,9 @@ http_client_t * httpd_proxy_connection_get (string_t * host, string_t * port) {
 }
 
 void httpd_proxy_connection_close_all () {
-  int http_client_shutdown (http_client_t * http);
-  for (http_client_t * elem = (http_client_t*)master.connection_list; elem; elem = (http_client_t*)elem->c.next) {
+  http_client_t * next = NULL;
+  for (http_client_t * elem = (http_client_t*)master.connection_list; elem; elem = next) {
+    next = (http_client_t *)elem->c.next;
     http_client_shutdown (elem);
   }
 }

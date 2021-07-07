@@ -53,9 +53,9 @@ void hin_client_list_remove (hin_client_t ** list, hin_client_t * new) {
 
 void hin_client_list_add (hin_client_t ** list, hin_client_t * new) {
   new->next = new->prev = NULL;
+  new->next = *list;
   if (*list == NULL) {
   } else {
-    new->next = *list;
     (*list)->prev = new;
   }
   *list = new;

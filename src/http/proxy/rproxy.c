@@ -72,8 +72,6 @@ static int httpd_proxy_buffer_close (hin_buffer_t * buffer, int ret) {
   http_client_t * http = (http_client_t*)buffer->parent;
   if (http->debug & DEBUG_PROXY) printf ("proxy close %d buffer\n", buffer->fd);
   if (ret < 0) printf ("proxy close %d error %s\n", buffer->fd, strerror (-ret));
-  hin_buffer_clean (http->read_buffer);
-  http->read_buffer = NULL;
   if (http->c.parent)
     httpd_proxy_close (http);
   return http_client_shutdown (http);

@@ -45,10 +45,10 @@ src/http/client/dl_client.c
 src/http/utils/http_utils.c
 src/http/utils/http_misc.c
 src/http/utils/filters.c
+src/http/proxy/rproxy.c
 src/http/server/httpd_read.c
 src/http/server/httpd_req.c
 src/http/server/httpd_head.c
-src/http/server/httpd_proxy.c
 src/http/server/httpd.c
 src/http/server/httpd_file.c
 src/http/cache/cache.c
