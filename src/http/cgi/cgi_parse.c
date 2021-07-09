@@ -77,8 +77,9 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer, int received) {
   hin_client_t * client = (hin_client_t*)worker->data;
   httpd_client_t * http = (httpd_client_t*)client;
   string_t source1, * source = &source1;
-  source->ptr = buffer->data;
-  source->len = buffer->ptr - buffer->data;
+  hin_lines_t * lines = (hin_lines_t*)&buffer->buffer;
+  source->ptr = lines->base;
+  source->len = lines->count;
 
   string_t line, orig=*source, param1;
   http->status = 200;

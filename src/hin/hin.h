@@ -57,7 +57,7 @@ struct hin_buffer_struct {
   int count, sz;
   void * parent;
   struct hin_buffer_struct * prev, * next, * ssl_buffer;
-  char * ptr, * data;
+  char * ptr;
   hin_ssl_t * ssl;
   char buffer[];
 };
@@ -120,6 +120,8 @@ typedef struct {
   int (*read_callback) (hin_buffer_t * buffer, int received);
   int (*eat_callback) (hin_buffer_t * buffer, int num);
   int (*close_callback) (hin_buffer_t * buffer, int ret);
+  int count;
+  char * base;
 } hin_lines_t;
 
 int hin_connect (const char * host, const char * port, hin_callback_t callback, void * parent, struct sockaddr * ai_addr, socklen_t * ai_addrlen);
@@ -170,7 +172,7 @@ int hin_buffer_prepare (hin_buffer_t * buffer, int num);
 int hin_buffer_eat (hin_buffer_t * buffer, int num);
 
 int hin_lines_request (hin_buffer_t * buffer);
-int hin_lines_reread (hin_client_t * client);
+int hin_lines_reread (hin_buffer_t * buf);
 hin_buffer_t * hin_lines_create_raw (int sz);
 
 // timing

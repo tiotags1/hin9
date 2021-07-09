@@ -11,7 +11,8 @@ void hin_buffer_clean (hin_buffer_t * buffer) {
     hin_buffer_clean (buffer->ssl_buffer);
   }
   if (buffer->type == HIN_DYN_BUFFER) {
-    if (buffer->data) free (buffer->data);
+    hin_lines_t * lines = (hin_lines_t*)&buffer->buffer;
+    if (lines->base) free (lines->base);
   }
   free (buffer);
 }
@@ -62,39 +63,42 @@ void hin_buffer_list_append (hin_buffer_t ** list, hin_buffer_t * new) {
 }
 
 int hin_buffer_prepare (hin_buffer_t * buffer, int num) {
-  int new_pos = buffer->ptr - buffer->data;
-  int min_sz = new_pos + num;
+  hin_lines_t * lines = (hin_lines_t*)&buffer->buffer;
+  int pos = lines->count;
+  int min_sz = pos + num;
   if (min_sz > buffer->sz) {
     buffer->sz = min_sz;
-    buffer->data = realloc (buffer->data, buffer->sz);
+    lines->base = realloc (lines->base, buffer->sz);
   }
-  buffer->ptr = buffer->data + new_pos;
+  buffer->ptr = lines->base + pos;
   buffer->count = num;
   return 0;
 }
 
 int hin_buffer_eat (hin_buffer_t * buffer, int num) {
-  int new_pos = buffer->ptr - buffer->data;
+  hin_lines_t * lines = (hin_lines_t*)&buffer->buffer;
+  int pos = lines->count;
+  char * base = lines->base;
 
-  if (num > 0) {
-    memmove (buffer->data, buffer->data + num, new_pos - num);
-    new_pos -= num;
-  }
+  if (num < 0) return -1;
 
-  buffer->ptr = buffer->data + new_pos;
-  buffer->count += num;
+  memmove (base, base + num, pos - num);
+  pos -= num;
+
+  buffer->ptr = base + pos;
+  lines->count -= num;
   return 0;
 }
 
 static int hin_lines_read_callback (hin_buffer_t * buffer, int ret);
 
 int hin_lines_request (hin_buffer_t * buffer) {
-  int sz = buffer->sz;
-  int new_pos = buffer->ptr - buffer->data;
-  int left = buffer->sz - new_pos;
-  if (left < (sz / 2)) { sz = READ_SZ; }
-  else { sz = left; }
-  hin_buffer_prepare (buffer, sz);
+  hin_lines_t * lines = (hin_lines_t*)&buffer->buffer;
+  int left = buffer->sz - lines->count;
+  int new;
+  if (left < (buffer->sz / 2)) { new = READ_SZ; }
+  else { new = left; }
+  hin_buffer_prepare (buffer, new);
   buffer->callback = hin_lines_read_callback;
   if (hin_request_read (buffer) < 0) {
     printf ("lines request failed\n");
@@ -129,16 +133,19 @@ static int hin_lines_read_callback (hin_buffer_t * buffer, int ret) {
     return -1;
   }
 
-  buffer->ptr += ret;
-  buffer->count -= ret;
+  lines->count += ret;
 
   int num = lines->read_callback (buffer, ret);
 
-  if (lines->eat_callback (buffer, num)) {
-    hin_buffer_clean (buffer);
-  }
+  return lines->eat_callback (buffer, num);
+}
 
-  return 0;
+int hin_lines_reread (hin_buffer_t * buf) {
+  hin_lines_t * lines = (hin_lines_t*)&buf->buffer;
+
+  int num = lines->read_callback (buf, lines->count);
+
+  return lines->eat_callback (buf, num);
 }
 
 hin_buffer_t * hin_lines_create_raw (int sz) {
@@ -147,12 +154,12 @@ hin_buffer_t * hin_lines_create_raw (int sz) {
   buf->flags = 0;
   buf->count = buf->sz = sz;
   buf->pos = 0;
-  buf->data = malloc (buf->sz);
-  buf->ptr = buf->data;
+  buf->ptr = malloc (buf->sz);
   buf->callback = hin_lines_read_callback;
 
   hin_lines_t * lines = (hin_lines_t*)&buf->buffer;
   lines->eat_callback = hin_lines_default_eat;
+  lines->base = buf->ptr;
   return buf;
 }
 

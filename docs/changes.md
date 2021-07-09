@@ -1,4 +1,7 @@
 
+* refactoring dynamic buffer
+
+commit 9d7ae4ea5b5d601b67795c32e2e3ba2cadfbeb34
 * better bugfix to proxy crash on double free, cleaning state
 * moved proxy into it's own folder
 

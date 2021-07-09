@@ -76,8 +76,9 @@ int http_client_send_data (http_client_t * http, string_t * source) {
 int http_client_headers_read_callback (hin_buffer_t * buffer, int received) {
   http_client_t * http = (http_client_t*)buffer->parent;
   string_t data;
-  data.ptr = buffer->data;
-  data.len = buffer->ptr - buffer->data;
+  hin_lines_t * lines = (hin_lines_t*)&buffer->buffer;
+  data.ptr = lines->base;
+  data.len = lines->count;
 
   int http_parse_headers (http_client_t * client, string_t * source);
   int used = http_parse_headers (http, &data);

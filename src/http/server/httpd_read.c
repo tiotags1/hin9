@@ -17,19 +17,7 @@ int httpd_client_reread (httpd_client_t * http) {
 
   if (http->state & HIN_REQ_ENDING) return 0;
 
-  int len = buffer->ptr - buffer->data;
-  int num = 0;
-  if (len > 0) {
-    num = httpd_client_read_callback (buffer, len);
-  }
-  if (num > 0) {
-  } else if (num == 0) {
-    buffer->count = buffer->sz;
-    hin_lines_request (buffer);
-  } else {
-    printf ("httpd %d reread error\n", http->c.sockfd);
-    return -1;
-  }
+  hin_lines_reread (buffer);
   return 0;
 }
 
@@ -91,8 +79,9 @@ static int httpd_client_handle_post (httpd_client_t * http, string_t * source) {
 
 int httpd_client_read_callback (hin_buffer_t * buffer, int received) {
   string_t source1, * source = &source1;
-  source->ptr = buffer->data;
-  source->len = buffer->ptr - buffer->data;
+  hin_lines_t * lines = (hin_lines_t*)&buffer->buffer;
+  source->ptr = lines->base;
+  source->len = lines->count;
 
   hin_client_t * client = (hin_client_t*)buffer->parent;
   httpd_client_t * http = (httpd_client_t*)client;
@@ -117,7 +106,7 @@ int httpd_client_read_callback (hin_buffer_t * buffer, int received) {
     used += consume;
   }
 
-  http->headers.ptr = buffer->data;
+  http->headers.ptr = lines->base;
   http->headers.len = used;
 
   // run lua processing

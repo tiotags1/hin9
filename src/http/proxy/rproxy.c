@@ -84,8 +84,9 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer, int receive
   httpd_client_t * http = (httpd_client_t*)client;
 
   string_t source, orig, line, param1, param2;
-  source.ptr = buffer->data;
-  source.len = buffer->ptr - buffer->data;
+  hin_lines_t * lines = (hin_lines_t*)&buffer->buffer;
+  source.ptr = lines->base;
+  source.len = lines->count;
   orig = source;
 
   if (source.len > HIN_HTTPD_MAX_HEADER_SIZE) return -1;
