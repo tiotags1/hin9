@@ -19,6 +19,14 @@ int hin_server_callback (hin_client_t * client) {
     if (vhost->parent == NULL) break;
   }
 
+  hin_server_t * socket = client->parent;
+  if (vhost->hsts &&
+     (vhost->vhost_flags & HIN_HSTS_NO_REDIRECT) == 0 &&
+     socket->ssl_ctx == NULL) {
+    httpd_respond_redirect_https (http);
+    return 0;
+  }
+
   lua_State * L = vhost->L;
   lua_rawgeti (L, LUA_REGISTRYINDEX, vhost->request_callback);
   lua_pushlightuserdata (L, client);

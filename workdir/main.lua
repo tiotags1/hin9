@@ -76,7 +76,11 @@ end
 
 redirect_log (server_log, debug_level)
 
-access = create_log (access_log)
+if (access_log) then
+  access = create_log (access_log)
+else
+  access = nil_log ()
+end
 access ("start server on %s\n", os.date ("%c"))
 
 init ()

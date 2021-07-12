@@ -59,6 +59,8 @@ int hin_pipe_append (hin_pipe_t * pipe, hin_buffer_t * buffer) {
 
   if (pipe->decode_callback) {
     ret1 = pipe->decode_callback (pipe, buffer, buffer->count, flush);
+  } else if (pipe->in_callback) {
+    ret1 = pipe->in_callback (pipe, buffer, buffer->count, flush);
   } else {
     ret1 = pipe->read_callback (pipe, buffer, buffer->count, flush);
   }
@@ -144,13 +146,14 @@ static int hin_pipe_write_next (hin_buffer_t * buffer) {
     hin_pipe_close (pipe);
     return -1;
   }
+  pipe->out.flags &= ~HIN_DONE;
   return 0;
 }
 
 int hin_pipe_advance (hin_pipe_t * pipe) {
   if ((pipe->in.flags & HIN_COUNT) && pipe->left <= 0) pipe->in.flags |= HIN_DONE;
 
-  if (pipe->write == NULL && (pipe->in.flags & HIN_DONE)) {
+  if (pipe->write == NULL && ((pipe->in.flags & pipe->out.flags) & HIN_DONE)) {
     if (pipe->debug & DEBUG_PIPE) printf ("pipe %d>%d close read %d write %d\n", pipe->in.fd, pipe->out.fd, (pipe->in.flags & HIN_DONE), pipe->write ? 1 : 0);
     hin_pipe_close (pipe);
     return 0;
@@ -177,6 +180,7 @@ int hin_pipe_advance (hin_pipe_t * pipe) {
 
 int hin_pipe_write_callback (hin_buffer_t * buffer, int ret) {
   hin_pipe_t * pipe = (hin_pipe_t*)buffer->parent;
+  pipe->out.flags |= HIN_DONE;
   if (ret < 0) {
     printf ("pipe %d>%d write error '%s'\n", pipe->in.fd, pipe->out.fd, strerror (-ret));
     if (pipe->out_error_callback)
@@ -212,11 +216,9 @@ int hin_pipe_write_callback (hin_buffer_t * buffer, int ret) {
     hin_buffer_t * buffer = pipe->write;
     hin_buffer_list_remove (&pipe->write, buffer);
     hin_pipe_write_next (buffer);
-  } else {
-    hin_pipe_advance (pipe);
   }
-  hin_buffer_clean (buffer);
-  return 0;
+  hin_pipe_advance (pipe);
+  return 1;
 }
 
 int hin_pipe_read_callback (hin_buffer_t * buffer, int ret) {
@@ -253,6 +255,8 @@ int hin_pipe_read_callback (hin_buffer_t * buffer, int ret) {
   int ret1 = 0, flush = pipe->in.flags & HIN_DONE ? 1 : 0;
   if (pipe->decode_callback) {
     ret1 = pipe->decode_callback (pipe, buffer, ret, flush);
+  } else if (pipe->in_callback) {
+    ret1 = pipe->in_callback (pipe, buffer, ret, flush);
   } else {
     ret1 = pipe->read_callback (pipe, buffer, ret, flush);
   }

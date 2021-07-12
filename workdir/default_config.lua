@@ -35,6 +35,8 @@ htdocs="htdocs",
 --onRequest = default_request_handler,
 --onError = default_error_handler,
 --onFinish = default_finish_handler,
+--hsts=600,
+--hsts_flags="subdomains preload no_redirect no_header",
 }
 
 

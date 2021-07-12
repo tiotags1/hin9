@@ -98,6 +98,8 @@ int httpd_respond_text (httpd_client_t * http, int status, const char * body);
 int httpd_respond_error (httpd_client_t * http, int status, const char * body);
 int httpd_respond_fatal (httpd_client_t * http, int status, const char * body);
 int httpd_respond_fatal_and_full (httpd_client_t * http, int status, const char * body);
+int httpd_respond_redirect (httpd_client_t * http, int status, const char * location);
+int httpd_respond_redirect_https (httpd_client_t * http);
 
 hin_pipe_t * send_file (hin_client_t * client, int filefd, off_t pos, off_t count, uint32_t flags, int (*extra) (hin_pipe_t *));
 hin_pipe_t * receive_file (hin_client_t * client, int filefd, off_t pos, off_t count, uint32_t flags, int (*extra) (hin_pipe_t *));

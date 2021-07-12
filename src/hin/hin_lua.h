@@ -6,6 +6,11 @@
 #include <lualib.h>
 #include <lauxlib.h>
 
+enum {
+HIN_HSTS_SUBDOMAINS = 0x1, HIN_HSTS_PRELOAD = 0x2,
+HIN_HSTS_NO_REDIRECT = 0x3, HIN_HSTS_NO_HEADER = 0x4,
+};
+
 typedef struct { const char * name; int (*ptr) (lua_State *); } lua_function_t;
 
 typedef struct hin_ssl_ctx_struct {
@@ -26,12 +31,14 @@ typedef struct hin_server_data_struct {
   uint32_t magic;
   uint32_t disable;
   uint32_t debug;
+  uint32_t vhost_flags;
   int timeout;
   char * hostname;
   int cwd_fd;
   void * cwd_dir;
   hin_ssl_ctx_t * ssl;
   void * ssl_ctx;
+  int hsts;
   lua_State *L;
   struct hin_server_data_struct * parent, * next;
 } hin_vhost_t;

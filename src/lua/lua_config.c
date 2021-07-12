@@ -41,7 +41,7 @@ static int hin_log_flush_single (hin_buffer_t * buf) {
   return 0;
 }
 
-static int l_log (lua_State *L) {
+static int l_hin_log_callback (lua_State *L) {
   hin_buffer_t * buf = lua_touserdata (L, lua_upvalueindex (1));
   size_t len = 0;
   const char * fmt = lua_tolstring (L, 1, &len);
@@ -107,9 +107,11 @@ static int l_log (lua_State *L) {
 }
 
 int hin_log_flush () {
-  hin_log_flush_single (logs);
-  close (logs->fd);
-  hin_buffer_clean (logs);
+  if (logs) {
+    hin_log_flush_single (logs);
+    close (logs->fd);
+    hin_buffer_clean (logs);
+  }
   return 0;
 }
 
@@ -136,10 +138,19 @@ static int l_hin_create_log (lua_State *L) {
   buf->callback = hin_log_write_callback;
 
   lua_pushlightuserdata (L, buf);
-  lua_pushcclosure (L, l_log, 1);
+  lua_pushcclosure (L, l_hin_log_callback, 1);
 
   logs = buf;
 
+  return 1;
+}
+
+static int l_hin_nil_log_callback (lua_State *L) {
+  return 0;
+}
+
+static int l_hin_nil_log (lua_State *L) {
+  lua_pushcclosure (L, l_hin_nil_log_callback, 0);
   return 1;
 }
 
@@ -368,6 +379,33 @@ static int l_hin_add_vhost (lua_State *L) {
   }
   lua_pop (L, 1);
 
+  lua_pushstring (L, "hsts");
+  lua_gettable (L, 1);
+  if (lua_type (L, -1) == LUA_TNUMBER) {
+    vhost->hsts = lua_tonumber (L, -1);
+  }
+  lua_pop (L, 1);
+
+  lua_pushstring (L, "hsts_flags");
+  lua_gettable (L, 1);
+  if (lua_type (L, -1) == LUA_TSTRING) {
+    string_t line, param;
+    line.len = 0;
+    line.ptr = (char*)lua_tolstring (L, -1, &line.len);
+    while (match_string (&line, "([%w_]+)%s*", &param) > 0) {
+      if (match_string (&param, "subdomains") > 0) {
+        vhost->vhost_flags |= HIN_HSTS_SUBDOMAINS;
+      } else if (match_string (&param, "preload") > 0) {
+        vhost->vhost_flags |= HIN_HSTS_PRELOAD;
+      } else if (match_string (&param, "no_redirect") > 0) {
+        vhost->vhost_flags |= HIN_HSTS_NO_REDIRECT;
+      } else if (match_string (&param, "no_header") > 0) {
+        vhost->vhost_flags |= HIN_HSTS_NO_HEADER;
+      }
+    }
+  }
+  lua_pop (L, 1);
+
   vhost->request_callback = l_hin_vhost_get_callback (L, 1, "onRequest");
   if (nsocket > 0 && vhost->request_callback == 0) {
     return luaL_error (L, "error! missing onRequest handler\n");
@@ -398,6 +436,7 @@ static int l_hin_add_vhost (lua_State *L) {
 
 static lua_function_t functs [] = {
 {"create_log",		l_hin_create_log },
+{"nil_log",		l_hin_nil_log },
 {"redirect_log",	l_hin_redirect_log },
 {"create_cert",		l_hin_create_cert },
 {"add_vhost",		l_hin_add_vhost },

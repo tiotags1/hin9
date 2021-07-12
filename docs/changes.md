@@ -1,4 +1,10 @@
 
+* added a simple hsts api, aka a simple way to redirect to https
+* added null logging to cheat on benchmarks (logging is too slow and fills the hdd)
+* bugfix: hin pipe fixed free before close
+* bugfix: segfault on exit when you don't use access logging
+
+commit eb51beab1893f0e3544540dabd7abdbdf2f28dc4
 * refactoring dynamic buffer
 
 commit 9d7ae4ea5b5d601b67795c32e2e3ba2cadfbeb34

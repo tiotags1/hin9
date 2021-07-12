@@ -14,6 +14,7 @@
 #include "http.h"
 #include "file.h"
 #include "conf.h"
+#include "hin_lua.h"
 
 static hin_buffer_t * new_buffer (hin_buffer_t * buffer, int min_sz) {
   if (buffer->debug & DEBUG_RW)
@@ -137,6 +138,15 @@ int httpd_write_common_headers (httpd_client_t * http, hin_buffer_t * buf) {
   if (http->content_type) {
     header (buf, "Content-Type: %s\r\n", http->content_type);
   }
+  hin_vhost_t * vhost = http->vhost;
+  if (vhost->hsts && (vhost->vhost_flags & HIN_HSTS_NO_HEADER) == 0) {
+    header (buf, "Strict-Transport-Security: max-age=%d", vhost->hsts);
+    if (vhost->vhost_flags & HIN_HSTS_SUBDOMAINS)
+      header (buf, "; includeSubDomains");
+    if (vhost->vhost_flags & HIN_HSTS_PRELOAD)
+      header (buf, "; preload");
+    header (buf, "\r\n");
+  }
   if (http->append_headers) {
     header (buf, "%s", http->append_headers);
   }
@@ -230,6 +240,34 @@ int httpd_respond_fatal_and_full (httpd_client_t * http, int status, const char 
   return 0;
 }
 
+int httpd_respond_redirect (httpd_client_t * http, int status, const char * location) {
+  char * new = NULL;
+  char * old = http->append_headers;
+  int num = asprintf (&new, "Location: %s\r\n%s", location, old ? old : "");
+  if (num < 0) { if (new) free (new); return -1; }
+
+  if (old) free (old);
+  http->append_headers = new;
+  httpd_respond_text (http, status ? status : 302, "");
+  return 0;
+}
+
+int httpd_respond_redirect_https (httpd_client_t * http) {
+  string_t source, line, path;
+  source = http->headers;
+  if (find_line (&source, &line) == 0 || match_string (&line, "%a+ ("HIN_HTTP_PATH_ACCEPT") HTTP/1.%d", &path) <= 0) {
+    printf ("httpd 400 error parsing request line '%.*s'\n", (int)line.len, line.ptr);
+    return -1;
+  }
+
+  char * new = NULL;
+  int num = asprintf (&new, "https://%s%.*s", http->hostname, (int)path.len, path.ptr);
+  if (num < 0) { if (new) free (new); return -1; }
+
+  httpd_respond_redirect (http, 302, new);
+  free (new);
+  return 0;
+}
 
 
 
