@@ -171,7 +171,8 @@ int hin_cache_timeout_callback (hin_timer_t * timer, time_t time) {
   return 0;
 }
 
-int hin_cache_save (hin_cache_store_t * store, hin_pipe_t * pipe) {
+int hin_cache_save (void * store1, hin_pipe_t * pipe) {
+  hin_cache_store_t * store = store1;
   if (store == NULL) store = default_store;
   httpd_client_t * http = pipe->parent;
 
@@ -278,7 +279,8 @@ int hin_cache_finish (httpd_client_t * client, hin_pipe_t * pipe) {
   return 0;
 }
 
-int hin_cache_check (hin_cache_store_t * store, httpd_client_t * http) {
+int hin_cache_check (void * store1, httpd_client_t * http) {
+  hin_cache_store_t * store = store1;
   if (store == NULL) store = default_store;
 
   if (http->disable & HIN_HTTP_LOCAL_CACHE) return -1;

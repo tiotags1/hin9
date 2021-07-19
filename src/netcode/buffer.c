@@ -100,9 +100,11 @@ int hin_lines_request (hin_buffer_t * buffer) {
   else { new = left; }
   hin_buffer_prepare (buffer, new);
   buffer->callback = hin_lines_read_callback;
+  if (buffer->fd >= 0) {
   if (hin_request_read (buffer) < 0) {
     printf ("lines request failed\n");
     return -1;
+  }
   }
   return 0;
 }
@@ -137,7 +139,8 @@ static int hin_lines_read_callback (hin_buffer_t * buffer, int ret) {
 
   int num = lines->read_callback (buffer, ret);
 
-  return lines->eat_callback (buffer, num);
+  int ret1 = lines->eat_callback (buffer, num);
+  return ret1;
 }
 
 int hin_lines_reread (hin_buffer_t * buf) {
@@ -145,7 +148,17 @@ int hin_lines_reread (hin_buffer_t * buf) {
 
   int num = lines->read_callback (buf, lines->count);
 
-  return lines->eat_callback (buf, num);
+  int ret = lines->eat_callback (buf, num);
+  if (ret) hin_buffer_clean (buf);
+  return ret;
+}
+
+int hin_lines_write (hin_buffer_t * buf, char * data, int len) {
+  hin_buffer_prepare (buf, len);
+  memcpy (buf->ptr, data, len);
+  int ret = buf->callback (buf, len);
+  if (ret) { hin_buffer_clean (buf); }
+  return ret;
 }
 
 hin_buffer_t * hin_lines_create_raw (int sz) {

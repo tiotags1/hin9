@@ -26,6 +26,7 @@ typedef struct hin_pipe_struct hin_pipe_t;
 #define HIN_SERVER_MAGIC 0xfcadc123
 #define HIN_VHOST_MAGIC 0xeeefcac1
 #define HIN_CERT_MAGIC 0xfaaaacc
+#define HIN_FCGI_MAGIC 0xeaeaeaea
 
 enum {
 HIN_DONE = 0x1, HIN_SOCKET = 0x2, HIN_FILE = 0x4, HIN_OFFSETS = 0x8,
@@ -173,6 +174,7 @@ int hin_buffer_eat (hin_buffer_t * buffer, int num);
 
 int hin_lines_request (hin_buffer_t * buffer);
 int hin_lines_reread (hin_buffer_t * buf);
+int hin_lines_write (hin_buffer_t * buf, char * data, int len);
 hin_buffer_t * hin_lines_create_raw (int sz);
 
 // timing

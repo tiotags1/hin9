@@ -279,8 +279,6 @@ int main (int argc, const char * argv[], const char * envp[]) {
   //http_download ("https://localhost:28006/cgi-bin/test.php", "/tmp/dl.txt", NULL);
   //http_download ("http://localhost:28005/", "/tmp/dl.txt", NULL);
   //http_download ("https://localhost:28006/", "/tmp/dl.txt", NULL);
-  void * hin_fcgi_start ();
-  hin_fcgi_start ();
 
   void hin_event_loop ();
   hin_event_loop ();

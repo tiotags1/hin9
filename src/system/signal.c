@@ -11,7 +11,7 @@
 #include <basic_hashtable.h>
 
 #include "hin.h"
-#include "worker.h" // for children
+#include "system/child.h" // for children
 
 #define RESTART_SIGNAL SIGUSR1
 

@@ -7,6 +7,7 @@
 
 #include "hin.h"
 #include "http.h"
+#include "conf.h"
 
 #include "fcgi.h"
 
@@ -65,17 +66,32 @@ void hin_fcgi_worker_run (hin_fcgi_worker_t * worker) {
 
 int hin_fastcgi (httpd_client_t * http, void * fcgi1, const char * script_path, const char * path_info) {
   if (http->state & HIN_REQ_DATA) return -1;
-  http->state |= (HIN_REQ_DATA | HIN_REQ_CGI);
+  http->state |= (HIN_REQ_DATA | HIN_REQ_FCGI);
 
-  hin_fcgi_group_t * fcgi = fcgi_group;
+  hin_fcgi_group_t * fcgi = fcgi1;
+  if (fcgi == NULL || fcgi->magic != HIN_FCGI_MAGIC) {
+    printf ("error! fcgi group is invalid\n");
+    httpd_respond_fatal (http, 500, NULL);
+    return -1;
+  }
+
+  if (!HIN_HTTPD_CGI_CHUNKED_UPLOAD && (http->peer_flags & HIN_HTTP_CHUNKED_UPLOAD)) {
+    printf ("cgi spec denies chunked upload\n");
+    httpd_respond_fatal (http, 411, NULL);
+    return -1;
+  }
+
+  if (hin_cache_check (NULL, http) > 0) {
+    return 0;
+  }
+
   hin_fcgi_worker_t * worker = hin_fcgi_get_worker (fcgi);
   if (worker == NULL) {
     printf ("error! worker null\n");
     return -1;
   }
   worker->http = http;
-  // TODO should use pipes to support chunked
-  http->disable |= HIN_HTTP_KEEPALIVE;
+  httpd_request_chunked (http);
 
   hin_fcgi_worker_run (worker);
 
@@ -83,9 +99,29 @@ int hin_fastcgi (httpd_client_t * http, void * fcgi1, const char * script_path, 
 }
 
 hin_fcgi_group_t * hin_fcgi_start (const char * uri) {
+  string_t source, host, port;
+  source.ptr = (char*)uri;
+  source.len = strlen (source.ptr);
+  if (match_string (&source, "tcp://") <= 0) {
+    printf ("error! fcgi missing 'tcp://' '%s'\n", uri);
+    return NULL;
+  }
+
+  if (match_string (&source, "([%w]+)", &host) <= 0) {
+    printf ("error! fcgi missing host '%s'\n", uri);
+    return NULL;
+  }
+  if (match_string (&source, ":([%d]+)", &port) <= 0) {
+    printf ("error! fcgi missing port '%s'\n", uri);
+    return NULL;
+  }
+
   hin_fcgi_group_t * fcgi = calloc (1, sizeof (*fcgi));
-  fcgi->host = strdup ("localhost");
-  fcgi->port = strdup ("9000");
+  fcgi->host = strndup (host.ptr, host.len);
+  fcgi->port = strndup (port.ptr, port.len);
+  fcgi->magic = HIN_FCGI_MAGIC;
+
+  fcgi->next = fcgi_group;
   fcgi_group = fcgi;
 
   return fcgi;
@@ -95,7 +131,7 @@ void hin_fcgi_socket_close (hin_fcgi_socket_t * socket) {
   for (int i=0; i<socket->max_worker; i++) {
     hin_fcgi_worker_t * worker = socket->worker[i];
     if (worker == NULL) continue;
-    hin_fcgi_worker_reset (worker);
+    //hin_fcgi_worker_reset (worker);
     free (worker);
   }
   if (socket->path) free ((void*)socket->path);

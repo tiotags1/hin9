@@ -6,9 +6,11 @@
 
 #include "uri.h"
 
-enum { HIN_REQ_HEADERS = 0x1, HIN_REQ_DATA = 0x2, HIN_REQ_POST = 0x4, HIN_REQ_WAIT = 0x8,
-	HIN_REQ_PROXY = 0x10, HIN_REQ_CGI = 0x20, HIN_REQ_END = 0x40, HIN_REQ_ENDING = 0x80,
-	HIN_REQ_ERROR = 0x100, HIN_REQ_ERROR_HANDLED = 0x200 };
+enum {
+HIN_REQ_HEADERS = 0x1, HIN_REQ_DATA = 0x2, HIN_REQ_POST = 0x4, HIN_REQ_WAIT = 0x8,
+HIN_REQ_PROXY = 0x10, HIN_REQ_CGI = 0x20, HIN_REQ_FCGI = 0x40, HIN_REQ_END = 0x80,
+HIN_REQ_ENDING = 0x100, HIN_REQ_ERROR = 0x200, HIN_REQ_ERROR_HANDLED = 0x400
+};
 
 enum { HIN_HTTP_GET = 1, HIN_HTTP_POST, HIN_HTTP_HEAD };
 
@@ -112,14 +114,20 @@ int httpd_client_finish_request (httpd_client_t * http);
 int httpd_client_shutdown (httpd_client_t * http);
 int http_client_shutdown (http_client_t * http);
 
-//int hin_request_headers (hin_client_t * client);
-
 int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_path, const char * script_path, const char * path_info);
 int hin_fastcgi (httpd_client_t * http, void * fcgi_group, const char * script_path, const char * path_info);
 
 // download
 hin_server_t * httpd_create (const char * addr, const char * port, const char * sock_type, void * ssl_ctx);
 http_client_t * http_download (const char * url, const char * save_path, int (*read_callback) (hin_buffer_t * buffer, int num, int flush));
+
+// filters
+int httpd_request_chunked (httpd_client_t * http);
+
+// cache
+int hin_cache_save (void * store, hin_pipe_t * pipe);
+int hin_cache_finish (httpd_client_t * client, hin_pipe_t * pipe);
+int hin_cache_check (void * store, httpd_client_t * client);
 
 #include "utils.h"
 

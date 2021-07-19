@@ -215,6 +215,20 @@ static int l_hin_create_cert (lua_State *L) {
   return 1;
 }
 
+static int l_hin_create_fcgi (lua_State *L) {
+  const char * uri = lua_tostring (L, 1);
+
+  void * hin_fcgi_start (const char * uri);
+  void * ptr = hin_fcgi_start (uri);
+
+  if (ptr == NULL) {
+    return luaL_error (L, "error! fcgi can't connect '%s'\n", uri);
+  }
+
+  lua_pushlightuserdata (L, ptr);
+  return 1;
+}
+
 static const char * l_hin_get_str (lua_State *L, int tpos, const char * name) {
   const char * ret = NULL;
   lua_pushstring (L, name);
@@ -439,6 +453,7 @@ static lua_function_t functs [] = {
 {"nil_log",		l_hin_nil_log },
 {"redirect_log",	l_hin_redirect_log },
 {"create_cert",		l_hin_create_cert },
+{"create_fcgi",		l_hin_create_fcgi },
 {"add_vhost",		l_hin_add_vhost },
 {NULL, NULL},
 };

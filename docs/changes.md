@@ -1,4 +1,11 @@
 
+* fcgi fpm, 1 fpm connection per httpd client, no uploads, possible crashes, not enabled by default
+* merged fcgi and cgi parsing, removed hin worker, replaced with hin fcgi worker
+* exposed fcgi creation api to lua, you can point fcgi to whatever tcp server you want
+* fixed some virtual pipe handling
+* fixed fcgi caching
+
+commit e6d10dd24021a390a51f604bd11c8fe9372f9625
 * added a simple hsts api, aka a simple way to redirect to https
 * added null logging to cheat on benchmarks (logging is too slow and fills the hdd)
 * bugfix: hin pipe fixed free before close

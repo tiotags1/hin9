@@ -14,10 +14,11 @@
 #include "hin.h"
 #include "http.h"
 #include "uri.h"
-#include "worker.h"
 #include "conf.h"
 #include "hin_lua.h"
 #include "file.h"
+
+#include "fcgi.h"
 
 typedef struct {
   int pos;
@@ -57,7 +58,7 @@ static int var (env_list_t * env, const char * fmt, ...) {
   return 0;
 }
 
-int hin_cgi_send (httpd_client_t * http, hin_worker_t * worker, int fd);
+int hin_cgi_send (httpd_client_t * http, hin_fcgi_worker_t * worker, int fd);
 int httpd_request_chunked (httpd_client_t * http);
 
 int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_path, const char * script_path, const char * path_info) {
@@ -74,15 +75,14 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
     return -1;
   }
 
-  int hin_cache_check (void * store, httpd_client_t * client);
   if (hin_cache_check (NULL, http) > 0) {
     return 0;
   }
 
   httpd_request_chunked (http);
 
-  hin_worker_t * worker = calloc (1, sizeof (*worker));
-  worker->data = (void*)client;
+  hin_fcgi_worker_t * worker = calloc (1, sizeof (*worker));
+  worker->http = http;
 
   int out_pipe[2];
   if (pipe (out_pipe) < 0) {
@@ -278,15 +278,3 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
   exit (-1);
 }
 
-#if 0
-void * hin_fcgi_start () {
-  return NULL;
-}
-
-void hin_fcgi_clean () {
-}
-
-int hin_fastcgi (httpd_client_t * http, void * fcgi1, const char * script_path, const char * path_info) {
-  return httpd_respond_text (http, 501, NULL);
-}
-#endif

@@ -10,6 +10,10 @@
 
 #include "fcgi.h"
 
+void hin_fcgi_worker_free (hin_fcgi_worker_t * worker) {
+  free (worker);
+}
+
 hin_fcgi_worker_t * hin_fcgi_worker_create (hin_fcgi_socket_t * sock) {
   hin_fcgi_worker_t * worker = calloc (1, sizeof (*worker));
   worker->req_id = sock->next_req++;
@@ -26,18 +30,13 @@ static hin_fcgi_socket_t * hin_fcgi_create_socket (hin_fcgi_group_t * fcgi) {
 
 hin_fcgi_worker_t * hin_fcgi_get_worker (hin_fcgi_group_t * fcgi) {
   hin_fcgi_worker_t * worker = NULL;
-  if (fcgi->socket == NULL) {
-    fcgi->socket = hin_fcgi_create_socket (fcgi);
-  }
-  hin_fcgi_socket_t * sock = fcgi->socket;
+  hin_fcgi_socket_t * sock = hin_fcgi_create_socket (fcgi);
   for (int i=0; i<sock->max_worker; i++) {
     worker = sock->worker[i];
-    if (worker && worker->http == NULL) return worker;
-    if (worker == NULL) {
-      worker = hin_fcgi_worker_create (sock);
-      sock->worker[i] = worker;
-      return worker;
-    }
+    if (worker) continue;
+    worker = hin_fcgi_worker_create (sock);
+    sock->worker[i] = worker;
+    return worker;
   }
 
   int new = 10;
@@ -53,7 +52,7 @@ hin_fcgi_worker_t * hin_fcgi_get_worker (hin_fcgi_group_t * fcgi) {
 int hin_fcgi_worker_reset (hin_fcgi_worker_t * worker) {
   httpd_client_t * http = worker->http;
   if (http) {
-    httpd_client_finish_request (http);
+    //httpd_client_finish_request (http);
     worker->http = NULL;
   }
   return 0;

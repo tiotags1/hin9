@@ -10,56 +10,31 @@
 
 #include "fcgi.h"
 
-static int hin_fcgi_pipe_finish_callback (hin_pipe_t * pipe) {
-  hin_fcgi_worker_t * worker = pipe->parent;
-  hin_fcgi_socket_t * socket = worker->socket;
-  httpd_client_t * http = worker->http;
-  if (http && http->debug & DEBUG_CGI)
-    printf ("fcgi %d worker %d done.\n", socket->fd, worker->req_id);
-  hin_fcgi_worker_reset (worker);
-  return 0;
-}
-
 int hin_fcgi_pipe_init (hin_fcgi_worker_t * worker) {
   httpd_client_t * http = worker->http;
 
-  hin_pipe_t * pipe = calloc (1, sizeof (*pipe));
-  hin_pipe_init (pipe);
-  pipe->in.fd = -1;
-  pipe->in.flags = HIN_INACTIVE;
-  pipe->in.pos = 0;
-  pipe->out.fd = http->c.sockfd;
-  pipe->out.flags = HIN_SOCKET | (http->c.flags & HIN_SSL);
-  pipe->out.ssl = &http->c.ssl;
-  pipe->out.pos = 0;
-  pipe->parent = worker;
-  pipe->finish_callback = hin_fcgi_pipe_finish_callback;
-  pipe->debug = http->debug;
-
-  hin_buffer_t * buf = malloc (sizeof *buf + READ_SZ);
-  memset (buf, 0, sizeof (*buf));
-  buf->fd = http->c.sockfd;
-  buf->flags = HIN_SOCKET | (http->c.flags & HIN_SSL);
-  buf->sz = READ_SZ;
-  buf->ptr = buf->buffer;
-  buf->parent = pipe;
+  hin_buffer_t * buf = hin_lines_create_raw (READ_SZ);
+  buf->fd = -1;
+  buf->parent = worker;
+  buf->flags = 0;
   buf->debug = http->debug;
-  buf->ssl = &http->c.ssl;
-  header (buf, "HTTP/1.1 200 OK\r\n");
-  hin_pipe_write (pipe, buf);
 
-  hin_pipe_start (pipe);
+  worker->header_buf = buf;
 
-  worker->out = pipe;
+  int hin_fcgi_send (httpd_client_t * http, hin_buffer_t * buf);
+  hin_fcgi_send (http, buf);
 
   return 0;
 }
 
 static int hin_fcgi_pipe_write (hin_fcgi_worker_t * worker, FCGI_Header * head) {
-  printf ("payload '%.*s'\n", head->length, head->data);
-  hin_buffer_t * buf = hin_buffer_create_from_data (worker->out, (char*)head->data, head->length);
-  hin_pipe_write (worker->out, buf);
-  hin_pipe_advance (worker->out);
+  if (worker->header_buf) {
+    hin_lines_write (worker->header_buf, (char*)head->data, head->length);
+  } else {
+    hin_buffer_t * buf = hin_buffer_create_from_data (worker->out, (char*)head->data, head->length);
+    hin_pipe_append (worker->out, buf);
+    hin_pipe_advance (worker->out);
+  }
   return 0;
 }
 
@@ -72,9 +47,8 @@ static int hin_fcgi_pipe_end (hin_fcgi_worker_t * worker, FCGI_Header * head) {
     printf ("fcgi %d req_id %d status %d proto %d end\n", socket->fd, head->request_id, req->appStatus, req->protocolStatus);
 
   hin_pipe_t * pipe = worker->out;
-  pipe->in.flags |= HIN_DONE;
-  //hin_pipe_advance (pipe);
-  worker->out = NULL;
+  hin_pipe_finish (pipe);
+  //worker->out = NULL;
 
   return 0;
 }
@@ -114,7 +88,7 @@ int hin_fcgi_read_callback (hin_buffer_t * buf, int ret) {
   if (ret == 0) {
     if (buf->debug & DEBUG_CGI)
       printf ("fcgi %d close\n", buf->fd);
-    hin_fcgi_socket_close (socket);
+    //hin_fcgi_socket_close (socket);
     return 1;
   }
 

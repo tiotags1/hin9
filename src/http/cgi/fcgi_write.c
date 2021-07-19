@@ -197,6 +197,14 @@ static int hin_fcgi_write_callback (hin_buffer_t * buf, int ret) {
     return -1;
   }
 
+  if (buf->next) {
+    if (hin_request_write (buf->next) < 0) {
+      printf ("uring error!\n");
+      return -1;
+    }
+    return 1;
+  }
+
   int hin_fcgi_read_callback (hin_buffer_t * buf, int ret);
   buf->callback = hin_fcgi_read_callback;
   buf->count = buf->sz;
@@ -212,11 +220,12 @@ int hin_fcgi_write_request (hin_fcgi_worker_t * worker) {
   hin_fcgi_socket_t * socket = worker->socket;
   httpd_client_t * http = worker->http;
 
-  hin_buffer_t * buf = malloc (sizeof (hin_buffer_t) + READ_SZ * 4);
+  int buf_sz = READ_SZ * 4;
+  hin_buffer_t * buf = malloc (sizeof (hin_buffer_t) + buf_sz);
   memset (buf, 0, sizeof (*buf));
   buf->flags = HIN_SOCKET;
   buf->fd = socket->fd;
-  buf->sz = READ_SZ * 4;
+  buf->sz = buf_sz;
   buf->ptr = buf->buffer;
   buf->parent = socket;
   buf->debug = http->debug;
@@ -235,12 +244,6 @@ int hin_fcgi_write_request (hin_fcgi_worker_t * worker) {
   head->length = endian_swap16 (sz);
   hin_fcgi_header (buf, FCGI_PARAMS, worker->req_id, 0);
   hin_fcgi_header (buf, FCGI_STDIN, worker->req_id, 0);
-
-  hin_fcgi_header (buf, FCGI_BEGIN_REQUEST, worker->req_id+1, 8);
-  body = header_ptr (buf, sizeof (*body));
-  memset (body, 0, sizeof (*body));
-  body->role = endian_swap16 (FCGI_RESPONDER);
-  body->flags = 0;
 
   if (hin_request_write (buf) < 0) {
     printf ("uring error!\n");

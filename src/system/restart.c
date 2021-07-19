@@ -9,7 +9,7 @@
 #include <sys/types.h>
 
 #include "hin.h"
-#include "worker.h"
+#include "system/child.h"
 
 int hin_check_alive () {
   if (master.flags & HIN_RESTARTING) {

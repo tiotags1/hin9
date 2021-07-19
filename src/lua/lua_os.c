@@ -12,7 +12,8 @@
 #include "hin.h"
 #include "hin_lua.h"
 #include "conf.h"
-#include "worker.h"
+
+#include "system/child.h"
 
 enum {EXEC_WAIT=0, EXEC_FORK, EXEC_SWITCH};
 

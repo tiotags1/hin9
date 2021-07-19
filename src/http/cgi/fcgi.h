@@ -59,6 +59,7 @@ typedef struct {
   int req_id;
   httpd_client_t * http;
 
+  hin_buffer_t * header_buf;
   hin_pipe_t * out;
 
   struct hin_fcgi_socket_struct * socket;
@@ -88,6 +89,8 @@ typedef struct hin_fcgi_group_struct {
 
   hin_fcgi_worker_t * free, * busy;
 
+  uint32_t magic;
+
   struct hin_fcgi_group_struct * next;
 } hin_fcgi_group_t;
 
@@ -97,6 +100,8 @@ int hin_fcgi_write_request (hin_fcgi_worker_t * worker);
 hin_fcgi_worker_t * hin_fcgi_get_worker (hin_fcgi_group_t * fcgi_group);
 int hin_fcgi_worker_reset (hin_fcgi_worker_t * worker);
 void hin_fcgi_socket_close (hin_fcgi_socket_t * socket);
+
+void hin_fcgi_worker_free (hin_fcgi_worker_t * worker);
 
 #endif
 

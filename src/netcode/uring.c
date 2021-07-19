@@ -332,7 +332,7 @@ int hin_event_loop () {
 
     io_uring_cqe_seen (&ring, cqe);
     err = buffer->callback (buffer, cqe->res);
-    if (debug & DEBUG_URING) printf ("req%d done. buf %p\n", master.id, buffer);
+    if (debug & DEBUG_URING) printf ("req%d done. buf %p %d\n", master.id, buffer, err);
     if (err) {
       hin_buffer_clean (buffer);
     }

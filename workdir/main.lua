@@ -45,7 +45,7 @@ function default_onRequest_handler (req)
 
   if (ext == "php") then
     return cgi (req, php_bin, nil, nil, path_info)
-    --return fastcgi (req, nil, "index.php", path_info)
+    --return fastcgi (req, php_fcgi)
   elseif (to_cache[ext]) then
     set_option (req, "cache", 604800)
   end
@@ -75,6 +75,8 @@ if (err) then
 end
 
 redirect_log (server_log, debug_level)
+
+php_fcgi = create_fcgi ("tcp://localhost:9000")
 
 if (access_log) then
   access = create_log (access_log)
