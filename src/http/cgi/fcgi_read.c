@@ -54,28 +54,44 @@ static int hin_fcgi_pipe_end (hin_fcgi_worker_t * worker, FCGI_Header * head) {
 }
 
 int hin_fcgi_read_rec (hin_buffer_t * buf, char * ptr, int left) {
-  if (left < 8) return -1;
+  if (left < 8) return 0;
   FCGI_Header * head = (FCGI_Header*)ptr;
+  int len = endian_swap16 (head->length);
+  int total = len + sizeof (*head) + head->padding;
+  if (left < total) {
+    if (buf->debug & DEBUG_CGI)
+      printf ("fcgi %d request more %d<%d\n", buf->fd, left, total);
+    buf->count = total;
+    return 0;
+  }
+
   head->request_id = endian_swap16 (head->request_id);
-  head->length = endian_swap16 (head->length);
+  head->length = len;
   if (buf->debug & DEBUG_CGI)
     printf ("fcgi %d rec type %d id %d len %d\n", buf->fd, head->type, head->request_id, head->length);
 
   hin_fcgi_socket_t * sock = buf->parent;
   int req_id = head->request_id;
-  int used = head->length;
   if (req_id < 0 || req_id > sock->max_worker) {
     printf ("fcgi %d req_id %d error! outside bounds\n", buf->fd, req_id);
-    return used + 8 + head->padding;
+    return total;
   }
   hin_fcgi_worker_t * worker = sock->worker[req_id];
 
-  if (head->type == FCGI_END_REQUEST) {
-    hin_fcgi_pipe_end (worker, head);
-  } else {
+  switch (head->type) {
+  case FCGI_STDOUT:
     hin_fcgi_pipe_write (worker, head);
+  break;
+  case FCGI_STDERR:
+    fprintf (stderr, "fcgi %d error '%.*s'\n", buf->fd, len, head->data);
+  break;
+  case FCGI_END_REQUEST:
+    hin_fcgi_pipe_end (worker, head);
+  break;
+  default:
+    printf ("fcgi %d unkown request type %d\n", buf->fd, head->type);
   }
-  return used + 8 + head->padding;
+  return total;
 }
 
 int hin_fcgi_read_callback (hin_buffer_t * buf, int ret) {
@@ -89,26 +105,26 @@ int hin_fcgi_read_callback (hin_buffer_t * buf, int ret) {
     if (buf->debug & DEBUG_CGI)
       printf ("fcgi %d close\n", buf->fd);
     //hin_fcgi_socket_close (socket);
-    return 1;
+    return -1;
   }
 
   if (buf->debug & DEBUG_CGI)
     printf ("fcgi %d received %d bytes\n", buf->fd, ret);
-  char * ptr = buf->ptr;
-  int left = ret;
+
+  buf->count = 0; // hack to keep nr bytes so you can speed up
+
+  hin_lines_t * lines = (hin_lines_t*)&buf->buffer;
+  char * ptr = lines->base;
+  int left = lines->count;
   int sz = 0;
+  int used = 0;
   while ((sz = hin_fcgi_read_rec (buf, ptr, left)) > 0) {
     left -= sz;
     ptr += sz;
+    used += sz;
   }
 
-  buf->count = buf->sz;
-  if (hin_request_read (buf) < 0) {
-    printf ("uring error!\n");
-    return -1;
-  }
-
-  return 0;
+  return used;
 }
 
 

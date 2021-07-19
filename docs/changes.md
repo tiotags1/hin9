@@ -1,4 +1,10 @@
 
+* fcgi uploads
+* moved some headers around
+* set default log level to only log errors and configuration
+* bugfix fcgi not being able to send large responses
+
+commit 1b8b8cd4a27e5de72791fafd06efe4b346ff7910
 * fcgi fpm, 1 fpm connection per httpd client, no uploads, possible crashes, not enabled by default
 * merged fcgi and cgi parsing, removed hin worker, replaced with hin fcgi worker
 * exposed fcgi creation api to lua, you can point fcgi to whatever tcp server you want

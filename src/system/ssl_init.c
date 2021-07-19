@@ -14,7 +14,7 @@
 #include <fcntl.h>
 
 #include "hin.h"
-#include "hin_lua.h"
+#include "vhost.h"
 
 #ifdef HIN_USE_OPENSSL
 

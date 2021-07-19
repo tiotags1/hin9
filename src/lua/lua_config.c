@@ -7,9 +7,10 @@
 
 #include "hin.h"
 #include "http.h"
-#include "hin_lua.h"
-#include "ssl.h"
 #include "conf.h"
+#include "vhost.h"
+#include "system/ssl.h"
+#include "system/hin_lua.h"
 
 #include <fcntl.h>
 

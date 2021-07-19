@@ -8,7 +8,7 @@ include_directories (${LUA_INCLUDE_DIR})
 
 add_definitions (-D_GNU_SOURCE -D_LARGEFILE_SOURCE -O2 -fno-omit-frame-pointer -Wall -Werror=vla)
 
-include_directories ("src/hin/" "external/basic/" "external/basic/vfs/")
+include_directories ("src/hin/" "src/hin/http/" "external/basic/" "external/basic/vfs/")
 
 option (USE_OPENSSL "Use openssl" ON)
 
@@ -36,6 +36,7 @@ set (hin_src
 src/http/cgi/fcgi.c
 src/http/cgi/fcgi_read.c
 src/http/cgi/fcgi_write.c
+src/http/cgi/fcgi_post.c
 src/http/cgi/fcgi_util.c
 src/http/cgi/cgi_parse.c
 src/http/cgi/httpd_cgi.c

@@ -20,7 +20,7 @@
 #include "http.h"
 #include "file.h"
 #include "conf.h"
-#include "hin_lua.h"
+#include "vhost.h"
 
 static int httpd_close_filefd (httpd_client_t * http) {
   if (http->file_fd <= 0) return 0;

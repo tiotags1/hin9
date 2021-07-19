@@ -6,7 +6,7 @@
 #include <basic_hashtable.h>
 
 #include "hin.h"
-#include "hin_lua.h"
+#include "vhost.h"
 
 static basic_ht_t * vhost_ht = NULL;
 
@@ -60,7 +60,7 @@ int httpd_vhost_request (httpd_client_t * http, const char * name, int len) {
   http->hostname = strndup (name, len);
 
   hin_vhost_t * vhost = hin_vhost_get (name, len);
-  if (http->debug & (DEBUG_HTTP|DEBUG_RW_ERROR))
+  if (http->debug & (DEBUG_HTTP|DEBUG_INFO))
     printf ("hostname '%.*s'%s\n", len, name, vhost ? "" : " not found");
 
   if (vhost) {

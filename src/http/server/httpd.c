@@ -7,7 +7,7 @@
 
 #include "hin.h"
 #include "http.h"
-#include "hin_lua.h"
+#include "vhost.h"
 #include "conf.h"
 
 int httpd_client_reread (httpd_client_t * http);
@@ -140,7 +140,7 @@ static int httpd_client_buffer_close_callback (hin_buffer_t * buffer, int ret) {
 static int httpd_client_buffer_eat_callback (hin_buffer_t * buffer, int num) {
   if (num > 0) {
   } else if (num == 0) {
-    hin_lines_request (buffer);
+    hin_lines_request (buffer, 0);
   } else {
     printf ("httpd eat callback error\n");
   }

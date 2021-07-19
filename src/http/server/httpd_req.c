@@ -14,7 +14,7 @@
 #include "http.h"
 #include "file.h"
 #include "conf.h"
-#include "hin_lua.h"
+#include "vhost.h"
 
 static hin_buffer_t * new_buffer (hin_buffer_t * buffer, int min_sz) {
   if (buffer->debug & DEBUG_RW)

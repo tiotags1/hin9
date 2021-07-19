@@ -10,10 +10,9 @@
 #include <sys/wait.h>
 
 #include "hin.h"
-#include "hin_lua.h"
 #include "conf.h"
-
 #include "system/child.h"
+#include "system/hin_lua.h"
 
 enum {EXEC_WAIT=0, EXEC_FORK, EXEC_SWITCH};
 

@@ -7,9 +7,10 @@
 #include <fcntl.h>
 
 #include "hin.h"
-#include "hin_lua.h"
 #include "conf.h"
 #include "http.h"
+#include "vhost.h"
+#include "system/hin_lua.h"
 
 int hin_server_callback (hin_client_t * client) {
   httpd_client_t * http = (httpd_client_t*)client;

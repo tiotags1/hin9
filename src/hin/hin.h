@@ -18,8 +18,8 @@ typedef struct hin_pipe_struct hin_pipe_t;
 //65536
 //16k prob
 
-#include "ssl.h"
-#include "master.h"
+#include "system/ssl.h"
+#include "system/master.h"
 
 #define HIN_CONNECT_MAGIC 0xfeabc321
 #define HIN_CLIENT_MAGIC 0xfeabc111
@@ -43,7 +43,7 @@ DEBUG_BASIC=0x1, DEBUG_CONFIG=0x2, DEBUG_VFS=0x4, DEBUG_SOCKET=0x8,
 DEBUG_URING=0x10, DEBUG_SSL=0x20, DEBUG_SYSCALL=0x40, DEBUG_MEMORY=0x80,
 DEBUG_HTTP=0x100, DEBUG_CGI=0x200, DEBUG_PROXY=0x400, DEBUG_HTTP_FILTER=0x800,
 DEBUG_POST=0x1000, DEBUG_CHILD=0x2000, DEBUG_CACHE=0x4000, DEBUG_TIMEOUT=0x8000,
-DEBUG_RW=0x10000, DEBUG_RW_ERROR=0x20000, DEBUG_PIPE=0x40000,
+DEBUG_RW=0x10000, DEBUG_RW_ERROR=0x20000, DEBUG_PIPE=0x40000, DEBUG_INFO=0x80000,
 };
 
 typedef int (*hin_callback_t) (hin_buffer_t * buffer, int ret);
@@ -172,7 +172,7 @@ void hin_buffer_list_add (hin_buffer_t ** list, hin_buffer_t * new);
 int hin_buffer_prepare (hin_buffer_t * buffer, int num);
 int hin_buffer_eat (hin_buffer_t * buffer, int num);
 
-int hin_lines_request (hin_buffer_t * buffer);
+int hin_lines_request (hin_buffer_t * buffer, int min);
 int hin_lines_reread (hin_buffer_t * buf);
 int hin_lines_write (hin_buffer_t * buf, char * data, int len);
 hin_buffer_t * hin_lines_create_raw (int sz);

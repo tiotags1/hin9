@@ -12,7 +12,7 @@
 #include "hin.h"
 #include "http.h"
 #include "conf.h"
-#include "hin_lua.h"
+#include "vhost.h"
 
 time_t hin_date_str_to_time (string_t * source);
 

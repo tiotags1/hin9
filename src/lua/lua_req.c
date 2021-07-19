@@ -6,9 +6,9 @@
 
 #include "hin.h"
 #include "http.h"
-#include "hin_lua.h"
 #include "uri.h"
 #include "file.h"
+#include "system/hin_lua.h"
 
 static int l_hin_parse_path (lua_State *L) {
   hin_client_t *client = (hin_client_t*)lua_touserdata (L, 1);

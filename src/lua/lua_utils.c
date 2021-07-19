@@ -7,7 +7,8 @@
 #include <libgen.h> // for dirname
 
 #include "hin.h"
-#include "hin_lua.h"
+
+#include "system/hin_lua.h"
 
 #include <basic_vfs.h>
 

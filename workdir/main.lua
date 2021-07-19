@@ -44,8 +44,8 @@ function default_onRequest_handler (req)
   end
 
   if (ext == "php") then
-    return cgi (req, php_bin, nil, nil, path_info)
-    --return fastcgi (req, php_fcgi)
+    --return cgi (req, php_bin, nil, nil, path_info)
+    return fastcgi (req, php_fcgi)
   elseif (to_cache[ext]) then
     set_option (req, "cache", 604800)
   end

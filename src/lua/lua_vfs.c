@@ -11,8 +11,10 @@
 
 #include "hin.h"
 #include "conf.h"
-#include "hin_lua.h"
 #include "http.h"
+#include "vhost.h"
+
+#include "system/hin_lua.h"
 
 basic_vfs_t * vfs = NULL;
 

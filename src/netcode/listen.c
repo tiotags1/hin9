@@ -9,7 +9,6 @@
 #include "hin.h"
 #include "utils.h"
 #include "conf.h"
-#include "hin_lua.h"
 
 static int hin_server_handle_client (hin_client_t * client) {
   hin_server_t * server = (hin_server_t*)client->parent;

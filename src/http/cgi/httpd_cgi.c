@@ -15,7 +15,7 @@
 #include "http.h"
 #include "uri.h"
 #include "conf.h"
-#include "hin_lua.h"
+#include "vhost.h"
 #include "file.h"
 
 #include "fcgi.h"
