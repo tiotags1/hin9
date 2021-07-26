@@ -3,7 +3,7 @@ hin9
 
 hinsightd is a http/1.1 webserver designed for use with linux io_uring
 
-main features are http1.1 pipelining, reverse proxy, local file-based cache, cgi, ssl, dynamic deflate, per request debug information, graceful restart, customizable logging, customizable cache control headers, customizable everything
+main features are http1.1 pipelining, reverse proxy, local file-based cache, cgi and fastcgi, ssl, dynamic deflate, per request debug information, graceful restart, customizable logging, customizable cache control headers, customizable everything
 
 uses lua for everything related to configuration
 
@@ -40,49 +40,34 @@ configuration
 roadmap
 -------
 
-* fastcgi
 * static deflate caching
 
 
 function reference
 ------------------
 
-outdated
-
-create\_httpd (request-callback, error-callback, finish-callback)
-  * request-callback - is called when all the headers are gathered and the request is ready to be parsed
-  * error-callback - is called when an error is encountered, atm only on 404 for static files
-  * finish-callback - when the request is done
-  * return a server object
-
-listen (server-object, bind address, port, ipv6-specifier, ssl-data)
-  * bind address/port in string format usable for getaddrinfo
-  * ipv6 specifier, either "ipv4", "ipv6", "any", nil
-  * ssl data is a path to a ssl cert and ssl key
-  * returns a server socket object
-
 redirect\_log (log path, debug mask)
   * log path - a file path for where to redirect stdout & stderr (optional)
   * debug mask - a string that represents a mask for what debug output to show (optional)
     * valid values are "0", "ffffffff"
 
-set\_server\_option (server-object, option-name, option-value)
+set\_server\_option (vhost-object, option-name, option-value)
 
-set\_server\_option (server, "enable", feature)
+set\_server\_option (vhost, "enable", feature)
 
-set\_server\_option (server, "disable", feature)
-  * enable/disable a certain feature on the whole server
+set\_server\_option (vhost, "disable", feature)
+  * enable/disable a certain feature on the whole vhost
 
-get\_server\_option (server-object, option-name)
+get\_server\_option (vhost-object, option-name)
 
-get\_server\_option (server, "enable", feature)
+get\_server\_option (vhost, "enable", feature)
   * returns if feature is enabled or disabled
 
-set\_server\_option (server, "timeout", timeout)
+set\_server\_option (vhost, "timeout", timeout)
   * number of seconds to keep clients after a request is done
 
-set\_server\_option (server, "hostname", feature)
-  * set server hostname
+set\_server\_option (vhost, "hostname", feature)
+  * set vhost hostname (not what it responds to but it's name)
 
 set\_option (request-object, option-name, option-value)
 
@@ -136,8 +121,15 @@ parse\_path (request-object)
 parse\_headers (request-object)
   * returns headers as a lua hashtable
 
-send\_file (request-object, path, start offset, byte count)
-  * sends file at path to client
+set\_path (request-object, path, index\_file1, ... index\_file(n+1))
+  * looks up the vfs cache and sets (path) as the current file to serve
+  * index file(s) is an ordered list of files to look for if path is a directory
+  * returns directory path, file name, file extension and path info (everything after)
+  * expl: /var/www/htdocs/index.php/hey
+  * dir path: /var/www/htdocs/
+  * file name: index.php
+  * ext: php
+  * path info: /hey
 
 proxy (request-object, uri)
   * proxies a request for uri to client
@@ -146,11 +138,15 @@ proxy (request-object, uri)
 cgi (request-object, executable path, htdocs / root dir, file path)
   * executes cgi program and pipes the output to client
 
+fastcgi (request-object, fcgi-group, htdocs / root dir, file path)
+  * proxies a fastcgi request to a fpm socket and pipes the output to client
+  * fcgi group is created by the create_fcgi function
+
+create_fcgi (uri)
+  * uri is in the form tcp://<host>(:<port>)/
+
 respond (request-object, http status code, optional body)
   * returns a raw message to client expl respond (req, 403, "don't look")
-
-sanitize\_path (request-object, htdocs / root dir, path)
-  * returns dir path relative to root dir, file name, file extension
 
 remote\_address (request-object)
   * returns ip address, port number
@@ -164,6 +160,14 @@ shutdown (request-object)
 set\_content\_type (request-object, content type string)
   * sets content type returned
 
+create\_log (path)
+  * it creates a log and returns a function that write to it
+
+nil\_log ()
+  * create a nil log o replace create\_log, when speed is needed
+
+add\_vhost
+  * adds a vhost
 
 
 

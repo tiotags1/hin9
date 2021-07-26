@@ -141,7 +141,7 @@ int hin_vfs_clean () {
 int hin_server_set_work_dir (hin_vhost_t * server, const char * rel_path) {
   char * abs_path = realpath (rel_path, NULL);
   if (abs_path == NULL) {
-    fprintf (stderr, "cwd realpath '%s' %s", rel_path, strerror (errno));
+    fprintf (stderr, "cwd realpath '%s' %s\n", rel_path, strerror (errno));
     return -1;
   }
 

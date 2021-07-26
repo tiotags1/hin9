@@ -196,6 +196,15 @@ int hin_conf_load (const char * path) {
   return 0;
 }
 
+int hin_lua_run (const char * data, int len) {
+  lua_State * L = internal_lua;
+  int ret = hin_lua_run_string (L, data, len, "console");
+  if (ret < 0) {
+    fprintf (stderr, "error! lua parsing '%.*s': %s\n", len, data, lua_tostring (L, -1));
+  }
+  return ret;
+}
+
 int lua_reload () {
   hin_lua_clean ();
   lua_init ();

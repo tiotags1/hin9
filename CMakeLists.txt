@@ -37,7 +37,9 @@ src/http/cgi/fcgi.c
 src/http/cgi/fcgi_read.c
 src/http/cgi/fcgi_write.c
 src/http/cgi/fcgi_post.c
+src/http/cgi/fcgi_socket.c
 src/http/cgi/fcgi_util.c
+src/http/cgi/fcgi_worker.c
 src/http/cgi/cgi_parse.c
 src/http/cgi/httpd_cgi.c
 src/http/client/dl_head.c

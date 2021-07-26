@@ -1,4 +1,12 @@
 
+* refactored fcgi
+* run lua scripts from the console
+* minor readme revision
+* fixed set debug mask for running vhosts (redirect log might actually work)
+* fixed epoll with files (epoll doesn't support files so just use sync)
+* fixed musl system calls for other architectures besides x86
+
+commit 915945d97133c84af4f2ac63b7bbe96fabeceb6b
 * fcgi uploads
 * moved some headers around
 * set default log level to only log errors and configuration

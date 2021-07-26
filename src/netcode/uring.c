@@ -71,8 +71,12 @@ int hin_request_write (hin_buffer_t * buffer) {
   }
 
   if (buffer->flags & HIN_EPOLL) {
-    if (hin_epoll_request_write (buffer) < 0) return -1;
-    return 0;
+    if (buffer->flags & HIN_OFFSETS) {
+      buffer->flags |= HIN_SYNC;
+    } else {
+      if (hin_epoll_request_write (buffer) < 0) return -1;
+      return 0;
+    }
   }
   if (buffer->flags & HIN_SYNC) {
     int ret = write (buffer->fd, buffer->ptr, buffer->count);
@@ -98,8 +102,12 @@ int hin_request_read (hin_buffer_t * buffer) {
   }
 
   if (buffer->flags & HIN_EPOLL) {
-    if (hin_epoll_request_read (buffer) < 0) return -1;
-    return 0;
+    if (buffer->flags & HIN_OFFSETS) {
+      buffer->flags |= HIN_SYNC;
+    } else {
+      if (hin_epoll_request_read (buffer) < 0) return -1;
+      return 0;
+    }
   }
   if (buffer->flags & HIN_SYNC) {
     int ret = read (buffer->fd, buffer->ptr, buffer->count);
@@ -119,33 +127,7 @@ int hin_request_read (hin_buffer_t * buffer) {
   if (buffer->debug & DEBUG_URING) printf (" req%d %s buf %p cb %p fd %d\n", master.id, buffer->flags & HIN_SOCKET ? "recv" : "read", buffer, buffer->callback, buffer->fd);
   return 0;
 }
-/*
-int hin_request_write_fixed (hin_buffer_t * buffer) {
-  struct io_uring_sqe *sqe = hin_request_sqe ();
-  if (buffer->flags & HIN_SOCKET) {
-    io_uring_prep_send (sqe, buffer->fd, buffer->ptr, buffer->count, 0);
-    //io_uring_prep_send_fixed (sqe, buffer->fd, buffer->ptr, buffer->count, 0, buffer->buf_index);
-  } else {
-    io_uring_prep_write_fixed (sqe, buffer->fd, buffer->ptr, buffer->count, buffer->pos, buffer->buf_index);
-  }
-  io_uring_sqe_set_data (sqe, buffer);
-  if (buffer->debug & DEBUG_URING) printf ("req%d %s buf %p cb %p fd %d\n", master.id, "fwrite", buffer, buffer->callback, buffer->fd);
-  return 0;
-}
 
-int hin_request_read_fixed (hin_buffer_t * buffer) {
-  struct io_uring_sqe *sqe = hin_request_sqe ();
-  if (buffer->flags & HIN_SOCKET) {
-    io_uring_prep_recv (sqe, buffer->fd, buffer->ptr, buffer->count, 0);
-    //io_uring_prep_recv_fixed (sqe, buffer->fd, buffer->ptr, buffer->count, 0, buffer->buf_index);
-  } else {
-    io_uring_prep_read_fixed (sqe, buffer->fd, buffer->ptr, buffer->count, buffer->pos, buffer->buf_index);
-  }
-  io_uring_sqe_set_data (sqe, buffer);
-  if (buffer->debug & DEBUG_URING) printf ("req%d %s buf %p cb %p fd %d\n", master.id, "fread ", buffer, buffer->callback, buffer->fd);
-  return 0;
-}
-*/
 int hin_request_accept (hin_buffer_t * buffer, int flags) {
   hin_client_t * client = (hin_client_t*)buffer->parent;
   hin_client_t * server = (hin_client_t*)client->parent;

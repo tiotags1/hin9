@@ -38,6 +38,7 @@ int hin_pipe_write (hin_pipe_t * pipe, hin_buffer_t * buffer) {
   hin_buffer_t * next = buffer->next;
   for (hin_buffer_t * buf = buffer; buf; buf = next) {
     next = buf->next;
+    buffer->parent = pipe;
     hin_buffer_list_append (&pipe->write, buf);
     pipe->num_write++;
   }
@@ -45,6 +46,8 @@ int hin_pipe_write (hin_pipe_t * pipe, hin_buffer_t * buffer) {
 }
 
 int hin_pipe_append (hin_pipe_t * pipe, hin_buffer_t * buffer) {
+  buffer->parent = pipe;
+
   if (pipe->in.flags & HIN_COUNT) {
     pipe->left -= buffer->count;
     if (pipe->left <= 0) {

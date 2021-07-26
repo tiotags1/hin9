@@ -16,6 +16,28 @@ void hin_vhost_clean () {
   vhost_ht = NULL;
 }
 
+void hin_vhost_set_debug (uint32_t debug) {
+  master.debug = debug;
+  basic_ht_iterator_t iter;
+  basic_ht_pair_t * pair;
+  memset (&iter, 0, sizeof iter);
+  if (vhost_ht) {
+  while ((pair = basic_ht_iterate_pair (vhost_ht, &iter)) != NULL) {
+    hin_vhost_t * vhost = (hin_vhost_t*)pair->value2;
+    vhost->debug = debug;
+  }
+  }
+  for (hin_client_t * c = master.server_list; c; c = c->next) {
+    hin_server_t * server = (hin_server_t*)c;
+    server->debug = debug;
+    hin_buffer_t * buf = server->accept_buffer;
+    if (buf)
+      buf->debug = debug;
+    hin_vhost_t * vhost = c->parent;
+    vhost->debug = debug;
+  }
+}
+
 int hin_vhost_add (const char * name, int name_len, hin_vhost_t * vhost) {
   if (vhost_ht == NULL) {
     vhost_ht = basic_ht_create (1024, 101);

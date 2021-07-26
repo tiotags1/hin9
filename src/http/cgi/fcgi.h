@@ -68,8 +68,6 @@ typedef struct {
 typedef struct hin_fcgi_socket_struct {
   int fd;
 
-  char * path;
-
   struct sockaddr ai_addr;
   socklen_t ai_addrlen;
 
@@ -84,8 +82,7 @@ typedef struct hin_fcgi_socket_struct {
 typedef struct hin_fcgi_group_struct {
   char * host;
   char * port;
-
-  hin_fcgi_socket_t * socket;
+  char * uri;
 
   hin_fcgi_worker_t * free, * busy;
 
@@ -97,10 +94,12 @@ typedef struct hin_fcgi_group_struct {
 FCGI_Header * hin_fcgi_header (hin_buffer_t * buf, int type, int id, int sz);
 int hin_fcgi_write_request (hin_fcgi_worker_t * worker);
 
-hin_fcgi_worker_t * hin_fcgi_get_worker (hin_fcgi_group_t * fcgi_group);
-int hin_fcgi_worker_reset (hin_fcgi_worker_t * worker);
+hin_fcgi_socket_t * hin_fcgi_create_socket (hin_fcgi_group_t * fcgi);
 void hin_fcgi_socket_close (hin_fcgi_socket_t * socket);
 
+hin_fcgi_worker_t * hin_fcgi_get_worker (hin_fcgi_group_t * fcgi_group);
+int hin_fcgi_worker_reset (hin_fcgi_worker_t * worker);
+void hin_fcgi_worker_run (hin_fcgi_worker_t * worker);
 void hin_fcgi_worker_free (hin_fcgi_worker_t * worker);
 
 #endif

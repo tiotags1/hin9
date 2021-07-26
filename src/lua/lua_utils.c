@@ -36,6 +36,20 @@ int run_file (lua_State * L, const char * path) {
   return 0;
 }
 
+int hin_lua_run_string (lua_State * L, const char * data, int len, const char * name) {
+  int err;
+  err = luaL_loadbuffer (L, data, len, name);
+  if (err) {
+    return -1;
+  }
+
+  err = lua_pcall (L, 0, LUA_MULTRET, 0);
+  if (err) {
+    return -1;
+  }
+  return 0;
+}
+
 int run_function (lua_State * L, const char * name) {
   lua_getglobal(L, name);
 

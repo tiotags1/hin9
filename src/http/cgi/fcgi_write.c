@@ -189,29 +189,9 @@ static int hin_fcgi_headers (hin_buffer_t * buf, hin_fcgi_worker_t * worker) {
   return sz;
 }
 
-int hin_fcgi_eat_callback (hin_buffer_t * buffer, int num) {
-  hin_lines_t * lines = (hin_lines_t*)&buffer->buffer;
-
-  if (num > 0) {
-    hin_buffer_eat (buffer, num);
-    hin_lines_request (buffer, buffer->count);
-  } else if (num == 0) {
-    hin_lines_request (buffer, buffer->count);
-  } else {
-    if (lines->close_callback) {
-      return lines->close_callback (buffer, num);
-    } else {
-      printf ("lines client error %d\n", num);
-    }
-    return -1;
-  }
-  return 0;
-}
-
 static int hin_fcgi_write_callback (hin_buffer_t * buf, int ret) {
   hin_fcgi_worker_t * worker = buf->parent;
   hin_fcgi_socket_t * socket = worker->socket;
-  httpd_client_t * http = worker->http;
 
   if (ret < 0) {
     printf ("fcgi %d write callback error '%s'\n", buf->fd, strerror (-ret));
@@ -227,19 +207,6 @@ static int hin_fcgi_write_callback (hin_buffer_t * buf, int ret) {
     return 1;
   }
 
-  hin_buffer_t * buf1 = hin_lines_create_raw (READ_SZ);
-  buf1->fd = buf->fd;
-  buf1->parent = socket;
-  buf1->flags = 0;
-  buf1->debug = buf->debug;
-  hin_lines_t * lines = (hin_lines_t*)&buf1->buffer;
-  int hin_fcgi_read_callback (hin_buffer_t * buf, int ret);
-  lines->read_callback = hin_fcgi_read_callback;
-  lines->eat_callback = hin_fcgi_eat_callback;
-  if (hin_request_read (buf1) < 0) {
-    httpd_respond_fatal_and_full (http, 503, NULL);
-    return -1;
-  }
   return 1;
 }
 
@@ -247,7 +214,7 @@ int hin_fcgi_write_request (hin_fcgi_worker_t * worker) {
   hin_fcgi_socket_t * socket = worker->socket;
   httpd_client_t * http = worker->http;
 
-  int buf_sz = READ_SZ * 4;
+  int buf_sz = READ_SZ;
   hin_buffer_t * buf = malloc (sizeof (hin_buffer_t) + buf_sz);
   memset (buf, 0, sizeof (*buf));
   buf->flags = HIN_SOCKET;

@@ -43,6 +43,7 @@ int hin_server_set_work_dir (hin_vhost_t * vhost, const char * rel_path);
 
 hin_vhost_t * hin_vhost_get (const char * name, int name_len);
 int hin_vhost_add (const char * name, int name_len, hin_vhost_t * ptr);
+void hin_vhost_set_debug (uint32_t debug);
 
 #include "http.h"
 

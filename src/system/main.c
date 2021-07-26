@@ -13,6 +13,7 @@
 #include "hin.h"
 #include "conf.h"
 #include "http.h"
+#include "vhost.h"
 
 hin_master_t master;
 
@@ -111,7 +112,7 @@ int hin_process_argv (int argc, const char * argv[]) {
       master.flags |= HIN_DAEMONIZE;
     } else if (my_strcmp (argv[i], "--pretend", "--check", NULL)) {
       master.flags |= HIN_PRETEND;
-      master.debug = 0;
+      hin_vhost_set_debug (0);
     } else if (my_strcmp (argv[i], "--workdir", "--cwd", NULL)) {
       i++;
       if (i >= argc) {
@@ -167,9 +168,9 @@ int hin_process_argv (int argc, const char * argv[]) {
       }
       master.sharefd = fd;
     } else if (my_strcmp (argv[i], "--verbose", NULL)) {
-      master.debug = 0xffffffff;
+      hin_vhost_set_debug (0xffffffff);
     } else if (my_strcmp (argv[i], "--quiet", NULL)) {
-      master.debug = 0;
+      hin_vhost_set_debug (0);
     } else if (my_strcmp (argv[i], "--loglevel", NULL)) {
       i++;
       if (i >= argc) {
@@ -187,6 +188,7 @@ int hin_process_argv (int argc, const char * argv[]) {
       case 5: master.debug = 0xffffffff; break;
       default: printf ("unkown loglevel '%s'\n", argv[i]); return -1; break;
       }
+      hin_vhost_set_debug (master.debug);
     } else if (my_strcmp (argv[i], "--debugmask", NULL)) {
       i++;
       if (i >= argc) {
@@ -194,7 +196,7 @@ int hin_process_argv (int argc, const char * argv[]) {
         print_help ();
         return -1;
       }
-      master.debug = strtol (argv[i], NULL, 16);
+      hin_vhost_set_debug (strtol (argv[i], NULL, 16));
     }
   }
   return 0;

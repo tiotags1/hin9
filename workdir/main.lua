@@ -22,7 +22,7 @@ function default_onRequest_handler (req)
     return cgi (req, php_bin, nil, "test.php")
   elseif (path == "/fcgi") then
     set_path (req, "/tests/min.php", "index.php")
-    return fastcgi (req)
+    return fastcgi (req, php_fcgi)
   elseif (path == "/hello") then
     return respond (req, 200, "Hello world")
   end

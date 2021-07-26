@@ -11,6 +11,7 @@
 #include "hin.h"
 #include "utils.h"
 #include "conf.h"
+#include "system/hin_lua.h"
 
 static hin_buffer_t * console_buffer = NULL;
 static hin_buffer_t * timeout_buffer = NULL;
@@ -27,6 +28,8 @@ int console_execute (string_t * source) {
     int lua_reload ();
     if (lua_reload () < 0)
       printf ("reload failed\n");
+  } else if (matchi_string (source, "lua ") > 0) {
+    hin_lua_run (source->ptr, source->len);
   } else {
     printf ("command unknown '%.*s'\n", (int)source->len, source->ptr);
   }
@@ -134,4 +137,6 @@ int hin_timer_init () {
 
   return 0;
 }
+
+
 

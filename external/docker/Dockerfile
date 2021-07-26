@@ -24,6 +24,7 @@ USER docker:docker
 
 #exposes 8080 and 8081
 
-CMD ["sh"]
+CMD ["hinsightd"]
 #CMD ["sh", "/app/scripts/run.sh"]
+#CMD ["sh"]
 

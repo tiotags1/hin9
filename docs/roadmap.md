@@ -1,13 +1,9 @@
 
 * bugs
-  * one day I'll figure out where those phantom 3x 0x0a come from
+  * only unconfirmed ones
 
 * reverse proxy
   * cache gzipped files
-
-
-* cgi support
-  * fastcgi
 
 
 * daemon support
