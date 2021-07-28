@@ -40,6 +40,7 @@ basic_vfs_dir_t * basic_vfs_get_dir (basic_vfs_t * vfs, basic_vfs_node_t * node)
     printf ("error populating dir\n");
     return NULL;
   }
+  free (new_path);
 
   return new_dir;
 }

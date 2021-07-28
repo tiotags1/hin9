@@ -117,6 +117,7 @@ void hin_ssl_ctx_unref (hin_ssl_ctx_t * box) {
   free ((void*)box->cert);
   free ((void*)box->key);
   // free ssl ctx
+  SSL_CTX_free (box->ctx);
   free (box);
 }
 

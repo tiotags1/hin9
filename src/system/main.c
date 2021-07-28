@@ -22,7 +22,9 @@ void hin_clean () {
   hin_log_flush ();
   void hin_lua_clean ();
   hin_lua_clean ();
-  for (hin_client_t * elem = master.server_list; elem; elem = elem->next) {
+  hin_client_t * next;
+  for (hin_client_t * elem = master.server_list; elem; elem = next) {
+    next = elem->next;
     void hin_server_clean (hin_client_t * server);
     hin_server_clean (elem);
   }

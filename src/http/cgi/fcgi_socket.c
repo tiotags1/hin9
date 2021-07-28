@@ -76,7 +76,7 @@ static int hin_fcgi_connect_callback (hin_buffer_t * buf, int ret) {
   buf1->fd = buf->fd;
   buf1->parent = socket;
   buf1->flags = 0;
-  buf1->debug = buf->debug;
+  buf1->debug = master.debug;
   hin_lines_t * lines = (hin_lines_t*)&buf1->buffer;
   int hin_fcgi_read_callback (hin_buffer_t * buf, int ret);
   lines->read_callback = hin_fcgi_read_callback;

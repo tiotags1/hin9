@@ -21,7 +21,7 @@ basic_vfs_node_t * basic_vfs_ref_path (basic_vfs_t * vfs, basic_vfs_node_t * dir
   // if initial / then set current to root
   if (path->len <= 0) return NULL;
   if (match_string (&source, "/") > 0) {
-    current = &vfs->rootent;
+    current = vfs->root;
   }
   if (current == NULL || current->type != BASIC_ENT_DIR) {
     return NULL;

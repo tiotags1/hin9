@@ -32,6 +32,8 @@ static int hin_fcgi_pipe_write (hin_fcgi_worker_t * worker, FCGI_Header * head) 
     hin_lines_write (worker->header_buf, (char*)head->data, head->length);
   } else {
     hin_buffer_t * buf = hin_buffer_create_from_data (worker->out, (char*)head->data, head->length);
+    httpd_client_t * http = worker->http;
+    buf->debug = http->debug;
     hin_pipe_append (worker->out, buf);
     hin_pipe_advance (worker->out);
   }
@@ -54,14 +56,14 @@ static int hin_fcgi_pipe_end (hin_fcgi_worker_t * worker, FCGI_Header * head) {
 }
 
 int hin_fcgi_read_rec (hin_buffer_t * buf, char * ptr, int left) {
-  if (left < 8) return 0;
   FCGI_Header * head = (FCGI_Header*)ptr;
+  if (left < sizeof (*head)) return 0;
   int len = endian_swap16 (head->length);
   int total = len + sizeof (*head) + head->padding;
   if (left < total) {
     if (buf->debug & DEBUG_CGI)
       printf ("fcgi %d request more %d<%d\n", buf->fd, left, total);
-    buf->count = total;
+    buf->count = total; // hint to set request size
     return 0;
   }
 
@@ -111,13 +113,12 @@ int hin_fcgi_read_callback (hin_buffer_t * buf, int ret) {
   if (buf->debug & DEBUG_CGI)
     printf ("fcgi %d received %d bytes\n", buf->fd, ret);
 
-  buf->count = 0; // hack to keep nr bytes so you can speed up
-
   hin_lines_t * lines = (hin_lines_t*)&buf->buffer;
   char * ptr = lines->base;
   int left = lines->count;
   int sz = 0;
   int used = 0;
+
   while ((sz = hin_fcgi_read_rec (buf, ptr, left)) > 0) {
     left -= sz;
     ptr += sz;

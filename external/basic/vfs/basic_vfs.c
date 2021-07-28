@@ -11,11 +11,12 @@
 int basic_vfs_init (basic_vfs_t * vfs) {
   basic_ht_init (&vfs->ht, 1024, 0);
 
-  vfs->root = calloc (1, sizeof (basic_vfs_dir_t));
-  vfs->rootent.inode = vfs->root;
-  vfs->rootent.type = BASIC_ENT_DIR;
+  basic_vfs_node_t * root = calloc (1, sizeof (basic_vfs_node_t));
+  root->type = BASIC_ENT_DIR;
+  root->inode = calloc (1, sizeof (basic_vfs_dir_t));
 
-  basic_vfs_stat_dir (vfs, vfs->root, "/", 1);
+  basic_vfs_stat_dir (vfs, root->inode, "/", 1);
+  vfs->root = root;
 
   char * cwd = realpath (".", NULL);
   string_t path;
@@ -27,32 +28,36 @@ int basic_vfs_init (basic_vfs_t * vfs) {
   return 0;
 }
 
-static void basic_vfs_clean_dir (basic_vfs_t * vfs, basic_vfs_dir_t * dir) {
-  for (int i=0; i < dir->max; i++) {
-    basic_vfs_node_t * node = dir->entries[i];
-    if (node == NULL) continue;
-    switch (node->type) {
-    case 0:
-    case BASIC_ENT_FILE:
-      if (node->inode == NULL) break;
-      basic_vfs_unref (vfs, node);
-      free (node->inode);
-    break;
-    case BASIC_ENT_DIR:
-      if (node->inode == NULL) break;
-      basic_vfs_clean_dir (vfs, node->inode);
-    break;
-    default:
-      printf ("vfs clean unknown type ? %d\n", node->type);
+int basic_vfs_node_free (basic_vfs_t * vfs, basic_vfs_node_t * node) {
+  switch (node->type) {
+  case 0:
+  case BASIC_ENT_FILE:
+    if (node->inode == NULL) break;
+    basic_vfs_unref (vfs, node);
+    free (node->inode);
+  break;
+  case BASIC_ENT_DIR:
+    if (node->inode == NULL) break;
+    basic_vfs_dir_t * dir = node->inode;
+    for (int i=0; i < dir->max; i++) {
+      if (dir->entries[i])
+        basic_vfs_node_free (vfs, dir->entries[i]);
     }
+    if (dir->entries) free (dir->entries);
+    if (dir->path) free ((char*)dir->path);
+    free (dir);
+  break;
+  default:
+    printf ("vfs clean unknown type ? %d\n", node->type);
+  break;
   }
-  if (dir->entries) free (dir->entries);
-  free (dir);
+  free (node);
+  return 0;
 }
 
 int basic_vfs_clean (basic_vfs_t * vfs) {
   basic_ht_clean (&vfs->ht);
-  basic_vfs_clean_dir (vfs, vfs->root);
+  basic_vfs_node_free (vfs, vfs->root);
   if (vfs->inotify_fd) close (vfs->inotify_fd);
   return 0;
 }

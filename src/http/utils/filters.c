@@ -109,7 +109,7 @@ int hin_pipe_copy_deflate (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, in
     }
     http->z.avail_out = new->sz;
     http->z.next_out = (Bytef *)&new->buffer[new->count];
-    deflate (&http->z, flush);
+    deflate (&http->z, flush ? Z_FINISH : Z_NO_FLUSH);
     have = new->sz - http->z.avail_out;
 
     if (have > 0) {

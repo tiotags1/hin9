@@ -27,11 +27,6 @@ void hin_server_clean (hin_client_t * server) {
 
   free (bp->accept_client);
   hin_buffer_clean (bp->accept_buffer);
-  if (bp->ssl_ctx) {
-    #ifdef HIN_USE_OPENSSL
-    SSL_CTX_free (bp->ssl_ctx);
-    #endif
-  }
 
   if (master.debug & DEBUG_SOCKET)
     printf ("server sockfd %d close\n", server->sockfd);

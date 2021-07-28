@@ -1,4 +1,11 @@
 
+* added php compression by default
+* bugfix fcgi crash due to improper buffer length handling
+* bugfix use after free in cleanup
+* bugfix memory leaks in vfs
+* bugfix memory leak in deflate compression
+
+commit e8a2edd159e2e58fe826fa025f1cd9a46ceef19e
 * refactored fcgi
 * run lua scripts from the console
 * minor readme revision

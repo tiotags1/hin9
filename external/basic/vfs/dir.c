@@ -26,7 +26,7 @@ int basic_vfs_delete (basic_vfs_t * vfs, basic_vfs_dir_t * dir, const char * nam
     if (node == NULL) continue;
     if (node->name_len != name_len) continue;
     if (memcmp (node->name, name, name_len) != 0) continue;
-    basic_vfs_node_free (node);
+    basic_vfs_node_free (vfs, node);
     dir->entries[i] = NULL;
     return 1;
   }
@@ -99,21 +99,6 @@ int basic_vfs_stat_dir (basic_vfs_t * vfs, basic_vfs_dir_t * dir, const char * p
     }
   }
   closedir (d);
-  return 0;
-}
-
-int basic_vfs_node_free (basic_vfs_node_t * node) {
-  if (node->type == BASIC_ENT_DIR) {
-    basic_vfs_dir_t * dir = node->inode;
-    if (dir == NULL) return 0;
-    for (int i=0; i < dir->num; i++) {
-      if (dir->entries[i])
-        basic_vfs_node_free (dir->entries[i]);
-    }
-    if (dir->entries) free (dir->entries);
-    free (dir);
-  }
-  free (node);
   return 0;
 }
 

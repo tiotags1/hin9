@@ -96,9 +96,15 @@ int hin_lines_request (hin_buffer_t * buffer, int min) {
   hin_lines_t * lines = (hin_lines_t*)&buffer->buffer;
   int left = buffer->sz - lines->count;
   int new;
-  if (min) { new = min - left; }
+  if (min > 0 && min > left) { new = min - left; }
   else if (left < (buffer->sz / 2)) { new = READ_SZ; }
   else { new = left; }
+  if (left < 0) {
+    printf ("error! lines request negative %d - %d = %d\n", buffer->sz, lines->count, left);
+  }
+  if (new < 0) {
+    printf ("error! lines new is %d: min %d left %d\n", new, min, left);
+  }
   hin_buffer_prepare (buffer, new);
   buffer->callback = hin_lines_read_callback;
   if (buffer->fd >= 0) {
@@ -136,6 +142,7 @@ static int hin_lines_read_callback (hin_buffer_t * buffer, int ret) {
     return -1;
   }
 
+  buffer->count = 0;
   lines->count += ret;
 
   int num = lines->read_callback (buffer, ret);
@@ -146,6 +153,8 @@ static int hin_lines_read_callback (hin_buffer_t * buffer, int ret) {
 
 int hin_lines_reread (hin_buffer_t * buf) {
   hin_lines_t * lines = (hin_lines_t*)&buf->buffer;
+
+  buf->count = 0;
 
   int num = lines->read_callback (buf, lines->count);
 

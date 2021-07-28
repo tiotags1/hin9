@@ -31,6 +31,13 @@ void httpd_client_clean (httpd_client_t * http) {
   if (http->content_type) free (http->content_type);
   if (http->hostname) free (http->hostname);
 
+  if (http->peer_flags & HIN_HTTP_DEFLATE) {
+    int ret = deflateEnd (&http->z);
+    if (ret != Z_OK) {
+      printf ("deflate end failed\n");
+    }
+  }
+
   http->peer_flags = http->disable = 0;
   http->status = http->method = 0;
   http->pos = http->count = 0;
@@ -215,8 +222,7 @@ int httpd_client_accept (hin_client_t * client) {
   lines->read_callback = httpd_client_read_callback;
   lines->close_callback = httpd_client_buffer_close_callback;
   lines->eat_callback = httpd_client_buffer_eat_callback;
-  if (hin_request_read (buf) < 0) {
-  }
+  hin_lines_request (buf, 0);
   return 0;
 #endif
 }

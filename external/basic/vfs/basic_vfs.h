@@ -51,8 +51,7 @@ typedef struct {
   basic_ht_t ht;
   int inotify_fd;
   uint32_t debug;
-  basic_vfs_dir_t * root;
-  basic_vfs_node_t rootent;
+  basic_vfs_node_t * root;
 } basic_vfs_t;
 
 int basic_vfs_init (basic_vfs_t * vfs);

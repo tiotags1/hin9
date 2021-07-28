@@ -166,6 +166,7 @@ int hin_server_set_work_dir (hin_vhost_t * server, const char * rel_path) {
     printf ("cwd couldn't be set '%.*s'\n", (int)path.len, path.ptr);
     return -1;
   }
+  free (abs_path);
 
   basic_vfs_get_dir (vfs, cwd);
   server->cwd_dir = cwd;

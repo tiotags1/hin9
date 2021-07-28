@@ -71,8 +71,7 @@ static int hin_cgi_location (httpd_client_t * http, hin_buffer_t * buf, string_t
     header (buf, "Location: %.*s\r\n", origin->len, origin->ptr);
     return 0;
   }
-  //if (master.debug & DEBUG_CGI)
-    //fprintf (stderr, "cgi %d location1 %.*s\n", http->c.sockfd, (int)source.len, source.ptr);
+  if (master.debug & DEBUG_CGI)
     fprintf (stderr, "cgi %d location2 %.*s\n", http->c.sockfd, (int)origin->len, origin->ptr);
   header (buf, "Location: %.*s\r\n", origin->len, origin->ptr);
   return 0;
