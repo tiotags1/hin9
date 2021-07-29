@@ -118,7 +118,6 @@ int hin_log_flush () {
 
 static int l_hin_create_log (lua_State *L) {
   const char * path = lua_tostring (L, 1);
-  if (master.flags & HIN_PRETEND) path = "/dev/null";
   int fd = openat (AT_FDCWD, path, O_WRONLY | O_APPEND | O_CLOEXEC | O_CREAT, 0660);
   if (fd < 0) {
     return luaL_error (L, "error! create_log '%s' %s\n", path, strerror (errno));

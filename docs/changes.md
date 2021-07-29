@@ -1,4 +1,8 @@
 
+* pid file should now only be writable at server start/restart (via pid_helper)
+* should now properly abort if logfiles can't be opened
+
+commit 98446fe03d7da3364e5bf613b24b03a8d05d2a45
 * added php compression by default
 * bugfix fcgi crash due to improper buffer length handling
 * bugfix use after free in cleanup

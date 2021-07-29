@@ -83,5 +83,7 @@ src/lua/lua_os.c
 add_executable (hin9 ${hin_src} ${external_src})
 target_link_libraries (hin9 ${TARGET_LIBS})
 
+add_executable (hin9_pid_helper external/tools/pid_helper.c)
+
 
 

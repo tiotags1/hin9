@@ -21,6 +21,7 @@ external/*
 !external/packaging
 !external/docker
 !external/tests
+!external/tools
 
 workdir/config.lua
 

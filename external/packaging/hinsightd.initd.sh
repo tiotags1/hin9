@@ -12,7 +12,7 @@ extra_commands="checkconfig reload"
 
 command=${HIN_BIN:-/usr/sbin/hinsightd}
 pidfile="${HIN_PID_FILE:-$HIN_RUN_DIR/$HIN_NAME.pid}"
-command_args="--config $HIN_CFG_FILE --logdir $HIN_LOG_DIR --tmpdir $HIN_TMP_DIR --cwd $HIN_WORK_DIR --pidfile $pidfile --log $HIN_LOG_FILE"
+command_args="--log $HIN_LOG_FILE --config $HIN_CFG_FILE --logdir $HIN_LOG_DIR --tmpdir $HIN_TMP_DIR --cwd $HIN_WORK_DIR --pidfile $pidfile.1"
 command_args_background="--daemonize"
 command_user=${HIN_USER:-hinsightd}
 
@@ -28,6 +28,7 @@ checkconfig() {
 start_pre() {
   checkpath --directory --owner $command_user:$command_user --mode 0770 $HIN_LOG_DIR $HIN_TMP_DIR $HIN_RUN_DIR
   checkconfig || return 1
+  hinsightd_pid_helper $pidfile.1 $pidfile || return 1
 }
 
 reload() {
@@ -35,6 +36,8 @@ reload() {
     eerror "ERROR ${HIN_NAME} isn't running"
     return 1
   fi
+
+  hinsightd_pid_helper $pidfile.1 $pidfile || return 1
 
   checkconfig || return 1
 

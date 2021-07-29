@@ -34,16 +34,16 @@ done:
 }
 
 int hin_pidfile (const char * path) {
-  int fd = openat (AT_FDCWD, path, O_WRONLY | O_CREAT | O_CLOEXEC | O_TRUNC | O_EXCL, 0700);
+  int fd = openat (AT_FDCWD, path, O_WRONLY | O_CREAT | O_CLOEXEC | O_TRUNC, 0644);
   if (fd < 0) {
     if (errno == EEXIST) {
       printf ("should clean up old pidfile %s\n", path);
     }
     printf ("can't open '%s' %s\n", path, strerror (errno));
-    return 0;
+    exit (1);
   }
   char buf[256];
-  int ret = snprintf (buf, sizeof buf, "%d", getpid ());
+  int ret = snprintf (buf, sizeof buf, "%d\n", getpid ());
   if (ret < 0) return -1;
   int err = write (fd, buf, ret);
   if (err < ret) { perror ("write"); return -1; }
@@ -107,11 +107,10 @@ int hin_daemonize () {
 
 
 int hin_redirect_log (const char * path) {
-  if (master.flags & HIN_PRETEND) return 0;
   int fd = openat (AT_FDCWD, path, O_WRONLY | O_APPEND | O_CLOEXEC | O_CREAT, 0660);
   if (fd < 0) {
     printf ("hin can't open log '%s' %s\n", path, strerror (errno));
-    return -1;
+    exit (1);
   }
 
   fflush (stdout);
