@@ -22,7 +22,7 @@ function default_onRequest_handler (req)
     return cgi (req, php_bin, nil, "test.php")
   elseif (path == "/fcgi") then
     set_path (req, "/tests/min.php", "index.php")
-    return fastcgi (req, php_fcgi)
+    return fastcgi (req, fpm_socks.php)
   elseif (path == "/hello") then
     return respond (req, 200, "Hello world")
   end
@@ -43,9 +43,9 @@ function default_onRequest_handler (req)
     set_content_type (req, content_type[ext])
   end
 
-  if (ext == "php") then
+  if (fpm_socks[ext]) then
     --return cgi (req, php_bin, nil, nil, path_info)
-    return fastcgi (req, php_fcgi)
+    return fastcgi (req, fpm_socks[ext])
   elseif (to_cache[ext]) then
     set_option (req, "cache", 604800)
   end
@@ -76,7 +76,10 @@ end
 
 redirect_log (server_log, debug_level)
 
-php_fcgi = create_fcgi ("tcp://localhost:9000")
+fpm_socks = fpm_socks or {}
+for ext, uri in pairs (fpm_apps) do
+  fpm_socks[ext] = create_fcgi (uri)
+end
 
 if (access_log) then
   access = create_log (access_log)

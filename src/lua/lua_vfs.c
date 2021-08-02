@@ -56,7 +56,7 @@ int l_hin_set_path (lua_State *L) {
         break;
       }
     }
-    if (node->type == BASIC_ENT_DIR) {
+    if (node->type == BASIC_ENT_DIR && dir) {
       lua_pushlstring (L, dir->path, dir->path_len);
       return 1;
     }

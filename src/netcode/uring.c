@@ -14,6 +14,12 @@
 
 #include <basic_vfs.h> // for statx on musl
 
+#if HIN_URING_REDUCE_SYSCALLS
+#define io_uring_submit1(x)
+#else
+#define io_uring_submit1(x) io_uring_submit(x);
+#endif
+
 struct io_uring ring;
 
 typedef struct hin_sqe_que_struct {
@@ -90,6 +96,8 @@ int hin_request_write (hin_buffer_t * buffer) {
     io_uring_prep_write (sqe, buffer->fd, buffer->ptr, buffer->count, buffer->pos);
   }
   io_uring_sqe_set_data (sqe, buffer);
+  io_uring_submit1 (&ring);
+
   if (buffer->debug & DEBUG_URING) printf (" req%d %s buf %p cb %p fd %d\n", master.id, buffer->flags & HIN_SOCKET ? "send" : "writ", buffer, buffer->callback, buffer->fd);
   return 0;
 }
@@ -123,6 +131,7 @@ int hin_request_read (hin_buffer_t * buffer) {
   }
 
   io_uring_sqe_set_data (sqe, buffer);
+  io_uring_submit1 (&ring);
 
   if (buffer->debug & DEBUG_URING) printf (" req%d %s buf %p cb %p fd %d\n", master.id, buffer->flags & HIN_SOCKET ? "recv" : "read", buffer, buffer->callback, buffer->fd);
   return 0;
@@ -145,6 +154,8 @@ int hin_request_accept (hin_buffer_t * buffer, int flags) {
   struct io_uring_sqe *sqe = hin_request_sqe ();
   io_uring_prep_accept (sqe, server->sockfd, &client->ai_addr, &client->ai_addrlen, flags);
   io_uring_sqe_set_data (sqe, buffer);
+  io_uring_submit1 (&ring);
+
   if (buffer->debug & DEBUG_URING) printf (" req%d accept buf %p cb %p\n", master.id, buffer, buffer->callback);
   return 0;
 }
@@ -162,6 +173,8 @@ int hin_request_connect (hin_buffer_t * buffer, struct sockaddr * ai_addr, int a
   struct io_uring_sqe *sqe = hin_request_sqe ();
   io_uring_prep_connect (sqe, buffer->fd, ai_addr, ai_addrlen);
   io_uring_sqe_set_data (sqe, buffer);
+  io_uring_submit1 (&ring);
+
   if (buffer->debug & DEBUG_URING) printf (" req%d connect buf %p cb %p\n", master.id, buffer, buffer->callback);
   return 0;
 }
@@ -175,6 +188,8 @@ int hin_request_close (hin_buffer_t * buffer) {
   struct io_uring_sqe *sqe = hin_request_sqe ();
   io_uring_prep_close (sqe, buffer->fd);
   io_uring_sqe_set_data (sqe, buffer);
+  io_uring_submit1 (&ring);
+
   if (buffer->debug & DEBUG_URING) printf (" req%d close buf %p cb %p fd %d\n", master.id, buffer, buffer->callback, buffer->fd);
   return 0;
 }
@@ -188,6 +203,8 @@ int hin_request_openat (hin_buffer_t * buffer, int dfd, const char * path, int f
   struct io_uring_sqe *sqe = hin_request_sqe ();
   io_uring_prep_openat (sqe, dfd, path, flags, mode);
   io_uring_sqe_set_data (sqe, buffer);
+  io_uring_submit1 (&ring);
+
   if (buffer->debug & DEBUG_URING) printf (" req%d open buf %p cb %p\n", master.id, buffer, buffer->callback);
   return 0;
 }
@@ -201,6 +218,8 @@ int hin_request_timeout (hin_buffer_t * buffer, struct timespec * ts, int count,
   struct io_uring_sqe *sqe = hin_request_sqe ();
   io_uring_prep_timeout (sqe, ts, count, flags);
   io_uring_sqe_set_data (sqe, buffer);
+  io_uring_submit1 (&ring);
+
   if (buffer->debug & DEBUG_URING) printf (" req%d time buf %p cb %p\n", master.id, buffer, buffer->callback);
   return 0;
 }
@@ -215,6 +234,8 @@ int hin_request_statx (hin_buffer_t * buffer, int dfd, const char * path, int fl
   if (buffer->count < sizeof (struct statx)) { printf ("need more space inside buffer to statx\n"); return -1; }
   io_uring_prep_statx (sqe, dfd, path, flags, mask, (struct statx *)buffer->ptr);
   io_uring_sqe_set_data (sqe, buffer);
+  io_uring_submit1 (&ring);
+
   if (buffer->debug & DEBUG_URING) printf (" req%d stat buf %p cb %p\n", master.id, buffer, buffer->callback);
   return 0;
 }

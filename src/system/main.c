@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+#include <basic_args.h>
 #include <basic_pattern.h>
 #include <basic_vfs.h>
 
@@ -79,127 +80,110 @@ static void print_help () {
 ");
 }
 
-static int my_strcmp (const char * base, ...) {
-  va_list ap;
-  va_start (ap, base);
-  int ret = 0;
-  while (1) {
-    const char * ptr = va_arg (ap, const char *);
-    if (ptr == NULL) { break; }
-    if (strcmp (base, ptr) == 0) { ret = 1; break; }
-  }
-  va_end (ap);
-  return ret;
-}
-
-int hin_process_argv (int argc, const char * argv[]) {
-  for (int i = 1; i < argc; i++) {
-    if (my_strcmp (argv[i], "--version", NULL)) {
-      printf ("%s\n", HIN_HTTPD_SERVER_BANNER);
-      return 1;
-    } else if (my_strcmp (argv[i], "--help", NULL)) {
+int hin_process_argv (basic_args_t * args, const char * name) {
+  if (basic_args_cmp (name, "-v", "--version", NULL)) {
+    printf ("%s\n", HIN_HTTPD_SERVER_BANNER);
+    return 1;
+  } else if (basic_args_cmp (name, "-h", "--help", NULL)) {
+    print_help ();
+    return 1;
+  } else if (basic_args_cmp (name, "--pidfile", NULL)) {
+    const char * path = basic_args_get (args);
+    if (path == NULL) {
+      printf ("missing pid path\n");
       print_help ();
-      return 1;
-    } else if (my_strcmp (argv[i], "--pidfile", NULL)) {
-      i++;
-      if (i >= argc) {
-        printf ("missing path\n");
-        print_help ();
-        return -1;
-      }
-      if (argv[i][0]) {
-        master.pid_path = argv[i];
-      }
-    } else if (my_strcmp (argv[i], "--daemonize", NULL)) {
-      master.flags |= HIN_DAEMONIZE;
-    } else if (my_strcmp (argv[i], "--pretend", "--check", NULL)) {
-      master.flags |= HIN_PRETEND;
-      hin_vhost_set_debug (0);
-    } else if (my_strcmp (argv[i], "--workdir", "--cwd", NULL)) {
-      i++;
-      if (i >= argc) {
-        printf ("missing path\n");
-        print_help ();
-        return -1;
-      }
-      hin_directory_path (argv[i], &master.workdir_path);
-      if (chdir (master.workdir_path) < 0) perror ("chdir");
-    } else if (my_strcmp (argv[i], "--logdir", NULL)) {
-      i++;
-      if (i >= argc) {
-        printf ("missing path\n");
-        print_help ();
-        return -1;
-      }
-      hin_directory_path (argv[i], &master.logdir_path);
-    } else if (my_strcmp (argv[i], "--tmpdir", NULL)) {
-      i++;
-      if (i >= argc) {
-        printf ("missing path\n");
-        print_help ();
-        return -1;
-      }
-      hin_directory_path (argv[i], &master.tmpdir_path);
-    } else if (my_strcmp (argv[i], "--config", NULL)) {
-      i++;
-      if (i >= argc) {
-        printf ("missing config path\n");
-        print_help ();
-        return -1;
-      }
-      master.conf_path = (char *)argv[i];
-    } else if (my_strcmp (argv[i], "--log", NULL)) {
-      i++;
-      if (i >= argc) {
-        printf ("missing path\n");
-        print_help ();
-        return -1;
-      }
-      if (hin_redirect_log (argv[i]) < 0) return -1;
-    } else if (my_strcmp (argv[i], "--reuse", NULL)) {
-      i++;
-      if (i >= argc) {
-        printf ("missing reuse fd\n");
-        print_help ();
-        return -1;
-      }
-      int fd = atoi (argv[i]);
-      if (fcntl (fd, F_GETFD) == -1) {
-        printf ("fd %d is not opened\n", fd);
-        exit (1);
-      }
-      master.sharefd = fd;
-    } else if (my_strcmp (argv[i], "--verbose", NULL)) {
-      hin_vhost_set_debug (0xffffffff);
-    } else if (my_strcmp (argv[i], "--quiet", NULL)) {
-      hin_vhost_set_debug (0);
-    } else if (my_strcmp (argv[i], "--loglevel", NULL)) {
-      i++;
-      if (i >= argc) {
-        printf ("missing loglevel\n");
-        print_help ();
-        return -1;
-      }
-      int nr = atoi (argv[i]);
-      master.debug = 0;
-      switch (nr) {
-      case 0: master.debug |= DEBUG_BASIC;
-      case 1: master.debug |= DEBUG_CONFIG|DEBUG_SOCKET|DEBUG_RW_ERROR;
-      case 2: master.debug |= DEBUG_HTTP|DEBUG_CGI|DEBUG_PROXY;
-      case 3 ... 4:
-      case 5: master.debug = 0xffffffff; break;
-      default: printf ("unkown loglevel '%s'\n", argv[i]); return -1; break;
-      }
-      hin_vhost_set_debug (master.debug);
-    } else if (my_strcmp (argv[i], "--debugmask", NULL)) {
-      i++;
-      if (i >= argc) {
-        printf ("missing debugmask\n");
-        print_help ();
-        return -1;
-      }
-      hin_vhost_set_debug (strtol (argv[i], NULL, 16));
+      return -1;
     }
+    if (*path) master.pid_path = path;
+  } else if (basic_args_cmp (name, "--daemonize", NULL)) {
+    master.flags |= HIN_DAEMONIZE;
+  } else if (basic_args_cmp (name, "--pretend", "--check", NULL)) {
+    master.flags |= HIN_PRETEND;
+    hin_vhost_set_debug (0);
+  } else if (basic_args_cmp (name, "--workdir", "--cwd", NULL)) {
+    const char * path = basic_args_get (args);
+    if (path == NULL) {
+      printf ("missing workdir path\n");
+      print_help ();
+      return -1;
+    }
+    hin_directory_path (path, &master.workdir_path);
+    if (chdir (master.workdir_path) < 0) perror ("chdir");
+  } else if (basic_args_cmp (name, "--logdir", NULL)) {
+    const char * path = basic_args_get (args);
+    if (path == NULL) {
+      printf ("missing logdir path\n");
+      print_help ();
+      return -1;
+    }
+    hin_directory_path (path, &master.logdir_path);
+  } else if (basic_args_cmp (name, "--tmpdir", NULL)) {
+    const char * path = basic_args_get (args);
+    if (path == NULL) {
+      printf ("missing tmpdir path\n");
+      print_help ();
+      return -1;
+    }
+    hin_directory_path (path, &master.tmpdir_path);
+  } else if (basic_args_cmp (name, "--config", NULL)) {
+    const char * path = basic_args_get (args);
+    if (path == NULL) {
+      printf ("missing config path\n");
+      print_help ();
+      return -1;
+    }
+    master.conf_path = path;
+  } else if (basic_args_cmp (name, "--log", NULL)) {
+    const char * path = basic_args_get (args);
+    if (path == NULL) {
+      printf ("missing log path\n");
+      print_help ();
+      return -1;
+    }
+    if (hin_redirect_log (path) < 0) return -1;
+  } else if (basic_args_cmp (name, "--reuse", NULL)) {
+    const char * path = basic_args_get (args);
+    if (path == NULL) {
+      printf ("don't use use --reuse\n");
+      print_help ();
+      return -1;
+    }
+    int fd = atoi (path);
+    if (fcntl (fd, F_GETFD) == -1) {
+      printf ("fd %d is not opened\n", fd);
+      exit (1);
+    }
+    master.sharefd = fd;
+  } else if (basic_args_cmp (name, "-V", "--verbose", NULL)) {
+    hin_vhost_set_debug (0xffffffff);
+  } else if (basic_args_cmp (name, "-q", "--quiet", NULL)) {
+    hin_vhost_set_debug (0);
+  } else if (basic_args_cmp (name, "--loglevel", NULL)) {
+    const char * path = basic_args_get (args);
+    if (path == NULL) {
+      printf ("missing loglevel\n");
+      print_help ();
+      return -1;
+    }
+    int nr = atoi (path);
+    master.debug = 0;
+    switch (nr) {
+    case 0: master.debug |= DEBUG_BASIC;
+    case 1: master.debug |= DEBUG_CONFIG|DEBUG_SOCKET|DEBUG_RW_ERROR;
+    case 2: master.debug |= DEBUG_HTTP|DEBUG_CGI|DEBUG_PROXY;
+    case 3 ... 4:
+    case 5: master.debug = 0xffffffff; break;
+    default: printf ("unkown loglevel '%s'\n", path); return -1; break;
+    }
+    hin_vhost_set_debug (master.debug);
+  } else if (basic_args_cmp (name, "--debugmask", NULL)) {
+    const char * path = basic_args_get (args);
+    if (path == NULL) {
+      printf ("missing debugmask\n");
+      print_help ();
+      return -1;
+    }
+    hin_vhost_set_debug (strtol (path, NULL, 16));
   }
   return 0;
 }
@@ -214,7 +198,7 @@ int main (int argc, const char * argv[], const char * envp[]) {
   hin_directory_path (HIN_LOGDIR_PATH, &master.logdir_path);
   hin_directory_path (HIN_WORKDIR_PATH, &master.workdir_path);
 
-  int ret = hin_process_argv (argc, argv);
+  int ret = basic_args_process (argc, argv, hin_process_argv);
   if (ret) {
     if (ret > 0) return 0;
     return -1;

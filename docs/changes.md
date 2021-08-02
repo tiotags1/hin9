@@ -1,4 +1,10 @@
 
+* better command line processing including short versions
+* added better configuration handling for multiple fcgi groups
+* moved missing ssl sni warn message to info level
+* fixed crash when trying to serve from folders you don't have access to
+
+commit 0c1fbdc264750aff0d9ec9dae899e93dcd5aaad9
 * pid file should now only be writable at server start/restart (via pid_helper)
 * should now properly abort if logfiles can't be opened
 

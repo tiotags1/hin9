@@ -37,8 +37,6 @@ basic_vfs_dir_t * basic_vfs_get_dir (basic_vfs_t * vfs, basic_vfs_node_t * node)
   node->inode = new_dir;
 
   if (basic_vfs_stat_dir (vfs, new_dir, new_path, new_len) < 0) {
-    printf ("error populating dir\n");
-    return NULL;
   }
   free (new_path);
 

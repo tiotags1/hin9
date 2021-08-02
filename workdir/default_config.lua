@@ -39,5 +39,9 @@ htdocs="htdocs",
 --hsts_flags="subdomains preload no_redirect no_header",
 }
 
+fpm_apps = {
+php = "tcp://localhost:9000",
+}
+
 
 

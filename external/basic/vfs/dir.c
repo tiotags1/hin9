@@ -10,6 +10,7 @@
 #include "internal.h"
 
 basic_vfs_node_t * basic_vfs_search_dir (basic_vfs_t * vfs, basic_vfs_dir_t * dir, const char * name, int name_len) {
+  if (dir == NULL) return NULL;
   for (int i=0; i < dir->num; i++) {
     basic_vfs_node_t * dent = dir->entries[i];
     if (dent == NULL) continue;
@@ -72,7 +73,10 @@ int basic_vfs_stat_dir (basic_vfs_t * vfs, basic_vfs_dir_t * dir, const char * p
   dir->path_len = path_len;
   DIR * d = opendir (dir->path);
   if (vfs->debug) printf ("vfs populating '%s'\n", dir->path);
-  if (d == NULL) { perror ("opendir"); printf ("can't find '%s'\n", dir->path); return -1; }
+  if (d == NULL) {
+    printf ("opendir can't open '%s': %s\n", dir->path, strerror (errno));
+    return -1;
+  }
 
   basic_vfs_add_inotify (vfs, dir);
 

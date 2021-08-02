@@ -1,3 +1,10 @@
+/*
+ * basic_libs, libraries used for other projects, including, pattern matching, timers and others
+ * written by Alexandru C
+ * You may not use this software except in compliance with the License.
+ * You may obtain a copy of the License at: docs/LICENSE.txt
+ * documentation is in the docs folder
+ */
 
 #include <stdint.h>
 #include <stdlib.h>

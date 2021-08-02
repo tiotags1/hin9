@@ -26,6 +26,7 @@ external/basic/vfs/inotify.c
 external/basic/vfs/stat.c
 external/basic/vfs/path.c
 external/basic/vfs/compat.c
+external/basic/basic_args.c
 external/basic/basic_endianness.c
 external/basic/basic_hashtable.c
 external/basic/basic_pattern.c

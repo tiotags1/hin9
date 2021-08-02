@@ -69,11 +69,11 @@ static inline int get_pattern (const char * fmt, uint32_t * matches, uint32_t * 
       }
       return 2;
       break;
-  case '^':
+  /*case '^':
     *matches = PATTERN_NEGATIVE; break;
     *character = *(fmt+1);
     return 2;
-    break;
+    break;*/
   default:
     *matches = PATTERN_CUSTOM;
     *character = *(fmt);

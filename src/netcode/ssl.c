@@ -27,12 +27,13 @@ static enum sslstatus get_sslstatus (SSL* ssl, int n) {
   case SSL_ERROR_WANT_X509_LOOKUP: printf ("SSL_ERROR_WANT_X509_LOOKUP\n"); goto fail;
   case SSL_ERROR_SYSCALL: printf ("SSL_ERROR_SYSCALL\n"); goto fail;
   case SSL_ERROR_SSL: printf ("SSL_ERROR_SSL\n"); goto fail;
-  default:
+  default: printf ("SSL_UNKNOWN_ERROR\n"); break;
   fail:
     if (err == SSL_ERROR_SSL)
       fprintf (stderr, "ssl err: %s\n", ERR_error_string (ERR_get_error (), NULL));
     return SSL_STATUS_FAIL;
   }
+  return 0;
 }
 
 static int hin_ssl_handshake (hin_ssl_t * ssl, hin_buffer_t * crypt);

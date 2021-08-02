@@ -99,7 +99,7 @@ static int hin_ssl_sni_callback (SSL *ssl, int *ad, void *arg) {
 
   const char* servername = SSL_get_servername (ssl, TLSEXT_NAMETYPE_host_name);
   if (servername == NULL || servername[0] == '\0') {
-    if (debug & (DEBUG_SSL|DEBUG_RW_ERROR))
+    if (debug & (DEBUG_SSL|DEBUG_INFO))
       printf ("ssl SNI null\n");
     return SSL_TLSEXT_ERR_NOACK;
   }
@@ -109,7 +109,7 @@ static int hin_ssl_sni_callback (SSL *ssl, int *ad, void *arg) {
 
   hin_vhost_t * vhost = hin_vhost_get (servername, strlen (servername));
   if (vhost == NULL || vhost->ssl_ctx == NULL) {
-    if (debug & (DEBUG_SSL|DEBUG_RW_ERROR))
+    if (debug & (DEBUG_SSL|DEBUG_INFO))
       printf ("ssl can't find vhost '%s'\n", servername);
     return SSL_TLSEXT_ERR_OK;
   }
@@ -172,8 +172,11 @@ SSL_CTX * hin_ssl_init (const char * cert, const char * key) {
 
   SSL_CTX_set_tlsext_servername_callback (ctx, hin_ssl_sni_callback);
 
+  // TODO not doing what I want it
+  SSL_CTX_set_verify (ctx, SSL_VERIFY_NONE, NULL);
+
   // Recommended to avoid SSLv2 & SSLv3
-  SSL_CTX_set_options (ctx, SSL_OP_ALL|SSL_OP_NO_SSLv2|SSL_OP_NO_SSLv3);
+  SSL_CTX_set_options (ctx, SSL_OP_ALL|SSL_OP_NO_SSLv2|SSL_OP_NO_SSLv3|SSL_OP_CIPHER_SERVER_PREFERENCE);
   return ctx;
 }
 
