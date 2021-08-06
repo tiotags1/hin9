@@ -57,6 +57,7 @@ int l_hin_set_path (lua_State *L) {
       }
     }
     if (node->type == BASIC_ENT_DIR && dir) {
+      http->file = node;
       lua_pushlstring (L, dir->path, dir->path_len);
       return 1;
     }
@@ -92,6 +93,52 @@ int l_hin_set_path (lua_State *L) {
   }
 
   return nret;
+}
+
+int l_hin_list_dir (lua_State *L) {
+  httpd_client_t * http = (httpd_client_t*)lua_touserdata (L, 1);
+  if (http == NULL || http->c.magic != HIN_CLIENT_MAGIC) {
+    printf ("lua list_dir need a valid client\n");
+    return 0;
+  }
+
+  basic_vfs_node_t * node = http->file;
+  basic_vfs_dir_t * dir = basic_vfs_get_dir (vfs, node);
+  if (dir == NULL) {
+    printf ("error! list dir on non-directory\n");
+    return 0;
+  }
+
+  hin_vhost_t * vhost = http->vhost;
+  if ((node->flags & BASIC_VFS_FORBIDDEN) || !(vhost->vhost_flags & HIN_DIRECTORY_LISTING)) {
+    httpd_respond_fatal (http, 403, NULL);
+    return 0;
+  }
+
+  hin_buffer_t * buf = malloc (sizeof (*buf) + READ_SZ);
+  memset (buf, 0, sizeof (*buf));
+  buf->flags = HIN_SOCKET | (http->c.flags & HIN_SSL);
+  buf->fd = http->c.sockfd;
+  buf->count = 0;
+  buf->sz = READ_SZ;
+  buf->ptr = buf->buffer;
+  buf->parent = http;
+  buf->ssl = &http->c.ssl;
+  buf->debug = http->debug;
+
+  basic_vfs_node_t * cwd_node = vhost->cwd_dir;
+  basic_vfs_dir_t * cwd = basic_vfs_get_dir (vfs, cwd_node);
+
+  const char * vpath = dir->path + cwd->path_len;
+  for (int i=0; i < dir->num; i++) {
+    basic_vfs_node_t * dent = dir->entries[i];
+    if (dent == NULL) continue;
+    header (buf, "<a href=\"/%s%s\">%s</a><br />\n", vpath, dent->name, dent->name);
+  }
+
+  httpd_respond_buffer (http, 200, buf);
+
+  return 0;
 }
 
 int hin_epoll_request_read (hin_buffer_t * buf);

@@ -236,6 +236,10 @@ int httpd_handle_file_request (hin_client_t * client, const char * path, off_t p
       httpd_respond_fatal (http, 404, NULL);
       return 0;
     }
+    if (node->flags & BASIC_VFS_FORBIDDEN) {
+      httpd_respond_fatal (http, 403, NULL);
+      return 0;
+    }
 
     hin_cache_item_t item;
     memset (&item, 0, sizeof (item));

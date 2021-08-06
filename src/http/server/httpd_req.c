@@ -156,8 +156,20 @@ int httpd_write_common_headers (httpd_client_t * http, hin_buffer_t * buf) {
 static int http_raw_response_callback (hin_buffer_t * buffer, int ret) {
   httpd_client_t * http = (httpd_client_t*)buffer->parent;
 
-  if (ret < 0) { printf ("httpd sending error %s\n", strerror (-ret)); }
-  else if (ret != buffer->count) printf ("httpd http_error_write_callback not sent all of it %d/%d\n", ret, buffer->count);
+  if (ret < 0) {
+    printf ("httpd sending error %s\n", strerror (-ret));
+  } else if (ret != buffer->count) {
+    printf ("httpd http_error_write_callback not sent all of it %d/%d\n", ret, buffer->count);
+    buffer->ptr += ret;
+    buffer->count -= ret;
+    hin_request_write (buffer);
+    return 0;
+  } else if (buffer->next) {
+    buffer->next->callback = http_raw_response_callback;
+    buffer->next->parent = buffer->parent;
+    hin_request_write (buffer->next);
+    return 1;
+  }
 
   http->state &= ~HIN_REQ_ERROR;
   httpd_client_finish_request (http);
@@ -237,6 +249,54 @@ int httpd_respond_fatal_and_full (httpd_client_t * http, int status, const char 
   http->method = HIN_HTTP_GET;
   httpd_respond_text (http, status, body);
   httpd_client_shutdown (http);
+  return 0;
+}
+
+
+int httpd_respond_buffer (httpd_client_t * http, int status, hin_buffer_t * data) {
+  if (http->state & HIN_REQ_DATA) return -1;
+  http->state |= HIN_REQ_DATA;
+  http->status = status;
+
+  hin_buffer_t * buf = malloc (sizeof (*buf) + READ_SZ);
+  memset (buf, 0, sizeof (*buf));
+  buf->flags = HIN_SOCKET | (http->c.flags & HIN_SSL);
+  buf->fd = http->c.sockfd;
+  buf->callback = http_raw_response_callback;
+  buf->count = 0;
+  buf->sz = READ_SZ;
+  buf->ptr = buf->buffer;
+  buf->parent = http;
+  buf->ssl = &http->c.ssl;
+  buf->debug = http->debug;
+
+  off_t len = 0;
+  for (hin_buffer_t * buf = data; buf; buf=buf->next) {
+    len += buf->count;
+  }
+
+  http->disable |= HIN_HTTP_CHUNKED | HIN_HTTP_DEFLATE | HIN_HTTP_CACHE;
+  http->peer_flags &= ~ http->disable;
+  header (buf, "HTTP/1.%d %d %s\r\n", http->peer_flags & HIN_HTTP_VER0 ? 0 : 1, status, http_status_name (status));
+  httpd_write_common_headers (http, buf);
+  header (buf, "Content-Length: %ld\r\n", len);
+  header (buf, "\r\n");
+  if (http->debug & DEBUG_RW) printf ("httpd %d buffer response %d '\n%.*s'\n", http->c.sockfd, buf->count, buf->count, buf->ptr);
+
+  if (http->method != HIN_HTTP_HEAD) {
+    hin_buffer_t * last = buf;
+    while (last->next) { last = last->next; }
+    last->next = data;
+  } else {
+    hin_buffer_t * last = data, * next;
+    while (last) {
+      next = last->next;
+      hin_buffer_clean (last);
+      last = next;
+    }
+  }
+
+  hin_request_write (buf);
   return 0;
 }
 

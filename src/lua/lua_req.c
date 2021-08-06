@@ -338,6 +338,7 @@ static int l_hin_set_content_type (lua_State *L) {
 }
 
 int l_hin_set_path (lua_State *L);
+int l_hin_list_dir (lua_State *L);
 
 static lua_function_t functs [] = {
 {"parse_path",		l_hin_parse_path },
@@ -353,6 +354,7 @@ static lua_function_t functs [] = {
 {"shutdown",		l_hin_shutdown },
 {"set_content_type",	l_hin_set_content_type },
 {"set_path",		l_hin_set_path },
+{"list_dir",		l_hin_list_dir },
 {NULL, NULL},
 };
 

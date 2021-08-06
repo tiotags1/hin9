@@ -100,6 +100,7 @@ int httpd_respond_text (httpd_client_t * http, int status, const char * body);
 int httpd_respond_error (httpd_client_t * http, int status, const char * body);
 int httpd_respond_fatal (httpd_client_t * http, int status, const char * body);
 int httpd_respond_fatal_and_full (httpd_client_t * http, int status, const char * body);
+int httpd_respond_buffer (httpd_client_t * http, int status, hin_buffer_t * data);
 int httpd_respond_redirect (httpd_client_t * http, int status, const char * location);
 int httpd_respond_redirect_https (httpd_client_t * http);
 

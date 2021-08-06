@@ -13,7 +13,7 @@
 #include "internal.h"
 
 basic_vfs_dir_t * basic_vfs_get_dir (basic_vfs_t * vfs, basic_vfs_node_t * node) {
-  if (node->type != BASIC_ENT_DIR) return NULL;
+  if (node == NULL || node->type != BASIC_ENT_DIR) return NULL;
   if (node->inode) return node->inode;
 
   basic_vfs_dir_t * parent = node->parent;
@@ -37,6 +37,7 @@ basic_vfs_dir_t * basic_vfs_get_dir (basic_vfs_t * vfs, basic_vfs_node_t * node)
   node->inode = new_dir;
 
   if (basic_vfs_stat_dir (vfs, new_dir, new_path, new_len) < 0) {
+    node->flags |= BASIC_VFS_FORBIDDEN;
   }
   free (new_path);
 

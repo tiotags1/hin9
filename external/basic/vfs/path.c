@@ -81,6 +81,7 @@ int basic_vfs_ref_file (basic_vfs_t * vfs, basic_vfs_file_t * inode) {
   ret = 0;
   if (file->fd < 0) {
     printf ("can't open path '%s' err '%s'\n", path, strerror (errno));
+    node->flags |= BASIC_VFS_FORBIDDEN;
     ret = -1;
   }
 

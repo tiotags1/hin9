@@ -9,6 +9,8 @@
 
 enum {BASIC_ENT_DIR = 1, BASIC_ENT_FILE, BASIC_ENT_UNKNOWN};
 
+enum {BASIC_VFS_FORBIDDEN = 0x1};
+
 typedef struct {
   int type;
   int refcount;
@@ -17,6 +19,7 @@ typedef struct {
 typedef struct {
   int type;
   int refcount;
+  int flags;
 
   struct basic_vfs_dir_struct * parent;
   void * inode;

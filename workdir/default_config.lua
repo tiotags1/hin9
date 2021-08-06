@@ -43,5 +43,5 @@ fpm_apps = {
 php = "tcp://localhost:9000",
 }
 
-
+--set_server_option (main, "directory_listing", true)
 

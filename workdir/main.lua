@@ -30,7 +30,7 @@ function default_onRequest_handler (req)
   local dir_path, file_name, ext, path_info = set_path (req, path, "index.php", "index.html")
   if (file_name == nil) then
     if (dir_path) then
-      return respond (req, 403)
+      return list_dir (req)
     else
       return respond (req, 404)
     end

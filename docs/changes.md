@@ -1,4 +1,11 @@
 
+* directory listing and option to enable it (disabled by default)
+* files that give EPERM should now return 403 instead of 404
+* directories that give EPERM should be handled better
+* added test for download speed and php fcgi post
+* bugfix httpd respond text handles now handles text larger than 4096 bytes
+
+commit 555cd10c97ca8aa41ec8e9b3262bb5c8a47ed010
 * better command line processing including short versions
 * added better configuration handling for multiple fcgi groups
 * moved missing ssl sni warn message to info level
