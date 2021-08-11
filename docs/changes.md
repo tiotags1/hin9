@@ -1,4 +1,10 @@
 
+* added gzip compression
+* refactored fcgi lifecycle to make it easier in the future to add reusing sockets
+* bugfix compressing php after php already compressed it
+* bugfix fcgi not properly closing
+
+commit 5a9959f4e6c254b8e9b5db728e2313663397b96d
 * directory listing and option to enable it (disabled by default)
 * files that give EPERM should now return 403 instead of 404
 * directories that give EPERM should be handled better

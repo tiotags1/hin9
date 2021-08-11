@@ -36,8 +36,8 @@ function default_onRequest_handler (req)
     end
   end
 
-  if (to_deflate[ext] == nil) then
-    set_option (req, "disable", "deflate")
+  if (to_compress[ext] == nil) then
+    set_option (req, "disable", "compress")
   end
   if (content_type[ext]) then
     set_content_type (req, content_type[ext])

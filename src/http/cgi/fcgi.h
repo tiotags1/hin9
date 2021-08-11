@@ -55,6 +55,8 @@ typedef struct __attribute__((__packed__)) {
   uint8_t reserved[3];
 } FCGI_EndRequestBody;
 
+enum { HIN_FCGI_SOCKET_REUSE = 0x1, };
+
 typedef struct {
   int req_id;
   httpd_client_t * http;
@@ -67,12 +69,13 @@ typedef struct {
 
 typedef struct hin_fcgi_socket_struct {
   int fd;
+  uint32_t flags;
 
   struct sockaddr ai_addr;
   socklen_t ai_addrlen;
 
   hin_fcgi_worker_t ** worker;
-  int next_req, max_worker;
+  int num_worker, max_worker;
 
   hin_fcgi_worker_t * queued;
 
@@ -94,7 +97,7 @@ typedef struct hin_fcgi_group_struct {
 FCGI_Header * hin_fcgi_header (hin_buffer_t * buf, int type, int id, int sz);
 int hin_fcgi_write_request (hin_fcgi_worker_t * worker);
 
-hin_fcgi_socket_t * hin_fcgi_create_socket (hin_fcgi_group_t * fcgi);
+hin_fcgi_socket_t * hin_fcgi_get_socket (hin_fcgi_group_t * fcgi);
 void hin_fcgi_socket_close (hin_fcgi_socket_t * socket);
 
 hin_fcgi_worker_t * hin_fcgi_get_worker (hin_fcgi_group_t * fcgi_group);

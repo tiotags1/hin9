@@ -94,7 +94,7 @@ int hin_pipe_copy_deflate (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, in
 
   int have;
   http->z.avail_in = num;
-  http->z.next_in = (Bytef *)buffer->buffer;
+  http->z.next_in = (Bytef *)buffer->ptr;
   buffer->count = num;
 
   if (http->debug & DEBUG_HTTP_FILTER) printf ("httpd %d deflate num %d flush %d\n", http->c.sockfd, num, flush);
@@ -178,7 +178,7 @@ int hin_pipe_copy_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, in
 int httpd_request_chunked (httpd_client_t * http);
 
 int httpd_pipe_set_chunked (httpd_client_t * http, hin_pipe_t * pipe) {
-  if (http->peer_flags & HIN_HTTP_DEFLATE) {
+  if (http->peer_flags & HIN_HTTP_COMPRESS) {
     httpd_request_chunked (http);
     pipe->read_callback = hin_pipe_copy_deflate;
   } else if ((http->peer_flags & HIN_HTTP_CHUNKED)) {

@@ -123,6 +123,8 @@ int httpd_write_common_headers (httpd_client_t * http, hin_buffer_t * buf) {
   }
   if (http->peer_flags & HIN_HTTP_DEFLATE) {
     header (buf, "Content-Encoding: deflate\r\n");
+  } else if (http->peer_flags & HIN_HTTP_GZIP) {
+    header (buf, "Content-Encoding: gzip\r\n");
   }
   if (http->peer_flags & HIN_HTTP_CHUNKED) {
     header (buf, "Transfer-Encoding: chunked\r\n");
@@ -209,7 +211,7 @@ int httpd_respond_text (httpd_client_t * http, int status, const char * body) {
     if (asprintf ((char**)&body, "<html><head></head><body><h1>Error %d: %s</h1></body></html>\n", status, http_status_name (status)) < 0)
       perror ("asprintf");
   }
-  http->disable |= HIN_HTTP_CHUNKED | HIN_HTTP_DEFLATE | HIN_HTTP_CACHE;
+  http->disable |= HIN_HTTP_CHUNKED | HIN_HTTP_COMPRESS | HIN_HTTP_CACHE;
   http->peer_flags &= ~ http->disable;
   header (buf, "HTTP/1.%d %d %s\r\n", http->peer_flags & HIN_HTTP_VER0 ? 0 : 1, status, http_status_name (status));
   httpd_write_common_headers (http, buf);
@@ -275,7 +277,7 @@ int httpd_respond_buffer (httpd_client_t * http, int status, hin_buffer_t * data
     len += buf->count;
   }
 
-  http->disable |= HIN_HTTP_CHUNKED | HIN_HTTP_DEFLATE | HIN_HTTP_CACHE;
+  http->disable |= HIN_HTTP_CHUNKED | HIN_HTTP_COMPRESS | HIN_HTTP_CACHE;
   http->peer_flags &= ~ http->disable;
   header (buf, "HTTP/1.%d %d %s\r\n", http->peer_flags & HIN_HTTP_VER0 ? 0 : 1, status, http_status_name (status));
   httpd_write_common_headers (http, buf);

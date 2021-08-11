@@ -51,14 +51,16 @@ static int hin_fcgi_pipe_finish_callback (hin_pipe_t * pipe) {
   if (http && http->debug & DEBUG_CGI)
     printf ("fcgi %d worker %d done.\n", socket->fd, worker->req_id);
 
+  worker->http = NULL;
   hin_fcgi_worker_reset (worker);
-  hin_fcgi_socket_close (worker->socket);
+  if (worker->socket)
+    hin_fcgi_socket_close (worker->socket);
 
   httpd_client_t * http1 = pipe->parent;
   if (http1->c.type == HIN_CACHE_OBJECT) {
     return hin_cache_finish (http1, pipe);
   } else {
-    httpd_client_finish_request (http);
+    httpd_client_finish_request (http1);
   }
 
   return 0;
@@ -95,16 +97,16 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer, int received) {
     if (matchi_string (&line, "Status: (%d+)", &param1) > 0) {
       http->status = atoi (param1.ptr);
       if (http->debug & DEBUG_CGI) printf ("cgi %d status is %d\n", http->c.sockfd, http->status);
-    } else if (matchi_string_equal (&line, "Content%-Length: (%d+)", &param1) > 0) {
+    } else if (matchi_string_equal (&line, "Content-Length: (%d+)", &param1) > 0) {
       sz = atoi (param1.ptr);
-    } else if (matchi_string_equal (&line, "Content%-Encoding: .*") > 0) {
-      disable |= HIN_HTTP_DEFLATE;
-    } else if (matchi_string_equal (&line, "Transfer%-Encoding: .*") > 0) {
+    } else if (matchi_string (&line, "Content-Encoding:") > 0) {
+      disable |= HIN_HTTP_COMPRESS;
+    } else if (matchi_string (&line, "Transfer-Encoding:") > 0) {
       disable |= HIN_HTTP_CHUNKED;
-    } else if (match_string (&line, "Cache%-Control:") > 0) {
+    } else if (matchi_string (&line, "Cache-Control:") > 0) {
       disable |= HIN_HTTP_CACHE;
       httpd_parse_cache_str (line.ptr, line.len, &http->cache_flags, &http->cache);
-    } else if (matchi_string_equal (&line, "Date: .*") > 0) {
+    } else if (matchi_string (&line, "Date:") > 0) {
       disable |= HIN_HTTP_DATE;
     }
   }
@@ -133,6 +135,9 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer, int received) {
     worker->header_buf = NULL;
   }
 
+  http->disable |= disable;
+  http->peer_flags = http->peer_flags & (~http->disable);
+
   if ((http->cache_flags & HIN_CACHE_PUBLIC) && http->method != HIN_HTTP_POST && http->status == 200) {
     // cache check is somewhere else
     int n = hin_cache_save (NULL, pipe);
@@ -150,11 +155,9 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer, int received) {
     }
   }
 
-  http->disable |= disable;
-
   int httpd_pipe_set_chunked (httpd_client_t * http, hin_pipe_t * pipe);
   if (http->method == HIN_HTTP_HEAD) {
-    http->peer_flags &= ~(HIN_HTTP_CHUNKED | HIN_HTTP_DEFLATE);
+    http->peer_flags &= ~(HIN_HTTP_CHUNKED | HIN_HTTP_COMPRESS);
   } else {
     httpd_pipe_set_chunked (http, pipe);
   }
@@ -178,7 +181,6 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer, int received) {
 
   *source = orig;
   header (buf, "HTTP/1.%d %d %s\r\n", http->peer_flags & HIN_HTTP_VER0 ? 0 : 1, http->status, http_status_name (http->status));
-  http->peer_flags = http->peer_flags & (~http->disable);
 
   httpd_write_common_headers (http, buf);
 

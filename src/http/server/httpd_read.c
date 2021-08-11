@@ -130,7 +130,7 @@ int httpd_client_read_callback (hin_buffer_t * buffer, int received) {
     httpd_client_handle_post (http, source);
   }
 
-  if (http->peer_flags & HIN_HTTP_DEFLATE) {
+  if (http->peer_flags & HIN_HTTP_COMPRESS) {
     int hin_client_deflate_init (httpd_client_t * http);
     hin_client_deflate_init (http);
   }

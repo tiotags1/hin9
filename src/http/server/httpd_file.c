@@ -99,8 +99,8 @@ int httpd_send_file (httpd_client_t * http, hin_cache_item_t * item, hin_buffer_
     http->status = 200;
   }
 
-  if (HIN_HTTPD_MAX_DEFLATE_SIZE && sz > HIN_HTTPD_MAX_DEFLATE_SIZE) {
-    http->disable |= HIN_HTTP_DEFLATE;
+  if (HIN_HTTPD_MAX_COMPRESS_SIZE && sz > HIN_HTTPD_MAX_COMPRESS_SIZE) {
+    http->disable |= HIN_HTTP_COMPRESS;
   }
   http->peer_flags &= ~http->disable;
 
@@ -123,7 +123,7 @@ int httpd_send_file (httpd_client_t * http, hin_cache_item_t * item, hin_buffer_
 
   int httpd_pipe_set_chunked (httpd_client_t * http, hin_pipe_t * pipe);
   if (http->status == 304 || http->method == HIN_HTTP_HEAD) {
-    http->peer_flags &= ~(HIN_HTTP_CHUNKED | HIN_HTTP_DEFLATE);
+    http->peer_flags &= ~(HIN_HTTP_CHUNKED | HIN_HTTP_COMPRESS);
   } else {
     httpd_pipe_set_chunked (http, pipe);
   }

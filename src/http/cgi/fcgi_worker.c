@@ -14,31 +14,30 @@ void hin_fcgi_worker_free (hin_fcgi_worker_t * worker) {
   free (worker);
 }
 
-hin_fcgi_worker_t * hin_fcgi_worker_create (hin_fcgi_socket_t * sock) {
-  hin_fcgi_worker_t * worker = calloc (1, sizeof (*worker));
-  worker->req_id = sock->next_req++;
-  worker->socket = sock;
-  return worker;
-}
-
 hin_fcgi_worker_t * hin_fcgi_get_worker (hin_fcgi_group_t * fcgi) {
-  hin_fcgi_worker_t * worker = NULL;
-  hin_fcgi_socket_t * sock = hin_fcgi_create_socket (fcgi);
-  for (int i=0; i<sock->max_worker; i++) {
-    worker = sock->worker[i];
-    if (worker) continue;
-    worker = hin_fcgi_worker_create (sock);
-    sock->worker[i] = worker;
-    return worker;
+  if (fcgi->free) {
+    //hin_fcgi_worker_t * worker = fcgi->free;
+    // TODO add to busy pool
+    //return worker;
   }
 
-  int new = 1; // TODO low number is temp for single client per connection
-  int max = sock->max_worker + new;
-  sock->worker = realloc (sock->worker, sizeof (void*) * max);
-  memset (&sock->worker[sock->max_worker], 0, sizeof (void*) * new);
-  worker = hin_fcgi_worker_create (sock);
-  sock->worker[sock->max_worker] = worker;
-  sock->max_worker = max;
+  hin_fcgi_socket_t * sock = hin_fcgi_get_socket (fcgi);
+
+  int req_id = sock->num_worker++;
+  if (sock->num_worker > sock->max_worker) {
+    int new = 5;
+    int max = sock->max_worker + new;
+    sock->worker = realloc (sock->worker, sizeof (void*) * max);
+    memset (&sock->worker[sock->max_worker], 0, sizeof (void*) * new);
+    sock->max_worker = max;
+  }
+
+  hin_fcgi_worker_t * worker = calloc (1, sizeof (*worker));
+  worker->req_id = req_id;
+  worker->socket = sock;
+
+  sock->worker[worker->req_id] = worker;
+
   return worker;
 }
 
@@ -46,8 +45,13 @@ int hin_fcgi_worker_reset (hin_fcgi_worker_t * worker) {
   httpd_client_t * http = worker->http;
   if (http) {
     //httpd_client_finish_request (http);
-    worker->http = NULL;
+    //worker->http = NULL;
   }
+  if (worker->socket == NULL) {
+    hin_fcgi_worker_free (worker);
+    return 0;
+  }
+  // TODO if not null then add to pool
   return 0;
 }
 

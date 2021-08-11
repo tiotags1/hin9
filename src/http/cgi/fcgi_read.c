@@ -50,7 +50,7 @@ static int hin_fcgi_pipe_end (hin_fcgi_worker_t * worker, FCGI_Header * head) {
 
   hin_pipe_t * pipe = worker->out;
   hin_pipe_finish (pipe);
-  //worker->out = NULL;
+  worker->out = NULL;
 
   return 0;
 }
@@ -106,7 +106,7 @@ int hin_fcgi_read_callback (hin_buffer_t * buf, int ret) {
   if (ret == 0) {
     if (buf->debug & DEBUG_CGI)
       printf ("fcgi %d close\n", buf->fd);
-    //hin_fcgi_socket_close (socket);
+    hin_fcgi_socket_close (socket);
     return -1;
   }
 

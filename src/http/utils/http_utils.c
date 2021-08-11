@@ -152,12 +152,21 @@ int hin_client_deflate_init (httpd_client_t * http) {
   http->z.zalloc = Z_NULL;
   http->z.zfree = Z_NULL;
   http->z.opaque = Z_NULL;
-  int ret = deflateInit (&http->z, Z_DEFAULT_COMPRESSION);
+  int windowsBits = 15;
+  if (http->peer_flags & HIN_HTTP_DEFLATE) {
+    http->peer_flags = (http->peer_flags & ~HIN_HTTP_COMPRESS) | HIN_HTTP_DEFLATE;
+  } else if (http->peer_flags & HIN_HTTP_GZIP) {
+    http->peer_flags = (http->peer_flags & ~HIN_HTTP_COMPRESS) | HIN_HTTP_GZIP;
+    windowsBits |= 16;
+  } else {
+    printf ("error! internal error useless zlib init\n");
+    return -1;
+  }
+  int ret = deflateInit2 (&http->z, Z_DEFAULT_COMPRESSION, Z_DEFLATED, windowsBits, 8, Z_DEFAULT_STRATEGY);
   if (ret != Z_OK) {
     printf ("deflate init failed\n");
     return -1;
   }
-  http->peer_flags |= HIN_HTTP_DEFLATE;
   httpd_request_chunked (http);
   return 0;
 }

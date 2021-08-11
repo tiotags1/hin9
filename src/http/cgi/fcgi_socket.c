@@ -21,8 +21,8 @@ void hin_fcgi_socket_close (hin_fcgi_socket_t * socket) {
     if (worker->http) {
       httpd_respond_fatal (worker->http, 500, NULL);
     }
-    //hin_fcgi_worker_reset (worker);
-    hin_fcgi_worker_free (worker);
+    worker->socket = NULL;
+    hin_fcgi_worker_reset (worker);
   }
   if (socket->worker) free (socket->worker);
   socket->worker = NULL;
@@ -89,7 +89,9 @@ static int hin_fcgi_connect_callback (hin_buffer_t * buf, int ret) {
   return 1;
 }
 
-hin_fcgi_socket_t * hin_fcgi_create_socket (hin_fcgi_group_t * fcgi) {
+hin_fcgi_socket_t * hin_fcgi_get_socket (hin_fcgi_group_t * fcgi) {
+  // TODO try to get a reusable sockets
+
   hin_fcgi_socket_t * sock = calloc (1, sizeof (*sock));
   sock->fd = -1;
   sock->fcgi = fcgi;

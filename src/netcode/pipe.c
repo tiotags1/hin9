@@ -102,6 +102,11 @@ int hin_pipe_finish (hin_pipe_t * pipe) {
   }
   if (ret1) hin_buffer_clean (buf);
 
+  if (pipe->write == NULL) {
+    pipe->out.flags |= HIN_DONE;
+  }
+  hin_pipe_advance (pipe);
+
   return 0;
 }
 

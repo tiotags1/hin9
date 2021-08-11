@@ -48,8 +48,12 @@ static uint32_t get_mask (const char * name) {
     return HIN_HTTP_POST;
   } else if (strcmp (name, "chunked") == 0) {
     return HIN_HTTP_CHUNKED;
+  } else if (strcmp (name, "gzip") == 0) {
+    return HIN_HTTP_GZIP;
   } else if (strcmp (name, "deflate") == 0) {
     return HIN_HTTP_DEFLATE;
+  } else if (strcmp (name, "compress") == 0) {
+    return HIN_HTTP_COMPRESS;
   } else if (strcmp (name, "date") == 0) {
     return HIN_HTTP_DATE;
   } else if (strcmp (name, "banner") == 0) {

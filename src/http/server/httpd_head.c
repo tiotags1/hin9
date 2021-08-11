@@ -26,6 +26,9 @@ int httpd_parse_headers_line (httpd_client_t * http, string_t * line) {
       if (match_string (&param, "deflate") > 0) {
         if (http->debug & (DEBUG_HTTP|DEBUG_HTTP_FILTER)) printf ("  can use deflate\n");
         http->peer_flags |= HIN_HTTP_DEFLATE;
+      } else if (match_string (&param, "gzip") > 0) {
+        if (http->debug & (DEBUG_HTTP|DEBUG_HTTP_FILTER)) printf ("  can use gzip\n");
+        http->peer_flags |= HIN_HTTP_GZIP;
       }
       if (match_string (line, "%s*,%s*") <= 0) break;
     }
