@@ -1,4 +1,7 @@
 
+* bugfix header function didn't write the last character for a buffer of a very specific size, aka vsnprintf needs a buffer of size n+1
+
+commit d24aec6c4a7a5239af563d03ba6f0a1e3200b38c
 * added gzip compression
 * refactored fcgi lifecycle to make it easier in the future to add reusing sockets
 * bugfix compressing php after php already compressed it

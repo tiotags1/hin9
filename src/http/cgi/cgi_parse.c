@@ -192,8 +192,8 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer, int received) {
     if (http->debug & (DEBUG_CGI|DEBUG_RW))
       fprintf (stderr, " %zd '%.*s'\n", line.len, (int)line.len, line.ptr);
     if (matchi_string (&line, "Status:") > 0) {
-    } else if ((http->peer_flags & HIN_HTTP_CHUNKED) && matchi_string (&line, "Content%-Length:") > 0) {
-    } else if (HIN_HTTPD_DISABLE_POWERED_BY && matchi_string (&line, "X%-Powered%-By:") > 0) {
+    } else if ((http->peer_flags & HIN_HTTP_CHUNKED) && matchi_string (&line, "Content-Length:") > 0) {
+    } else if (HIN_HTTPD_DISABLE_POWERED_BY && matchi_string (&line, "X-Powered-By:") > 0) {
     } else if (matchi_string (&line, "Location:") > 0) {
       hin_cgi_location (http, buf, &line);
     } else if (match_string (&line, "X-CGI-") > 0) {

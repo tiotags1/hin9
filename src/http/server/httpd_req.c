@@ -42,12 +42,13 @@ int vheader (hin_buffer_t * buffer, const char * fmt, va_list ap) {
   va_list prev;
   va_copy (prev, ap);
   int len = vsnprintf (buffer->ptr + pos, sz, fmt, ap);
+  if (len < 0) return 0;
   if (len > HIN_HTTPD_MAX_HEADER_LINE_SIZE) {
     printf ("'header' failed to write more\n");
     va_end (ap);
     return 0;
   }
-  if (len > sz) {
+  if (len >= sz) {
     hin_buffer_t * buf = new_buffer (buffer, len);
     return vheader (buf, fmt, prev);
   }
