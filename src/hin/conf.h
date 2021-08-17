@@ -15,6 +15,8 @@
 #define HIN_SOCKET_REUSEADDR 1
 
 #define HIN_USE_SIGNAL_FD 1
+#define HIN_RLIMIT_MEMLOCK ((long)0x100000)
+#define HIN_RLIMIT_NOFILE ((long)2048)
 
 #define HIN_HTTPD_TIMEOUT 10
 // in miliseconds

@@ -125,3 +125,49 @@ int hin_redirect_log (const char * path) {
   return 0;
 }
 
+#include <sys/resource.h>
+#include "conf.h"
+
+int hin_linux_set_limits () {
+  struct rlimit new;
+  rlim_t max;
+
+  memset (&new, 0, sizeof (new));
+  if (getrlimit (RLIMIT_MEMLOCK, &new) < 0) {
+    perror ("getrlimit");
+  }
+
+  max = new.rlim_max;
+  max = max > HIN_RLIMIT_MEMLOCK ? HIN_RLIMIT_MEMLOCK : max;
+  if (master.debug & DEBUG_INFO)
+    printf ("rlimit MEMLOCK %ld/%ld/%ld\n", new.rlim_cur, max, new.rlim_max);
+
+  new.rlim_cur = max;
+  if (setrlimit (RLIMIT_MEMLOCK, &new) < 0) {
+    perror ("setrlimit");
+  }
+
+  if (new.rlim_cur < HIN_RLIMIT_MEMLOCK) {
+    printf ("WARNING! low RLIMIT_MEMLOCK, possible crashes\n");
+    printf (" current: %ld\n", new.rlim_cur);
+    printf (" suggested: %ld\n", HIN_RLIMIT_MEMLOCK);
+  }
+
+  memset (&new, 0, sizeof (new));
+  if (getrlimit (RLIMIT_NOFILE, &new) < 0) {
+    perror ("getrlimit");
+  }
+
+  max = new.rlim_max;
+  max = max > HIN_RLIMIT_NOFILE ? HIN_RLIMIT_NOFILE : max;
+  if (master.debug & DEBUG_INFO)
+    printf ("rlimit NOFILE %ld/%ld/%ld\n", new.rlim_cur, max, new.rlim_max);
+
+  new.rlim_cur = max;
+  if (setrlimit (RLIMIT_NOFILE, &new) < 0) {
+    perror ("setrlimit");
+  }
+  return 0;
+}
+
+

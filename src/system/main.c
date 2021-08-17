@@ -207,6 +207,8 @@ int main (int argc, const char * argv[], const char * envp[]) {
   if (master.debug & DEBUG_BASIC)
     printf ("hin start ...\n");
 
+  int hin_linux_set_limits ();
+  hin_linux_set_limits ();
   void hin_init_sharedmem ();
   hin_init_sharedmem ();
   void hin_event_init ();

@@ -1,4 +1,8 @@
 
+* checks rlimits MEMLOCK at runtime so you don't have to warn at install time
+* also increased RLIMIT_NOFILE to something more reasonable and customizable
+
+commit ca8a1e3ec9c636a350ff16a4ce441610b93e52a4
 * bugfix header function didn't write the last character for a buffer of a very specific size, aka vsnprintf needs a buffer of size n+1
 
 commit d24aec6c4a7a5239af563d03ba6f0a1e3200b38c
