@@ -31,7 +31,7 @@ int console_execute (string_t * source) {
   } else if (matchi_string (source, "lua ") > 0) {
     hin_lua_run (source->ptr, source->len);
   } else {
-    printf ("command unknown '%.*s'\n", (int)source->len, source->ptr);
+    hin_lua_run (source->ptr, source->len);
   }
   return 0;
 }

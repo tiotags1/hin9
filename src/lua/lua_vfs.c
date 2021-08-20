@@ -27,10 +27,12 @@ int l_hin_set_path (lua_State *L) {
   httpd_client_t * http = (httpd_client_t*)client;
   hin_vhost_t * vhost = http->vhost;
 
-  string_t path;
+  string_t path, orig;
   basic_vfs_node_t * cwd = vhost->cwd_dir;
+  int is_dir = 0;
 
   path.ptr = (char*)lua_tolstring (L, 2, &path.len);
+  orig = path;
   match_string (&path, "/");
 
   basic_vfs_node_t * node = NULL;
@@ -45,6 +47,7 @@ int l_hin_set_path (lua_State *L) {
 
   if (node->type == BASIC_ENT_DIR) {
     basic_vfs_dir_t * dir = basic_vfs_get_dir (vfs, node);
+    is_dir = 1;
     for (int i=3; i <= lua_gettop (L); i++) {
       size_t name_len = 0;
       const char * name = lua_tolstring (L, i, &name_len);
@@ -59,7 +62,8 @@ int l_hin_set_path (lua_State *L) {
     if (node->type == BASIC_ENT_DIR && dir) {
       http->file = node;
       lua_pushlstring (L, dir->path, dir->path_len);
-      return 1;
+      lua_pushnil (L);
+      goto finalize;
     }
   }
 
@@ -75,21 +79,43 @@ int l_hin_set_path (lua_State *L) {
   lua_pushlstring (L, parent->path, parent->path_len);
   lua_pushlstring (L, node->name, node->name_len);
 
+finalize:
   int nret = 2;
 
   char * ext = NULL;
   char * max = node->name + node->name_len;
-  for (char * ptr = max; ptr > node->name; ptr--) {
-    if (*ptr == '.') { ext = ptr+1; break; }
+  if (node && node->type == BASIC_ENT_FILE) {
+    for (char * ptr = max; ptr > node->name; ptr--) {
+      if (*ptr == '.') { ext = ptr+1; break; }
+    }
   }
   if (ext) {
-    nret++;
     lua_pushlstring (L, ext, max - ext);
+  } else {
+    lua_pushnil (L);
   }
+  nret++;
 
   if (path.len > 0) {
     lua_pushlstring (L, path.ptr, path.len);
-    nret++;
+  } else {
+    lua_pushnil (L);
+  }
+  nret++;
+
+  if (is_dir && ((vhost->vhost_flags & HIN_DIRECTORY_NO_REDIRECT) == 0)) {
+    if (path.len >= 0)
+      orig.len -= path.len;
+    const char * ptr = orig.ptr + orig.len - 1;
+    if (*ptr != '/') {
+      char * new = malloc (orig.len + 2);
+      memcpy (new, orig.ptr, orig.len);
+      new[orig.len] = '/';
+      new[orig.len+1] = '\0';
+      lua_pushlstring (L, new, orig.len+1);
+      free (new);
+      nret++;
+    }
   }
 
   return nret;

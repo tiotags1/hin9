@@ -157,8 +157,21 @@ static int l_hin_exec (lua_State *L) {
   exit (1);
 }
 
+static int l_hin_app_state (lua_State *L) {
+  const char * new = lua_tostring (L, 1);
+  if (strcmp (new, "restart") == 0) {
+    hin_restart1 ();
+  } else if (strcmp (new, "reload") == 0) {
+    int lua_reload ();
+    if (lua_reload () < 0)
+      printf ("reload failed\n");
+  }
+  return 0;
+}
+
 static lua_function_t functs [] = {
 {"exec",		l_hin_exec },
+{"app_state",		l_hin_app_state },
 {NULL, NULL},
 };
 

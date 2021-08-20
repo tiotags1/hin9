@@ -46,5 +46,6 @@ php = "tcp://localhost:9000",
 --set_server_option (main, "directory_listing", true)
 --set_server_option (main, "disable", "compress")
 --set_server_option (main, "disable", "keepalive")
+--set_server_option (main, "directory_no_redirect", true)
 
 

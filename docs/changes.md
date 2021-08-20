@@ -1,4 +1,13 @@
 
+* redirect folder '/folder' to '/folder/', added trailing '/' for URIs to folders
+* option to control if server sends redirects for URIs to folders with missing trailing '/'
+* added redirect function to lua
+* console now parses lua directly without adding 'lua <command>'
+* added app_state function to allow restarting and reloading from lua
+* bugfix order of returns for set\_path function
+* bugfix http url matches a few more (] is still missing due to match_pattern bugs)
+
+commit 47f242e485906c795ab77f00b57bdbd8509e1a4d
 * checks rlimits MEMLOCK at runtime so you don't have to warn at install time
 * also increased RLIMIT_NOFILE to something more reasonable and customizable
 

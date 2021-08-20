@@ -133,6 +133,12 @@ static int l_hin_set_server_option (lua_State *L) {
     if (client->debug & DEBUG_CONFIG) printf ("lua server directory listing %s\n", ret ? "on" : "off");
     client->vhost_flags = (client->vhost_flags & (~HIN_DIRECTORY_LISTING)) | (HIN_DIRECTORY_LISTING * ret);
     return 0;
+  } else if (strcmp (name, "directory_no_redirect") == 0) {
+    int ret = lua_toboolean (L, 3);
+    if (client->debug & DEBUG_CONFIG) printf ("lua server directory no redirect %s\n", ret ? "on" : "off");
+    client->vhost_flags = (client->vhost_flags & (~HIN_DIRECTORY_NO_REDIRECT)) | (HIN_DIRECTORY_NO_REDIRECT * ret);
+    return 0;
+
   } else {
     printf ("set_otion unknown option '%s'\n", name);
     return 0;

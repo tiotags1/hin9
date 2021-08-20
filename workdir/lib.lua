@@ -58,4 +58,8 @@ function auto_ssl_do_renew ()
   end
 end
 
-
+function redirect (req, uri, status)
+  if (status == nil) then status = 302 end
+  add_header (req, "Location", uri)
+  return respond (req, status, nil)
+end

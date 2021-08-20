@@ -27,7 +27,10 @@ function default_onRequest_handler (req)
     return respond (req, 200, "Hello world")
   end
 
-  local dir_path, file_name, ext, path_info = set_path (req, path, "index.php", "index.html")
+  local dir_path, file_name, ext, path_info, location = set_path (req, path, "index.php", "index.html")
+  if (location) then
+    return redirect (req, location, 301)
+  end
   if (file_name == nil) then
     if (dir_path) then
       return list_dir (req)

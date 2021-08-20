@@ -164,10 +164,11 @@ create\_log (path)
   * it creates a log and returns a function that write to it
 
 nil\_log ()
-  * create a nil log o replace create\_log, when speed is needed
+  * create a nil log to replace create\_log, when speed is needed
 
-add\_vhost
-  * adds a vhost
+add\_vhost (vhost-table)
+  * adds a vhost using the vhost-table
+  * returns the vhost pointer
 
 
 

@@ -1,20 +1,13 @@
 
 * bugs
-  * only unconfirmed ones
+  * only unreported ones
 
 * reverse proxy
   * cache gzipped files
 
-
-* daemon support
-  * unknown
-
-
 * sandboxing
   * syscall filtering
-  * capabilities
   * namespaces
-
 
 * one day
   * traffic shaping
@@ -23,4 +16,6 @@
   * wildcard vhosts
   * better error handling
   * cgi spec compliance
+  * fcgi resuse connection
+  * threads
 
