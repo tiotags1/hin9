@@ -162,7 +162,7 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer, int receive
     pipe->left = pipe->sz = sz;
   }
 
-  if ((http->cache_flags & HIN_CACHE_PUBLIC) && http->method != HIN_HTTP_POST && http->status == 200) {
+  if ((http->cache_flags & HIN_CACHE_PUBLIC) && http->method != HIN_METHOD_POST && http->status == 200) {
     // cache check is somewhere else
     int hin_cache_save (void * store, hin_pipe_t * pipe);
     int n = hin_cache_save (NULL, pipe);
@@ -234,7 +234,7 @@ static int http_client_sent_callback (hin_buffer_t * buffer, int ret) {
   httpd_client_t * http = proxy->c.parent;
 
   if (http == NULL) return 1;
-  if (http->method != HIN_HTTP_POST) return 1;
+  if (http->method != HIN_METHOD_POST) return 1;
 
   string_t source = http->headers, line;
   if (find_line (&source, &line) == 0) { return -1; }
@@ -325,9 +325,9 @@ int http_proxy_start_request (http_client_t * http, int ret) {
 
   const char * method = "GET";
   switch (parent->method) {
-  case HIN_HTTP_GET: method = "GET"; break;
-  case HIN_HTTP_POST: method = "POST"; break;
-  case HIN_HTTP_HEAD: method = "HEAD"; break;
+  case HIN_METHOD_GET: method = "GET"; break;
+  case HIN_METHOD_POST: method = "POST"; break;
+  case HIN_METHOD_HEAD: method = "HEAD"; break;
   default: printf ("bad method detected\n"); break;
   }
 
@@ -342,7 +342,7 @@ int http_proxy_start_request (http_client_t * http, int ret) {
   } else {
     header (buf, "Connection: close\r\n");
   }
-  if (parent->method == HIN_HTTP_POST) {
+  if (parent->method == HIN_METHOD_POST) {
     if (parent->post_sz > 0)
       header (buf, "Content-Length: %ld\r\n", parent->post_sz);
     if (parent->post_sep)

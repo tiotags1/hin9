@@ -138,7 +138,7 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer, int received) {
   http->disable |= disable;
   http->peer_flags = http->peer_flags & (~http->disable);
 
-  if ((http->cache_flags & HIN_CACHE_PUBLIC) && http->method != HIN_HTTP_POST && http->status == 200) {
+  if ((http->cache_flags & HIN_CACHE_PUBLIC) && http->method != HIN_METHOD_POST && http->status == 200) {
     // cache check is somewhere else
     int n = hin_cache_save (NULL, pipe);
     if (n == 0) {
@@ -156,7 +156,7 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer, int received) {
   }
 
   int httpd_pipe_set_chunked (httpd_client_t * http, hin_pipe_t * pipe);
-  if (http->method == HIN_HTTP_HEAD) {
+  if (http->method == HIN_METHOD_HEAD) {
     http->peer_flags &= ~(HIN_HTTP_CHUNKED | HIN_HTTP_COMPRESS);
   } else {
     httpd_pipe_set_chunked (http, pipe);

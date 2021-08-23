@@ -54,7 +54,7 @@ int hin_fcgi_post_read_callback (hin_pipe_t * pipe, hin_buffer_t * buf, int num,
 int hin_fcgi_write_post (hin_buffer_t * buf, hin_fcgi_worker_t * worker) {
   httpd_client_t * http = worker->http;
 
-  if (http->method != HIN_HTTP_POST || http->post_sz <= 0) {
+  if (http->method != HIN_METHOD_POST) {
     hin_fcgi_header (buf, FCGI_STDIN, worker->req_id, 0);
     return 0;
   }

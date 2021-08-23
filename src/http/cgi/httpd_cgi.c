@@ -119,7 +119,7 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
     perror ("dup2");
     exit (1);
   }
-  if (http->method == HIN_HTTP_POST && http->post_fd) {
+  if (http->method == HIN_METHOD_POST && http->post_fd) {
     if (http->debug & DEBUG_CGI)
       fprintf (stderr, "cgi %d stdin set to %d\n", http->c.sockfd, http->post_fd);
 

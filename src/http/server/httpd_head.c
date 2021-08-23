@@ -43,12 +43,16 @@ int httpd_parse_headers_line (httpd_client_t * http, string_t * line) {
     uint64_t etag = strtol (line->ptr, NULL, 16);
     http->etag = etag;
   } else if (match_string (line, "Connection:%s*") > 0) {
-    if (match_string (line, "close") > 0) {
-      if (http->debug & (DEBUG_HTTP|DEBUG_HTTP_FILTER)) printf ("  connection requested closed\n");
-      http->peer_flags &= ~HIN_HTTP_KEEPALIVE;
-    } else if (match_string (line, "keep%-alive") > 0) {
-      if (http->debug & (DEBUG_HTTP|DEBUG_HTTP_FILTER)) printf ("  connection requested keepalive\n");
-      http->peer_flags |= HIN_HTTP_KEEPALIVE;
+    while (1) {
+      if (match_string (line, "close") > 0) {
+        if (http->debug & (DEBUG_HTTP|DEBUG_HTTP_FILTER)) printf ("  connection requested closed\n");
+        http->peer_flags &= ~HIN_HTTP_KEEPALIVE;
+      } else if (match_string (line, "keep-alive") > 0) {
+        if (http->debug & (DEBUG_HTTP|DEBUG_HTTP_FILTER)) printf ("  connection requested keepalive\n");
+        http->peer_flags |= HIN_HTTP_KEEPALIVE;
+      } else if (match_string (line, "%w+") > 0) {
+      }
+      if (match_string (line, "%s*,%s*") < 0) break;
     }
   } else if (match_string (line, "Range:%s*") > 0) {
     if (match_string (line, "bytes=(%d+)-(%d*)", &param1, &param2) > 0) {
@@ -60,10 +64,11 @@ int httpd_parse_headers_line (httpd_client_t * http, string_t * line) {
       }
       if (http->debug & (DEBUG_HTTP|DEBUG_HTTP_FILTER)) printf ("  range requested is %lld-%lld\n", (long long)http->pos, (long long)http->count);
     }
-  } else if (http->method == HIN_HTTP_POST) {
+  } else if (http->method == HIN_METHOD_POST) {
     if (match_string (line, "Content-Length: (%d+)", &param) > 0) {
       http->post_sz = atoi (param.ptr);
       if (http->debug & (DEBUG_HTTP|DEBUG_POST)) printf ("  post length is %lld\n", (long long)http->post_sz);
+      http->peer_flags |= HIN_HTTP_POST;
     } else if (match_string (line, "Content-Type:%s*multipart/form-data;%s*boundary=%\"?([%-%w]+)%\"?", &param) > 0) {
       char * new = malloc (param.len + 2 + 1);
       new[0] = '-';
@@ -75,10 +80,10 @@ int httpd_parse_headers_line (httpd_client_t * http, string_t * line) {
     } else if (match_string (line, "Transfer-Encoding:%s*") > 0) {
       if (match_string (line, "chunked") > 0) {
         if (http->debug & (DEBUG_HTTP|DEBUG_POST)) printf ("  post content encoding is chunked\n");
-        http->peer_flags |= HIN_HTTP_CHUNKED_UPLOAD;
+        http->peer_flags |= (HIN_HTTP_CHUNKED_UPLOAD | HIN_HTTP_POST);
       } else if (match_string (line, "identity") > 0) {
       } else {
-        printf ("httpd %d don't accept post with transfer encoding\n", http->c.sockfd);
+        httpd_error (http, 0, "doesn't accept post with transfer encoding");
         return -1;
       }
     }
@@ -105,10 +110,9 @@ int httpd_parse_headers (httpd_client_t * http, string_t * source) {
 
   line.len = 0;
   if (find_line (source, &line) == 0 || match_string (&line, "(%a+) ("HIN_HTTP_PATH_ACCEPT") HTTP/1.([01])", &method, &path, &param) <= 0) {
-    printf ("httpd 400 error parsing request line '%.*s'\n", (int)line.len, line.ptr);
+    httpd_error (http, 400, "parsing request line '%.*s'", (int)line.len, line.ptr);
     if (http->debug & (DEBUG_RW|DEBUG_RW_ERROR))
       printf (" raw request '\n%.*s'\n", (int)orig.len, orig.ptr);
-    httpd_respond_fatal (http, 400, NULL);
     return -1;
   }
   if (*param.ptr != '1') {
@@ -117,16 +121,15 @@ int httpd_parse_headers (httpd_client_t * http, string_t * source) {
     http->peer_flags |= HIN_HTTP_KEEPALIVE;
   }
   if (matchi_string_equal (&method, "GET") > 0) {
-    http->method = HIN_HTTP_GET;
+    http->method = HIN_METHOD_GET;
   } else if (matchi_string_equal (&method, "POST") > 0) {
-    http->method = HIN_HTTP_POST;
+    http->method = HIN_METHOD_POST;
   } else if (matchi_string_equal (&method, "HEAD") > 0) {
-    http->method = HIN_HTTP_HEAD;
+    http->method = HIN_METHOD_HEAD;
   } else {
-    printf ("httpd 405 error unknown method '%.*s'\n", (int)method.len, method.ptr);
+    httpd_error (http, 405, "unknown method '%.*s'", (int)method.len, method.ptr);
     if (http->debug & (DEBUG_RW|DEBUG_RW_ERROR))
       printf (" raw request '\n%.*s'\n", (int)orig.len, orig.ptr);
-    httpd_respond_fatal (http, 405, NULL);
     return -1;
   }
 
@@ -151,13 +154,17 @@ int httpd_parse_headers (httpd_client_t * http, string_t * source) {
   if (http->peer_flags & HIN_HTTP_CHUNKED_UPLOAD) {
     http->post_sz = 0;
   }
-  if (http->method == HIN_HTTP_POST && (http->post_sz <= 0 && (http->peer_flags & HIN_HTTP_CHUNKED_UPLOAD) == 0)) {
-    printf ("httpd post missing size\n");
-    httpd_respond_fatal (http, 411, NULL);
+  if (http->post_sz < 0) {
+    http->post_sz = 0;
+  }
+  if (http->peer_flags & http->disable & HIN_HTTP_POST) {
+    httpd_error (http, 403, "post disabled");
+    return -1;
+  } if (http->method == HIN_METHOD_POST && (http->peer_flags & HIN_HTTP_POST) == 0) {
+    httpd_error (http, 411, "post missing size");
     return -1;
   } else if (HIN_HTTPD_MAX_POST_SIZE && http->post_sz >= HIN_HTTPD_MAX_POST_SIZE) {
-    printf ("httpd post size %lld >= %ld\n", (long long)http->post_sz, (long)HIN_HTTPD_MAX_POST_SIZE);
-    httpd_respond_fatal (http, 413, NULL);
+    httpd_error (http, 413, "post size %lld >= %ld\n", (long long)http->post_sz, (long)HIN_HTTPD_MAX_POST_SIZE);
     return -1;
   }
 
@@ -168,9 +175,7 @@ int httpd_parse_req (httpd_client_t * http, string_t * source) {
   int used = httpd_parse_headers (http, source);
   if (used <= 0) return used;
 
-  if (http->disable & HIN_HTTP_KEEPALIVE) {
-    http->peer_flags &= ~HIN_HTTP_KEEPALIVE;
-  }
+  http->peer_flags &= ~http->disable;
   http->state &= ~HIN_REQ_HEADERS;
 
   return used;

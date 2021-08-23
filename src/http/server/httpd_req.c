@@ -186,10 +186,9 @@ int httpd_respond_text (httpd_client_t * http, int status, const char * body) {
   if (http->state & HIN_REQ_DATA) return -1;
   http->state |= HIN_REQ_DATA;
 
-  if (http->method == HIN_HTTP_POST) {
-    printf ("httpd 405 post on a raw resource\n");
-    http->method = HIN_HTTP_GET;
-    httpd_respond_fatal (http, 405, NULL);
+  if (http->method & HIN_METHOD_POST) {
+    http->method = HIN_METHOD_GET;
+    httpd_error (http, 405, "POST on a raw resource\n");
     return 0;
   }
   http->status = status;
@@ -218,7 +217,7 @@ int httpd_respond_text (httpd_client_t * http, int status, const char * body) {
   httpd_write_common_headers (http, buf);
   header (buf, "Content-Length: %ld\r\n", strlen (body));
   header (buf, "\r\n");
-  if (http->method != HIN_HTTP_HEAD) {
+  if (http->method != HIN_METHOD_HEAD) {
     header (buf, "%s", body);
   }
   if (freeable) free ((char*)body);
@@ -231,7 +230,7 @@ int httpd_respond_error (httpd_client_t * http, int status, const char * body) {
   if (http->state & HIN_REQ_ERROR) return 0;
   http->state &= ~(HIN_REQ_DATA | HIN_REQ_POST);
   http->state |= HIN_REQ_ERROR;
-  http->method = HIN_HTTP_GET;
+  http->method = HIN_METHOD_GET;
   return httpd_respond_text (http, status, body);
 }
 
@@ -239,7 +238,7 @@ int httpd_respond_fatal (httpd_client_t * http, int status, const char * body) {
   if (http->state & HIN_REQ_ERROR) return 0;
   http->state &= ~(HIN_REQ_DATA | HIN_REQ_POST);
   http->state |= HIN_REQ_ERROR;
-  http->method = HIN_HTTP_GET;
+  http->method = HIN_METHOD_GET;
   httpd_respond_text (http, status, body);
   httpd_client_shutdown (http);
   return 0;
@@ -249,7 +248,7 @@ int httpd_respond_fatal_and_full (httpd_client_t * http, int status, const char 
   if (http->state & HIN_REQ_ERROR) return 0;
   http->state &= ~(HIN_REQ_DATA | HIN_REQ_POST);
   http->state |= HIN_REQ_ERROR;
-  http->method = HIN_HTTP_GET;
+  http->method = HIN_METHOD_GET;
   httpd_respond_text (http, status, body);
   httpd_client_shutdown (http);
   return 0;
@@ -286,7 +285,7 @@ int httpd_respond_buffer (httpd_client_t * http, int status, hin_buffer_t * data
   header (buf, "\r\n");
   if (http->debug & DEBUG_RW) printf ("httpd %d buffer response %d '\n%.*s'\n", http->c.sockfd, buf->count, buf->count, buf->ptr);
 
-  if (http->method != HIN_HTTP_HEAD) {
+  if (http->method != HIN_METHOD_HEAD) {
     hin_buffer_t * last = buf;
     while (last->next) { last = last->next; }
     last->next = data;
@@ -319,7 +318,6 @@ int httpd_respond_redirect_https (httpd_client_t * http) {
   string_t source, line, path;
   source = http->headers;
   if (find_line (&source, &line) == 0 || match_string (&line, "%a+ ("HIN_HTTP_PATH_ACCEPT") HTTP/1.%d", &path) <= 0) {
-    printf ("httpd 400 error parsing request line '%.*s'\n", (int)line.len, line.ptr);
     return -1;
   }
 

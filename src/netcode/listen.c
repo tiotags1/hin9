@@ -316,7 +316,7 @@ just_use:
 
     if (hin_server_start_accept (server) < 0) {
       printf ("conf error\n");
-      exit (1);
+      return -1;
     }
   }
 

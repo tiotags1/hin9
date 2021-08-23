@@ -12,7 +12,10 @@ HIN_REQ_PROXY = 0x10, HIN_REQ_CGI = 0x20, HIN_REQ_FCGI = 0x40, HIN_REQ_END = 0x8
 HIN_REQ_ENDING = 0x100, HIN_REQ_ERROR = 0x200, HIN_REQ_ERROR_HANDLED = 0x400
 };
 
-enum { HIN_HTTP_GET = 1, HIN_HTTP_POST, HIN_HTTP_HEAD };
+enum {
+HIN_METHOD_GET = 0x10, HIN_METHOD_HEAD = 0x11,
+HIN_METHOD_POST = 0x20,
+};
 
 enum {
 HIN_HTTP_KEEPALIVE = 0x1, HIN_HTTP_RANGE = 0x2,
@@ -21,7 +24,7 @@ HIN_HTTP_CACHE = 0x10, HIN_HTTP_CHUNKED = 0x20,
 HIN_HTTP_DEFLATE = 0x40, HIN_HTTP_GZIP = 0x80,
 HIN_HTTP_VER0 = 0x100, HIN_HTTP_BANNER = 0x200,
 HIN_HTTP_CHUNKED_UPLOAD = 0x400, HIN_HTTP_LOCAL_CACHE = 0x800,
-HIN_HTTP_DATE = 0x1000,
+HIN_HTTP_DATE = 0x1000, HIN_HTTP_POST = 0x2000,
 };
 
 #define HIN_HTTP_COMPRESS (HIN_HTTP_DEFLATE|HIN_HTTP_GZIP)
@@ -92,6 +95,8 @@ typedef struct {
 
 #include <basic_pattern.h>
 #include <stdarg.h>
+
+int httpd_error (httpd_client_t * http, int status, const char * fmt, ...);
 
 int vheader (hin_buffer_t * buffer, const char * fmt, va_list ap);
 int header (hin_buffer_t * buffer, const char * fmt, ...);

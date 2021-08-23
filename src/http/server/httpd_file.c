@@ -122,7 +122,7 @@ int httpd_send_file (httpd_client_t * http, hin_cache_item_t * item, hin_buffer_
   if (item->type) { pipe->parent1 = item; }
 
   int httpd_pipe_set_chunked (httpd_client_t * http, hin_pipe_t * pipe);
-  if (http->status == 304 || http->method == HIN_HTTP_HEAD) {
+  if (http->status == 304 || http->method == HIN_METHOD_HEAD) {
     http->peer_flags &= ~(HIN_HTTP_CHUNKED | HIN_HTTP_COMPRESS);
   } else {
     httpd_pipe_set_chunked (http, pipe);
@@ -131,7 +131,7 @@ int httpd_send_file (httpd_client_t * http, hin_cache_item_t * item, hin_buffer_
   if ((http->peer_flags & HIN_HTTP_CHUNKED) == 0) {
     pipe->in.flags |= HIN_COUNT;
     pipe->left = pipe->sz = http->count;
-    if (http->status == 304 || http->method == HIN_HTTP_HEAD) {
+    if (http->status == 304 || http->method == HIN_METHOD_HEAD) {
       pipe->left = 0;
     }
   }
@@ -223,7 +223,7 @@ int httpd_handle_file_request (hin_client_t * client, const char * path, off_t p
   http->state |= HIN_REQ_DATA;
   http->peer_flags &= ~(HIN_HTTP_CHUNKED);
 
-  if (http->method == HIN_HTTP_POST) {
+  if (http->method == HIN_METHOD_POST) {
     printf ("httpd 405 post on a file resource\n");
     httpd_respond_fatal (http, 405, NULL);
     return 0;

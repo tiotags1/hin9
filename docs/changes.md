@@ -1,4 +1,11 @@
 
+* httpd added handling of multiple parameters in the connection header
+* httpd ability to disable POST serverwide
+* httpd added a more unified error handling
+* bugfix a remote denial of service bug found in the handling of chunked encoding could lead to the crash of the affected service (error handling used 'exit' instead of properly handling the error)
+* bugfix you can now post 0 length content, why would you do that I don't know but I've seen wordpress do it
+
+commit 133f98d11c56a92a76161f339608c15047b4f858
 * redirect folder '/folder' to '/folder/', added trailing '/' for URIs to folders
 * option to control if server sends redirects for URIs to folders with missing trailing '/'
 * added redirect function to lua

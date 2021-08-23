@@ -122,4 +122,19 @@ time_t hin_date_str_to_time (string_t * source) {
   return t;
 }
 
+int httpd_error (httpd_client_t * http, int status, const char * fmt, ...) {
+  va_list ap;
+  va_start (ap, fmt);
+
+  printf ("error! httpd %d %d ", http->c.sockfd, status);
+  vprintf (fmt, ap);
+  printf ("\n");
+
+  if (status)
+    httpd_respond_fatal (http, status, NULL);
+
+  va_end (ap);
+  return 0;
+}
+
 

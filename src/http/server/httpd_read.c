@@ -96,9 +96,9 @@ int httpd_client_read_callback (hin_buffer_t * buffer, int received) {
 
   int consume = 0;
   if (http->peer_flags & HIN_HTTP_CHUNKED_UPLOAD) {
-    printf ("TODO chunked upload later\n");
-    exit (1);
-  } else if (http->post_sz > 0) {
+    httpd_error (http, 411, "chunked upload currently disabled serverwide");
+    return -1;
+  } else if (http->method == HIN_METHOD_POST) {
     consume = source->len;
     if (consume > http->post_sz) consume = http->post_sz;
     httpd_client_start_post (http, source);
@@ -116,14 +116,12 @@ int httpd_client_read_callback (hin_buffer_t * buffer, int received) {
   http->peer_flags &= ~http->disable;
 
   if (http->state & HIN_REQ_END) {
-    printf ("httpd issued forced shutdown\n");
+    httpd_error (http, 0, "forced shutdown");
     return -1;
   } else if (http->peer_flags & http->disable & HIN_HTTP_CHUNKED_UPLOAD) {
-    printf ("httpd 411 chunked upload disabled\n");
-    httpd_respond_fatal (http, 411, NULL);
+    httpd_error (http, 411, "chunked upload disabled");
   } else if ((http->state & (HIN_REQ_DATA)) == 0) {
-    printf ("httpd 500 missing request %x\n", http->state);
-    httpd_respond_error (http, 500, NULL);
+    httpd_error (http, 500, "missing request");
     return -1;
   } else if (http->state & (HIN_REQ_ERROR)) {
   } else if ((http->state & HIN_REQ_CGI) && (http->state & HIN_REQ_POST)) {
