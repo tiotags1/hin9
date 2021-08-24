@@ -85,7 +85,7 @@ static int l_hin_get_server_option (lua_State *L) {
     lua_pushboolean (L, ret);
     return 1;
   } else {
-    printf ("get_otion unknown option '%s'\n", name);
+    printf ("get_server_option unknown '%s'\n", name);
     return 0;
   }
   return 0;
@@ -128,11 +128,13 @@ static int l_hin_set_server_option (lua_State *L) {
   } else if (strcmp (name, "cwd") == 0) {
     hin_server_set_work_dir (client, lua_tostring (L, 3));
     return 0;
+
   } else if (strcmp (name, "directory_listing") == 0) {
     int ret = lua_toboolean (L, 3);
     if (client->debug & DEBUG_CONFIG) printf ("lua server directory listing %s\n", ret ? "on" : "off");
     client->vhost_flags = (client->vhost_flags & (~HIN_DIRECTORY_LISTING)) | (HIN_DIRECTORY_LISTING * ret);
     return 0;
+
   } else if (strcmp (name, "directory_no_redirect") == 0) {
     int ret = lua_toboolean (L, 3);
     if (client->debug & DEBUG_CONFIG) printf ("lua server directory no redirect %s\n", ret ? "on" : "off");
@@ -140,7 +142,7 @@ static int l_hin_set_server_option (lua_State *L) {
     return 0;
 
   } else {
-    printf ("set_otion unknown option '%s'\n", name);
+    printf ("set_server_option unknown '%s'\n", name);
     return 0;
   }
   return 0;
@@ -172,7 +174,7 @@ static int l_hin_get_option (lua_State *L) {
     lua_pushboolean (L, ret);
     return 1;
   } else {
-    printf ("get_option unknown option '%s'\n", name);
+    printf ("get_option unknown '%s'\n", name);
     return 0;
   }
   return 0;
@@ -232,7 +234,24 @@ static int l_hin_set_option (lua_State *L) {
     }
     return 0;
   } else {
-    printf ("set_otion unknown option '%s'\n", name);
+    printf ("set_option unknown '%s'\n", name);
+    return 0;
+  }
+  return 0;
+}
+
+static int l_hin_set_global_option (lua_State *L) {
+  const char * name = lua_tostring (L, 1);
+  if (name == NULL) { printf ("option nil\n"); return 0; }
+
+  if (strcmp (name, "create_directory") == 0) {
+    int val = lua_toboolean (L, 2);
+    master.flags = (master.flags & (~HIN_CREATE_DIRECTORY)) | (HIN_CREATE_DIRECTORY * val);
+    if (master.debug & DEBUG_CONFIG) printf ("lua global %s %s\n", name, val ? "on" : "off");
+    return 0;
+
+  } else {
+    printf ("set_global_option unknown '%s'\n", name);
     return 0;
   }
   return 0;
@@ -243,6 +262,7 @@ static lua_function_t functs [] = {
 {"get_server_option",	l_hin_get_server_option },
 {"set_option",		l_hin_set_option },
 {"get_option",		l_hin_get_option },
+{"set_global_option",	l_hin_set_global_option },
 {NULL, NULL},
 };
 

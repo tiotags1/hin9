@@ -43,9 +43,12 @@ fpm_apps = {
 php = "tcp://localhost:9000",
 }
 
+--do_proxy = create_round_robin ("http://localhost:8080/", "http://localhost:8080/", "http://localhost:8080/")
+
 --set_server_option (main, "directory_listing", true)
 --set_server_option (main, "disable", "compress")
 --set_server_option (main, "disable", "keepalive")
 --set_server_option (main, "directory_no_redirect", true)
+set_global_option ("create_directory", true)
 
 

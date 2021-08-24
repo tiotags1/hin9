@@ -148,7 +148,7 @@ static int hin_cache_pipe_error_callback (hin_pipe_t * pipe) {
     httpd_client_t * http = queue->ptr;
     if (master.debug & DEBUG_CACHE) printf (" error to %d\n", http->c.sockfd);
     http->state &= ~HIN_REQ_DATA;
-    httpd_respond_error (http, 500, NULL);
+    httpd_error (http, 500, "error %d", 325346);
     hin_cache_unref (item);
     free (queue);
   }

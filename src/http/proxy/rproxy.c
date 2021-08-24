@@ -101,8 +101,7 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer, int receive
   off_t sz = 0;
   uint32_t flags = 0;
   if (find_line (&source, &line) == 0 || match_string (&line, "HTTP/1.([01]) (%d+) %w+", &param1, &param2) <= 0) {
-    printf ("proxy: error parsing header line '%.*s'\n", (int)line.len, line.ptr);
-    httpd_respond_fatal (http, 502, NULL);
+    httpd_error (http, 502, "proxy can't parse header '%.*s'", (int)line.len, line.ptr);
     return 0;
   }
 
@@ -122,8 +121,7 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer, int receive
       if (matchi_string_equal (&param1, "chunked") > 0) {
         http1->flags |= HIN_HTTP_CHUNKED;
       } else {
-        printf ("proxy: encoding type not supported '%.*s'\n", (int)param1.len, param1.ptr);
-        httpd_respond_fatal (http, 502, NULL);
+        httpd_error (http, 502, "proxy encoding not supported '%.*s'", (int)param1.len, param1.ptr);
         return 0;
       }
     } else if (match_string (&line, "Cache-Control:") > 0) {
@@ -285,8 +283,7 @@ int http_proxy_start_request (http_client_t * http, int ret) {
   httpd_client_t * parent = (httpd_client_t*)http->c.parent;
 
   if (ret < 0) {
-    printf ("proxy connection failed '%s'\n", strerror (-ret));
-    httpd_respond_error (parent, 502, NULL);
+    httpd_error (parent, 502, "proxy connection failed '%s'", strerror (-ret));
     httpd_proxy_close (http);
     return -1;
   }

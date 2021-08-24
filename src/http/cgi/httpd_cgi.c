@@ -70,8 +70,7 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
   http->state |= (HIN_REQ_DATA | HIN_REQ_CGI);
 
   if (!HIN_HTTPD_CGI_CHUNKED_UPLOAD && (http->peer_flags & HIN_HTTP_CHUNKED_UPLOAD)) {
-    printf ("cgi spec denies chunked upload\n");
-    httpd_respond_fatal (http, 411, NULL);
+    httpd_error (http, 411, "cgi spec denies chunked upload");
     return -1;
   }
 
@@ -86,14 +85,12 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
 
   int out_pipe[2];
   if (pipe (out_pipe) < 0) {
-    perror ("pipe");
-    httpd_respond_error (http, 500, NULL);
+    httpd_error (http, 500, "cgi pipe %s", strerror (errno));
     return -1;
   }
   int cwd_fd = dup (vhost->cwd_fd);
   if (cwd_fd < 0) {
-    perror ("dup");
-    httpd_respond_error (http, 500, NULL);
+    httpd_error (http, 500, "cgi dup %s", strerror (errno));
     return -1;
   }
 

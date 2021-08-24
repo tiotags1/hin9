@@ -73,8 +73,7 @@ int httpd_send_file (httpd_client_t * http, hin_cache_item_t * item, hin_buffer_
   }
 
   if (http->pos < 0 || http->pos > sz || http->pos + http->count > sz) {
-    printf ("http 416 error out of range\n");
-    httpd_respond_error (http, 416, NULL);
+    httpd_error (http, 416, "out of range %s %ld+%ld>%ld", http->file_path, http->pos, http->count, sz);
     httpd_close_filefd (http);
     return 0;
   }
@@ -169,8 +168,7 @@ static int httpd_statx_callback (hin_buffer_t * buf, int ret) {
   hin_client_t * client = (hin_client_t*)buf->parent;
   httpd_client_t * http = (httpd_client_t*)client;
   if (ret < 0) {
-    printf ("http 404 error can't open1 '%s': %s\n", http->file_path, strerror (-ret));
-    httpd_respond_error (http, 404, NULL);
+    httpd_error (http, 404, "can't open '%s': %s", http->file_path, strerror (-ret));
     httpd_close_filefd (http);
     return 1;
   }
@@ -199,10 +197,9 @@ static int httpd_open_filefd_callback (hin_buffer_t * buf, int ret) {
   hin_client_t * client = (hin_client_t*)buf->parent;
   httpd_client_t * http = (httpd_client_t*)client;
   if (ret < 0) {
-    printf ("http 404 error can't open '%s': %s\n", http->file_path, strerror (-ret));
     int hin_server_error_callback (hin_client_t * client, int error_code, const char * msg);
     if (hin_server_error_callback (client, 404, "can't open") == 0)
-      httpd_respond_error (http, 404, NULL);
+      httpd_error (http, 404, "can't open '%s': %s", http->file_path, strerror (-ret));
     return -1;
   }
   http->file_fd = ret;
@@ -224,8 +221,7 @@ int httpd_handle_file_request (hin_client_t * client, const char * path, off_t p
   http->peer_flags &= ~(HIN_HTTP_CHUNKED);
 
   if (http->method == HIN_METHOD_POST) {
-    printf ("httpd 405 post on a file resource\n");
-    httpd_respond_fatal (http, 405, NULL);
+    httpd_error (http, 405, "post on a file resource");
     return 0;
   }
 
@@ -233,11 +229,11 @@ int httpd_handle_file_request (hin_client_t * client, const char * path, off_t p
     basic_vfs_node_t * node = http->file;
     basic_vfs_file_t * file = basic_vfs_get_file (vfs, node);
     if (file == NULL) {
-      httpd_respond_fatal (http, 404, NULL);
+      httpd_error (http, 404, "can't open");
       return 0;
     }
     if (node->flags & BASIC_VFS_FORBIDDEN) {
-      httpd_respond_fatal (http, 403, NULL);
+      httpd_error (http, 403, "can't open");
       return 0;
     }
 
@@ -252,8 +248,7 @@ int httpd_handle_file_request (hin_client_t * client, const char * path, off_t p
     httpd_send_file (http, &item, NULL);
     return 0;
   } else if (path == NULL) {
-    printf ("httpd 404 no file path given\n");
-    httpd_respond_fatal (http, 404, NULL);
+    httpd_error (http, 404, "no file path given");
     return 0;
   }
 

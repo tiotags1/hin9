@@ -19,7 +19,7 @@ void hin_fcgi_socket_close (hin_fcgi_socket_t * socket) {
     hin_fcgi_worker_t * worker = socket->worker[i];
     if (worker == NULL) continue;
     if (worker->http) {
-      httpd_respond_fatal (worker->http, 500, NULL);
+      httpd_error (worker->http, 500, "fcgi socket closed");
     }
     worker->socket = NULL;
     hin_fcgi_worker_reset (worker);

@@ -1,4 +1,12 @@
 
+* httpd toggle to force requiring hostname like the http spec requires
+* httpd post-ing created a tmp file that wasn't being used
+* httpd new tests using raw netcat requests
+* httpd more error logging switched to new system
+* httpd added round robin proxying
+* now creates directory automatically for log files, and option to disable that
+
+commit 27d649787d27992afffc2b5e53cb7f84b53a55aa
 * httpd added handling of multiple parameters in the connection header
 * httpd ability to disable POST serverwide
 * httpd added a more unified error handling

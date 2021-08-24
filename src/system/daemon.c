@@ -11,27 +11,7 @@
 #include <syslog.h>
 
 #include "hin.h"
-
-char * hin_directory_path (const char * old, const char ** replace) {
-  if (replace && *replace) {
-    free ((void*)*replace);
-  }
-  int len = strlen (old);
-  char * new = NULL;
-  if (old[len-1] == '/') {
-    new = strdup (old);
-    goto done;
-  }
-  new = malloc (len + 2);
-  memcpy (new, old, len);
-  new[len] = '/';
-  new[len+1] = '\0';
-done:
-  if (replace) {
-    *replace = new;
-  }
-  return new;
-}
+#include "system/system.h"
 
 int hin_pidfile (const char * path) {
   int fd = openat (AT_FDCWD, path, O_WRONLY | O_CREAT | O_CLOEXEC | O_TRUNC, 0644);
@@ -107,7 +87,7 @@ int hin_daemonize () {
 
 
 int hin_redirect_log (const char * path) {
-  int fd = openat (AT_FDCWD, path, O_WRONLY | O_APPEND | O_CLOEXEC | O_CREAT, 0660);
+  int fd = hin_open_file_and_create_path (AT_FDCWD, path, O_WRONLY | O_APPEND | O_CLOEXEC | O_CREAT, 0660);
   if (fd < 0) {
     printf ("hin can't open log '%s' %s\n", path, strerror (errno));
     exit (1);
@@ -149,8 +129,8 @@ int hin_linux_set_limits () {
 
   if (new.rlim_cur < HIN_RLIMIT_MEMLOCK) {
     printf ("WARNING! low RLIMIT_MEMLOCK, possible crashes\n");
-    printf (" current: %ld\n", new.rlim_cur);
-    printf (" suggested: %ld\n", HIN_RLIMIT_MEMLOCK);
+    printf (" current: %lld\n", (long long)new.rlim_cur);
+    printf (" suggested: %lld\n", (long long)HIN_RLIMIT_MEMLOCK);
   }
 
   memset (&new, 0, sizeof (new));
@@ -161,7 +141,7 @@ int hin_linux_set_limits () {
   max = new.rlim_max;
   max = max > HIN_RLIMIT_NOFILE ? HIN_RLIMIT_NOFILE : max;
   if (master.debug & DEBUG_INFO)
-    printf ("rlimit NOFILE %ld/%ld/%ld\n", new.rlim_cur, max, new.rlim_max);
+    printf ("rlimit NOFILE %lld/%lld/%lld\n", (long long)new.rlim_cur, (long long)max, (long long)new.rlim_max);
 
   new.rlim_cur = max;
   if (setrlimit (RLIMIT_NOFILE, &new) < 0) {
@@ -169,5 +149,4 @@ int hin_linux_set_limits () {
   }
   return 0;
 }
-
 

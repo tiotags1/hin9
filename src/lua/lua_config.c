@@ -10,6 +10,7 @@
 #include "vhost.h"
 #include "system/ssl.h"
 #include "system/hin_lua.h"
+#include "system/system.h"
 
 #include <fcntl.h>
 
@@ -117,9 +118,9 @@ int hin_log_flush () {
 
 static int l_hin_create_log (lua_State *L) {
   const char * path = lua_tostring (L, 1);
-  int fd = openat (AT_FDCWD, path, O_WRONLY | O_APPEND | O_CLOEXEC | O_CREAT, 0660);
+  int fd = hin_open_file_and_create_path (AT_FDCWD, path, O_WRONLY | O_APPEND | O_CLOEXEC | O_CREAT, 0660);
   if (fd < 0) {
-    return luaL_error (L, "error! create_log '%s' %s\n", path, strerror (errno));
+    return luaL_error (L, "create_log '%s' %s\n", path, strerror (errno));
   }
 
   if (master.debug & DEBUG_CONFIG)

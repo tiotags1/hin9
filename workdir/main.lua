@@ -16,8 +16,8 @@ function default_onRequest_handler (req)
   set_option (req, "cache_key", path, "?", query)
 
   local app_path, sub_path = string.match (path, '^/(%w+)/?(.*)')
-  if (app_path == "proxy") then
-    return proxy (req, "http://localhost:28005/" .. (sub_path or ""))
+  if (app_path == "proxy" and do_proxy) then
+    return do_proxy (req, (sub_path or ""))
   elseif (app_path == "testing") then
     return cgi (req, php_bin, nil, "test.php")
   elseif (path == "/fcgi") then

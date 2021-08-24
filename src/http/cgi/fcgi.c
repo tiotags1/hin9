@@ -63,14 +63,12 @@ int hin_fastcgi (httpd_client_t * http, void * fcgi1, const char * script_path, 
 
   hin_fcgi_group_t * fcgi = fcgi1;
   if (fcgi == NULL || fcgi->magic != HIN_FCGI_MAGIC) {
-    printf ("error! fcgi group is invalid\n");
-    httpd_respond_fatal (http, 500, NULL);
+    httpd_error (http, 500, "fcgi invalid");
     return -1;
   }
 
   if (!HIN_HTTPD_CGI_CHUNKED_UPLOAD && (http->peer_flags & HIN_HTTP_CHUNKED_UPLOAD)) {
-    printf ("cgi spec denies chunked upload\n");
-    httpd_respond_fatal (http, 411, NULL);
+    httpd_error (http, 411, "cgi spec denies chunked upload");
     return -1;
   }
 
@@ -80,7 +78,7 @@ int hin_fastcgi (httpd_client_t * http, void * fcgi1, const char * script_path, 
 
   hin_fcgi_worker_t * worker = hin_fcgi_get_worker (fcgi);
   if (worker == NULL) {
-    printf ("error! worker null\n");
+    httpd_error (http, 500, "worker null");
     return -1;
   }
   worker->http = http;

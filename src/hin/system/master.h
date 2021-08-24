@@ -8,6 +8,7 @@
 
 enum {
 HIN_QUIT = 0x1, HIN_DAEMONIZE = 0x2, HIN_PRETEND = 0x4, HIN_RESTARTING = 0x8,
+HIN_CREATE_DIRECTORY = 0x10,
 };
 
 typedef struct hin_master_sock_struct {

@@ -224,11 +224,10 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer, int received) {
 }
 
 static int hin_cgi_headers_close_callback (hin_buffer_t * buffer, int ret) {
-  printf ("httpd cgi process failed %s\n", strerror (-ret));
   hin_fcgi_worker_t * worker = buffer->parent;
   httpd_client_t * http = worker->http;
+  httpd_error (http, 500, "cgi process failed %s", strerror (-ret));
   hin_fcgi_worker_free (worker);
-  httpd_respond_fatal (http, 500, NULL);
   return 1;
 }
 
@@ -251,7 +250,7 @@ int hin_cgi_send (httpd_client_t * http, hin_fcgi_worker_t * worker, int fd) {
   lines->eat_callback = hin_cgi_headers_eat_callback;
   lines->close_callback = hin_cgi_headers_close_callback;
   if (hin_request_read (buf) < 0) {
-    httpd_respond_fatal_and_full (http, 503, NULL);
+    httpd_error (http, 503, "error %d", 435776);
     return -1;
   }
   return 0;

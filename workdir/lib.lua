@@ -63,3 +63,18 @@ function redirect (req, uri, status)
   add_header (req, "Location", uri)
   return respond (req, status, nil)
 end
+
+function create_round_robin (...)
+  local arg = {...}
+  if (#arg < 1) then return nil end
+  local n = 1
+  return function (req, url)
+    local value = arg[n]
+    printf ("round robin at %d %s\n", n, value)
+    n = n + 1
+    if (n > #arg) then n = 1 end
+    return proxy (req, value .. url)
+  end
+end
+
+

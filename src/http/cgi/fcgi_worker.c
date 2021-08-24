@@ -60,7 +60,7 @@ void hin_fcgi_worker_run (hin_fcgi_worker_t * worker) {
   if (socket->fd < 0) {
     if (socket->queued) {
       // TODO lazy atm, should queue
-      httpd_respond_error (worker->http, 501, "lazy");
+      httpd_error (worker->http, 501, "fcgi worker should queue");
       return ;
     }
     socket->queued = worker;

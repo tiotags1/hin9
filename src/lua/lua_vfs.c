@@ -124,20 +124,20 @@ finalize:
 int l_hin_list_dir (lua_State *L) {
   httpd_client_t * http = (httpd_client_t*)lua_touserdata (L, 1);
   if (http == NULL || http->c.magic != HIN_CLIENT_MAGIC) {
-    printf ("lua list_dir need a valid client\n");
+    httpd_error (http, 500, "invalid client");
     return 0;
   }
 
   basic_vfs_node_t * node = http->file;
   basic_vfs_dir_t * dir = basic_vfs_get_dir (vfs, node);
   if (dir == NULL) {
-    printf ("error! list dir on non-directory\n");
+    httpd_error (http, 500, "non-directory");
     return 0;
   }
 
   hin_vhost_t * vhost = http->vhost;
   if ((node->flags & BASIC_VFS_FORBIDDEN) || !(vhost->vhost_flags & HIN_DIRECTORY_LISTING)) {
-    httpd_respond_fatal (http, 403, NULL);
+    httpd_error (http, 403, "EPERM");
     return 0;
   }
 

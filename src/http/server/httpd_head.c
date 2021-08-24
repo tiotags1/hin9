@@ -104,7 +104,7 @@ int httpd_parse_headers (httpd_client_t * http, string_t * source) {
   *source = orig;
 
   if (HIN_HTTPD_OVERLOAD_ERROR && hin_request_is_overloaded ()) {
-    httpd_respond_fatal (http, 503, NULL);
+    httpd_error (http, 503, "overload");
     return -1;
   }
 
@@ -145,7 +145,7 @@ int httpd_parse_headers (httpd_client_t * http, string_t * source) {
     if (httpd_parse_headers_line (http, &line) < 0) {
       *source = orig;
       if (http->status == 200) {
-        httpd_respond_fatal (http, 400, NULL);
+        httpd_error (http, 400, "shouldn't happen");
       }
       return -1;
     }
@@ -156,6 +156,10 @@ int httpd_parse_headers (httpd_client_t * http, string_t * source) {
   }
   if (http->post_sz < 0) {
     http->post_sz = 0;
+  }
+  if (HIN_HTTPD_ERROR_MISSING_HOSTNAME && (http->peer_flags & HIN_HTTP_VER0) == 0 && http->hostname == NULL) {
+    httpd_error (http, 400, "missing hostname");
+    return -1;
   }
   if (http->peer_flags & http->disable & HIN_HTTP_POST) {
     httpd_error (http, 403, "post disabled");

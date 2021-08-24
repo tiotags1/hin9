@@ -36,8 +36,10 @@ static int post_done (hin_pipe_t * pipe) {
 }
 
 static int httpd_client_start_post (httpd_client_t * http, string_t * source) {
-  http->post_fd = openat (AT_FDCWD, HIN_HTTPD_POST_DIRECTORY, O_RDWR | O_TMPFILE, 0600);
-  if (http->post_fd < 0) { printf ("openat tmpfile failed %s\n", strerror (errno)); return -1; }
+  if (http->state & HIN_REQ_CGI) {
+    http->post_fd = openat (AT_FDCWD, HIN_HTTPD_POST_DIRECTORY, O_RDWR | O_TMPFILE, 0600);
+    if (http->post_fd < 0) { printf ("openat tmpfile failed %s\n", strerror (errno)); return -1; }
+  }
   http->state |= HIN_REQ_POST;
   return 0;
 }
@@ -98,10 +100,9 @@ int httpd_client_read_callback (hin_buffer_t * buffer, int received) {
   if (http->peer_flags & HIN_HTTP_CHUNKED_UPLOAD) {
     httpd_error (http, 411, "chunked upload currently disabled serverwide");
     return -1;
-  } else if (http->method == HIN_METHOD_POST) {
+  } else if (http->method & HIN_METHOD_POST) {
     consume = source->len;
     if (consume > http->post_sz) consume = http->post_sz;
-    httpd_client_start_post (http, source);
     used += consume;
   }
 
@@ -113,6 +114,10 @@ int httpd_client_read_callback (hin_buffer_t * buffer, int received) {
   int hin_server_callback (hin_client_t * client);
   hin_server_callback (client);
 
+  if (http->method & HIN_METHOD_POST) {
+    httpd_client_start_post (http, source);
+  }
+
   http->peer_flags &= ~http->disable;
 
   if (http->state & HIN_REQ_END) {
@@ -120,6 +125,7 @@ int httpd_client_read_callback (hin_buffer_t * buffer, int received) {
     return -1;
   } else if (http->peer_flags & http->disable & HIN_HTTP_CHUNKED_UPLOAD) {
     httpd_error (http, 411, "chunked upload disabled");
+    return -1;
   } else if ((http->state & (HIN_REQ_DATA)) == 0) {
     httpd_error (http, 500, "missing request");
     return -1;
