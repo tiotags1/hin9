@@ -120,7 +120,7 @@ int hin_linux_set_limits () {
   max = new.rlim_max;
   max = max > HIN_RLIMIT_MEMLOCK ? HIN_RLIMIT_MEMLOCK : max;
   if (master.debug & DEBUG_INFO)
-    printf ("rlimit MEMLOCK %ld/%ld/%ld\n", new.rlim_cur, max, new.rlim_max);
+    printf ("rlimit MEMLOCK %lld/%lld/%lld\n", (long long)new.rlim_cur, (long long)max, (long long)new.rlim_max);
 
   new.rlim_cur = max;
   if (setrlimit (RLIMIT_MEMLOCK, &new) < 0) {

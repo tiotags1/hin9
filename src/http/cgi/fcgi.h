@@ -35,8 +35,16 @@ typedef struct __attribute__((__packed__)) {
   uint8_t padding;
   uint8_t reserved;
   uint8_t data[];
-  //uint8_t paddingData[]; paddingLength
 } FCGI_Header;
+
+typedef struct __attribute__((__packed__)) {
+  uint8_t version;
+  uint8_t type;
+  uint16_t request_id;
+  uint16_t length;
+  uint8_t padding;
+  uint8_t reserved;
+} FCGI_Header_int;
 
 typedef struct __attribute__((__packed__)) {
   uint16_t role;
@@ -45,7 +53,7 @@ typedef struct __attribute__((__packed__)) {
 } FCGI_BeginRequestBody;
 
 typedef struct __attribute__((__packed__)) {
-  FCGI_Header header;
+  FCGI_Header_int header;
   FCGI_BeginRequestBody body;
 } FCGI_BeginRequestRecord;
 

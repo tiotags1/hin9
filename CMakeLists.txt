@@ -6,7 +6,7 @@ project (hin9)
 find_package (Lua REQUIRED)
 include_directories (${LUA_INCLUDE_DIR})
 
-add_definitions (-D_GNU_SOURCE -D_LARGEFILE_SOURCE -O2 -fno-omit-frame-pointer -Wall -Werror=vla)
+add_definitions (-D_GNU_SOURCE -D_LARGEFILE_SOURCE -O2 -Wall -Werror=vla)
 
 include_directories ("src/hin/" "src/hin/http/" "external/basic/" "external/basic/vfs/")
 

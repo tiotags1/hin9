@@ -1,4 +1,8 @@
 
+* removed some of the gcc -Wextra -pedantic warnings
+* fixed debug level argument parsing
+
+commit d5942e9253436a8f3c60f414b04f274779ec0ff0
 * httpd toggle to force requiring hostname like the http spec requires
 * httpd post-ing created a tmp file that wasn't being used
 * httpd new tests using raw netcat requests

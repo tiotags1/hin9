@@ -169,11 +169,12 @@ int hin_process_argv (basic_args_t * args, const char * name) {
     int nr = atoi (path);
     master.debug = 0;
     switch (nr) {
-    case 0: master.debug |= DEBUG_BASIC;
-    case 1: master.debug |= DEBUG_CONFIG|DEBUG_SOCKET|DEBUG_RW_ERROR;
-    case 2: master.debug |= DEBUG_HTTP|DEBUG_CGI|DEBUG_PROXY;
-    case 3 ... 4:
     case 5: master.debug = 0xffffffff; break;
+    case 4: // fall through
+    case 3: // fall through
+    case 2: master.debug |= DEBUG_HTTP|DEBUG_CGI|DEBUG_PROXY; // fall through
+    case 1: master.debug |= DEBUG_CONFIG|DEBUG_SOCKET|DEBUG_RW_ERROR; // fall through
+    case 0: master.debug |= DEBUG_BASIC; break;
     default: printf ("unkown loglevel '%s'\n", path); return -1; break;
     }
     hin_vhost_set_debug (master.debug);
@@ -265,10 +266,7 @@ int main (int argc, const char * argv[], const char * envp[]) {
   void * hin_cache_create ();
   hin_cache_create ();
 
-  //http_download ("http://localhost:28005/cgi-bin/test.php", "/tmp/dl.txt", NULL);
-  //http_download ("https://localhost:28006/cgi-bin/test.php", "/tmp/dl.txt", NULL);
   //http_download ("http://localhost:28005/", "/tmp/dl.txt", NULL);
-  //http_download ("https://localhost:28006/", "/tmp/dl.txt", NULL);
 
   void hin_event_loop ();
   hin_event_loop ();
@@ -278,6 +276,5 @@ int main (int argc, const char * argv[], const char * envp[]) {
 
   return 0;
 }
-
 
 

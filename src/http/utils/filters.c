@@ -42,14 +42,14 @@ int hin_pipe_decode_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, 
   while (1) {
     if (pipe->debug & DEBUG_HTTP_FILTER) printf ("  chunk sz left %lld\n", (long long)decode->chunk_sz);
     if (decode->chunk_sz > 0) {
-      int consume = decode->chunk_sz;
+      uintptr_t consume = decode->chunk_sz;
       if (consume > source.len) consume = source.len;
       if (pipe->debug & DEBUG_HTTP_FILTER) printf ("  chunk consume %d\n", consume);
       hin_buffer_t * buf = hin_pipe_get_buffer (pipe, consume);
       memcpy (buf->ptr, source.ptr, consume);
       if (pipe->read_callback (pipe, buf, consume, 0))
         hin_buffer_clean (buf);
-      if (decode->chunk_sz > consume) {
+      if (decode->chunk_sz > (off_t)consume) {
         // want more;
         decode->chunk_sz -= consume;
         return 1;
@@ -124,7 +124,7 @@ int hin_pipe_copy_deflate (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, in
         }
 
         int num = snprintf (numbuf, sizeof (numbuf), "%x\r\n", have);
-        if (num < 0 || num >= sizeof (numbuf)) { printf ("weird error\n"); }
+        if (num < 0 || num >= (int)sizeof (numbuf)) { printf ("weird error\n"); }
         int offset = sizeof (numbuf) - num;
         char * ptr = new->buffer + offset;
         memcpy (ptr, numbuf, num);

@@ -79,7 +79,7 @@ int l_hin_set_path (lua_State *L) {
   lua_pushlstring (L, parent->path, parent->path_len);
   lua_pushlstring (L, node->name, node->name_len);
 
-finalize:
+finalize: ;
   int nret = 2;
 
   char * ext = NULL;
@@ -104,8 +104,7 @@ finalize:
   nret++;
 
   if (is_dir && ((vhost->vhost_flags & HIN_DIRECTORY_NO_REDIRECT) == 0)) {
-    if (path.len >= 0)
-      orig.len -= path.len;
+    orig.len -= path.len;
     const char * ptr = orig.ptr + orig.len - 1;
     if (*ptr != '/') {
       char * new = malloc (orig.len + 2);

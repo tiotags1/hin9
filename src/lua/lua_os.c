@@ -94,7 +94,7 @@ static int l_hin_exec (lua_State *L) {
   lua_pushstring (L, "argv");
   lua_gettable (L, 1);
   if (lua_type (L, -1) == LUA_TTABLE) {
-    size_t len = hin_lua_rawlen (L, -1);
+    int len = hin_lua_rawlen (L, -1);
     argv = malloc ((len + 1) * sizeof (char *));
     for (int i = 1; i <= len; i++) {
       lua_rawgeti (L, -1, i);

@@ -120,7 +120,7 @@ int l_hin_add_vhost (lua_State *L) {
   lua_pushstring (L, "socket");
   lua_gettable (L, 1);
   if (lua_type (L, -1) == LUA_TTABLE) {
-    size_t sz = hin_lua_rawlen (L, -1);
+    int sz = hin_lua_rawlen (L, -1);
     for (int i = 1; i <= sz; i++) {
       lua_rawgeti (L, -1, i);
       if (l_hin_add_socket (L, vhost, lua_gettop (L)) >= 0) {
@@ -144,7 +144,7 @@ int l_hin_add_vhost (lua_State *L) {
   lua_pushstring (L, "host");
   lua_gettable (L, 1);
   if (lua_type (L, -1) == LUA_TTABLE) {
-    size_t sz = hin_lua_rawlen (L, -1);
+    int sz = hin_lua_rawlen (L, -1);
     for (int i = 1; i <= sz; i++) {
       lua_rawgeti (L, -1, i);
       const char * name = lua_tolstring (L, -1, &len);

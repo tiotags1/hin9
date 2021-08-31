@@ -57,7 +57,7 @@ static int hin_fcgi_pipe_end (hin_fcgi_worker_t * worker, FCGI_Header * head) {
 
 int hin_fcgi_read_rec (hin_buffer_t * buf, char * ptr, int left) {
   FCGI_Header * head = (FCGI_Header*)ptr;
-  if (left < sizeof (*head)) return 0;
+  if (left < (int)sizeof (*head)) return 0;
   int len = endian_swap16 (head->length);
   int total = len + sizeof (*head) + head->padding;
   if (left < total) {

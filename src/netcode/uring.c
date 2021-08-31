@@ -231,7 +231,7 @@ int hin_request_statx (hin_buffer_t * buffer, int dfd, const char * path, int fl
   }
 
   struct io_uring_sqe *sqe = hin_request_sqe ();
-  if (buffer->count < sizeof (struct statx)) { printf ("need more space inside buffer to statx\n"); return -1; }
+  if (buffer->count < (int)sizeof (struct statx)) { printf ("need larger buffer for statx\n"); return -1; }
   io_uring_prep_statx (sqe, dfd, path, flags, mask, (struct statx *)buffer->ptr);
   io_uring_sqe_set_data (sqe, buffer);
   io_uring_submit1 (&ring);

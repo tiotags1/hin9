@@ -74,7 +74,7 @@ int httpd_vhost_switch (httpd_client_t * http, hin_vhost_t * vhost) {
 
 int httpd_vhost_request (httpd_client_t * http, const char * name, int len) {
   if (http->hostname) {
-    if (strncmp (http->hostname, name, len) == 0 && len == strlen (http->hostname))
+    if (strncmp (http->hostname, name, len) == 0 && len == (int)strlen (http->hostname))
       return 0;
     return -1;
   }

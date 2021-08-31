@@ -63,7 +63,7 @@ static int param (hin_buffer_t * buf, const char * name, const char * fmt, ...) 
 static int param_header (hin_buffer_t * buf, const char * name, int name_len, const char * value, int value_len) {
   char buffer[128];
   int len = snprintf (buffer, sizeof buffer, "HTTP_%.*s", name_len, name);
-  if (len >= sizeof (buffer)) {
+  if (len >= (int)sizeof (buffer)) {
     printf ("header name '%.*s' too long\n", name_len, name);
     return 0;
   }

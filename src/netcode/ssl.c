@@ -220,6 +220,7 @@ static int hin_ssl_check_data (hin_ssl_t * ssl, hin_buffer_t * crypt) {
     //printf ("ssl ok old ???\n");
   break;
   default: printf ("ssl fail default\n");
+    // fall through
   case SSL_STATUS_FAIL:
     printf ("ssl status fail\n");
     hin_buffer_clean (crypt);

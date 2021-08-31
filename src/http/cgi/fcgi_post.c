@@ -65,7 +65,7 @@ int hin_fcgi_write_post (hin_buffer_t * buf, hin_fcgi_worker_t * worker) {
     if (find_line (&source, &line) == 0) { return 0; }
     if (line.len == 0) break;
   }
-  if (source.len > http->post_sz) {
+  if (source.len > (uintptr_t)http->post_sz) {
     source.len = http->post_sz;
   }
 
