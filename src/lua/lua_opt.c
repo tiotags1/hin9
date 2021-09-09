@@ -250,6 +250,12 @@ static int l_hin_set_global_option (lua_State *L) {
     if (master.debug & DEBUG_CONFIG) printf ("lua global %s %s\n", name, val ? "on" : "off");
     return 0;
 
+  } else if (strcmp (name, "verbose_errors") == 0) {
+    int val = lua_toboolean (L, 2);
+    master.flags = (master.flags & (~HIN_VERBOSE_ERRORS)) | (HIN_VERBOSE_ERRORS * val);
+    if (master.debug & DEBUG_CONFIG) printf ("lua global %s %s\n", name, val ? "on" : "off");
+    return 0;
+
   } else {
     printf ("set_global_option unknown '%s'\n", name);
     return 0;

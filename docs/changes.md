@@ -1,4 +1,11 @@
 
+* added download mode, where it downloads files and then exits
+* made old cgi and reverse proxy code optional for extra small server
+* httpd added verbose error messages and a config to control it
+* fixed crashes if uring is used before program initialization
+* testing -Os vs -O2
+
+commit f04d7703f6cdbd2e33f8a7289d80a01dba5e970f
 * removed some of the gcc -Wextra -pedantic warnings
 * fixed debug level argument parsing
 

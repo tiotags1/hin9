@@ -29,6 +29,14 @@ HIN_HTTP_DATE = 0x1000, HIN_HTTP_POST = 0x2000,
 
 #define HIN_HTTP_COMPRESS (HIN_HTTP_DEFLATE|HIN_HTTP_GZIP)
 
+enum {
+HIN_HTTP_STATE_NIL,
+HIN_HTTP_STATE_CONNECTED, HIN_HTTP_STATE_CONNECTION_FAILED,
+HIN_HTTP_STATE_HEADERS, HIN_HTTP_STATE_HEADERS_FAILED,
+HIN_HTTP_STATE_FINISH,
+HIN_HTTP_STATE_ERROR,
+};
+
 typedef struct {
   char * name;
   char * file_name;
@@ -75,19 +83,21 @@ typedef struct {
   char * file_path;
 } httpd_client_t;
 
-typedef struct {
+typedef struct http_client_struct {
   hin_client_t c;
   uint32_t flags;
   uint32_t io_state;
   hin_uri_t uri;
   char * host, * port;
 
-  char * save_path;
   int save_fd;
   off_t sz;
 
   uint32_t debug;
   hin_buffer_t * read_buffer;
+
+  int (*state_callback) (struct http_client_struct * http, uint32_t state);
+  int (*read_callback) (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush);
 } http_client_t;
 
 // TODO no [], pending changes to match_pattern
@@ -142,6 +152,9 @@ int httpd_request_chunked (httpd_client_t * http);
 int hin_cache_save (void * store, hin_pipe_t * pipe);
 int hin_cache_finish (httpd_client_t * client, hin_pipe_t * pipe);
 int hin_cache_check (void * store, httpd_client_t * client);
+
+// internal
+int hin_http_state (http_client_t * http, int state);
 
 #include "utils.h"
 

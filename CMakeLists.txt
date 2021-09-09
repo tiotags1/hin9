@@ -6,7 +6,7 @@ project (hin9)
 find_package (Lua REQUIRED)
 include_directories (${LUA_INCLUDE_DIR})
 
-add_definitions (-D_GNU_SOURCE -D_LARGEFILE_SOURCE -O2 -Wall -Werror=vla)
+add_definitions (-D_GNU_SOURCE -D_LARGEFILE_SOURCE -Os -Wall -Werror=vla)
 
 include_directories ("src/hin/" "src/hin/http/" "external/basic/" "external/basic/vfs/")
 
@@ -17,6 +17,14 @@ set (TARGET_LIBS ${TARGET_LIBS} ${LUA_LIBRARIES} uring z)
 if (USE_OPENSSL)
   add_definitions (-DHIN_USE_OPENSSL)
   set (TARGET_LIBS ${TARGET_LIBS} crypto ssl)
+ENDIF()
+
+if (USE_CGI)
+  add_definitions (-DHIN_USE_CGI)
+ENDIF()
+
+if (USE_RPROXY)
+  add_definitions (-DHIN_USE_RPROXY)
 ENDIF()
 
 set (external_src
@@ -43,9 +51,10 @@ src/http/cgi/fcgi_util.c
 src/http/cgi/fcgi_worker.c
 src/http/cgi/cgi_parse.c
 src/http/cgi/httpd_cgi.c
-src/http/client/dl_head.c
-src/http/client/dl_req.c
 src/http/client/dl_client.c
+src/http/client/download.c
+src/http/client/headers.c
+src/http/client/data.c
 src/http/utils/http_utils.c
 src/http/utils/http_misc.c
 src/http/utils/filters.c
@@ -88,5 +97,7 @@ target_link_libraries (hin9 ${TARGET_LIBS})
 
 add_executable (hin9_pid_helper external/tools/pid_helper.c)
 
+install(TARGETS hin9 DESTINATION sbin)
+install(TARGETS hin9_pid_helper DESTINATION bin)
 
 

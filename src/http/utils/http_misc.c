@@ -123,15 +123,31 @@ time_t hin_date_str_to_time (string_t * source) {
 }
 
 int httpd_error (httpd_client_t * http, int status, const char * fmt, ...) {
-  va_list ap;
+  va_list ap, ap1;
   va_start (ap, fmt);
+  va_copy (ap1, ap);
 
   printf ("error! httpd %d %d ", http->c.sockfd, status);
   vprintf (fmt, ap);
   printf ("\n");
 
-  if (status)
-    httpd_respond_fatal (http, status, NULL);
+  if (status == 0) {
+    va_end (ap);
+    return 0;
+  }
+
+  char * body = NULL;
+  if (master.flags & HIN_VERBOSE_ERRORS) {
+    char * msg = NULL;
+    if (vasprintf ((char**)&msg, fmt, ap1) < 0) {
+      perror ("asprintf");
+    }
+    if (asprintf ((char**)&body, "<html><head></head><body><h1>Error %d: %s</h1><p>%s</p></body></html>\n", status, http_status_name (status), msg) < 0)
+      perror ("asprintf");
+    free (msg);
+  }
+  httpd_respond_fatal (http, status, body);
+  if (body) free (body);
 
   va_end (ap);
   return 0;

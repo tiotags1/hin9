@@ -190,6 +190,11 @@ int lua_init () {
 }
 
 int hin_conf_load (const char * path) {
+  if (master.flags & HIN_SKIP_CONFIG) return 0;
+
+  if (master.debug & DEBUG_CONFIG)
+    printf ("loading config '%s'\n", master.conf_path);
+
   if (run_file (internal_lua, path)) {
     printf ("can't load config at '%s'\n", path);
     return -1;

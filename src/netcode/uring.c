@@ -44,7 +44,9 @@ static inline int hin_request_callback (hin_buffer_t * buf, int ret) {
 }
 
 static inline struct io_uring_sqe * hin_request_sqe () {
-  struct io_uring_sqe *sqe = io_uring_get_sqe (&ring);
+  struct io_uring_sqe *sqe = NULL;
+  if (ring.ring_fd > 0)
+   sqe = io_uring_get_sqe (&ring);
   if (sqe == NULL) {
     hin_sqe_que_t * new = calloc (1, sizeof (*new));
     sqe = &new->sqe;
@@ -292,9 +294,13 @@ int hin_event_init () {
     exit (1);
   }
   #endif
+
   #if HIN_HTTPD_NULL_SERVER
   hin_generate_buffers ();
   #endif
+
+  hin_process_sqe_queue ();
+
   return 1;
 }
 

@@ -6,8 +6,6 @@ HOSTS=localhost:8081
 
 HTDOCS=htdocs/tests/
 
-PROXY=
-
 PARAMS="-q -k"
 
 build/hin9 --quiet &

@@ -128,16 +128,20 @@ static int l_hin_send_file (lua_State *L) {
 }
 
 static int l_hin_proxy (lua_State *L) {
-  hin_client_t *client = (hin_client_t*)lua_touserdata (L, 1);
-  if (client == NULL || client->magic != HIN_CLIENT_MAGIC) {
+  httpd_client_t *http = (httpd_client_t*)lua_touserdata (L, 1);
+  if (http == NULL || http->c.magic != HIN_CLIENT_MAGIC) {
     printf ("lua hin_proxy need a valid client\n");
     return 0;
   }
+  #ifdef BASIC_USE_PROXY
   const char * url = lua_tostring (L, 2);
   if (url == NULL) { printf ("no path supplied\n"); return 0; }
 
-  int hin_proxy (hin_client_t * client, const char * url);
-  hin_proxy (client, url);
+  int hin_proxy (httpd_client_t * client, const char * url);
+  hin_proxy (http, url);
+  #else
+  httpd_error (http, 500, "no rproxy compiled");
+  #endif
 
   return 1;
 }
@@ -148,7 +152,7 @@ static int l_hin_cgi (lua_State *L) {
     printf ("lua hin_cgi need a valid client\n");
     return 0;
   }
-
+  #ifdef HIN_USE_CGI
   const char * exe_path = lua_tostring (L, 2);
   const char * root_path = lua_tostring (L, 3);
   const char * script_path = lua_tostring (L, 4);
@@ -157,6 +161,9 @@ static int l_hin_cgi (lua_State *L) {
 
   if (hin_cgi (http, exe_path, root_path, script_path, path_info) < 0) {
   }
+  #else
+  httpd_error (http, 500, "no cgi compiled");
+  #endif
   return 0;
 }
 

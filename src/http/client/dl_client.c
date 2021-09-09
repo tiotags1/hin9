@@ -12,11 +12,10 @@ int http_client_headers_read_callback (hin_buffer_t * buffer, int received);
 
 void http_client_clean (http_client_t * http) {
   if (http->debug & DEBUG_MEMORY) printf ("http %d clean\n", http->c.sockfd);
-  if (http->save_path) free ((void*)http->save_path);
   if (http->uri.all.ptr) free ((void*)http->uri.all.ptr);
   if (http->host) free (http->host);
   if (http->port) free (http->port);
-  http->host = http->port = http->save_path = NULL;
+  http->host = http->port = NULL;
   if (http->save_fd) {
     if (http->debug & DEBUG_SYSCALL) printf ("  close save_fd %d\n", http->save_fd);
     close (http->save_fd);
@@ -106,22 +105,6 @@ void httpd_proxy_connection_close_all () {
   }
 }
 
-int http_client_start_request (http_client_t * http, int ret) {
-  if (ret < 0) {
-    printf ("can't connect '%s'\n", strerror (-ret));
-    return -1;
-  }
-  if (http->debug & DEBUG_HTTP) printf ("http %d request begin\n", ret);
-
-  hin_lines_t * lines = (hin_lines_t*)&http->read_buffer->buffer;
-  lines->read_callback = http_client_headers_read_callback;
-  lines->close_callback = http_client_buffer_close;
-
-  int http_send_request (http_client_t * http);
-  http_send_request (http);
-  return 0;
-}
-
 int http_client_finish_request (http_client_t * http) {
   if (http->debug & DEBUG_HTTP) printf ("http %d request done\n", http->c.sockfd);
   if (HIN_HTTPD_PROXY_CONNECTION_REUSE && http->read_buffer) {
@@ -207,33 +190,6 @@ http_client_t * hin_http_connect (http_client_t * prev, string_t * host, string_
 
   int ret = hin_connect (http->host, http->port, &connected, http, &http->c.ai_addr, &http->c.ai_addrlen);
   if (ret < 0) { printf ("http %d can't create connection\n", http->c.sockfd); return NULL; }
-
-  return http;
-}
-
-http_client_t * http_download (const char * url1, const char * save_path, int (*read_callback) (hin_buffer_t * buffer, int num, int flush)) {
-  printf ("http download '%s' to '%s'\n", url1, save_path);
-  hin_uri_t info;
-  char * url = strdup (url1);
-  if (hin_parse_uri (url, 0, &info) < 0) {
-    printf ("can't parse uri '%s'\n", url1);
-    return NULL;
-  }
-
-  http_client_t * http = calloc (1, sizeof (*http));
-  http->c.parent = NULL;
-  http->uri = info;
-  http->save_path = strdup (save_path);
-  http->debug = master.debug;
-
-  http->host = strndup (info.host.ptr, info.host.len);
-  if (info.port.len > 0) {
-    http->port = strndup (info.port.ptr, info.port.len);
-  } else {
-    http->port = strdup ("80");
-  }
-
-  http = hin_http_connect (http, &info.host, &info.port, http_client_start_request);
 
   return http;
 }

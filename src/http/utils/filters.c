@@ -44,7 +44,7 @@ int hin_pipe_decode_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, 
     if (decode->chunk_sz > 0) {
       uintptr_t consume = decode->chunk_sz;
       if (consume > source.len) consume = source.len;
-      if (pipe->debug & DEBUG_HTTP_FILTER) printf ("  chunk consume %d\n", consume);
+      if (pipe->debug & DEBUG_HTTP_FILTER) printf ("  chunk consume %lld\n", (long long)consume);
       hin_buffer_t * buf = hin_pipe_get_buffer (pipe, consume);
       memcpy (buf->ptr, source.ptr, consume);
       if (pipe->read_callback (pipe, buf, consume, 0))

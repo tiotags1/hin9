@@ -20,6 +20,8 @@
 
 #include "fcgi.h"
 
+#ifdef HIN_USE_CGI
+
 typedef struct {
   int pos;
   int num;
@@ -274,4 +276,6 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
   perror ("execvpe");
   exit (-1);
 }
+
+#endif
 

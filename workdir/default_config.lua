@@ -50,5 +50,6 @@ php = "tcp://localhost:9000",
 --set_server_option (main, "disable", "keepalive")
 --set_server_option (main, "directory_no_redirect", true)
 set_global_option ("create_directory", true)
+--set_global_option ("verbose_errors", true)
 
 

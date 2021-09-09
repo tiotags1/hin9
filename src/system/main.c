@@ -56,7 +56,8 @@ void hin_clean () {
 
   //close (0); close (1); close (2);
 
-  printf ("hin close ...\n");
+  if (master.debug & DEBUG_BASIC)
+    printf ("hin close ...\n");
   #ifdef BASIC_USE_MALLOC_DEBUG
   printf ("num fds open %d\n", print_fds ());
   print_unfree ();
@@ -65,21 +66,26 @@ void hin_clean () {
 
 static void print_help () {
   printf ("usage hinsightd [OPTION]...\n\
- --version: prints version information\n\
- --config <path>: sets config path\n\
- --tmpdir <path>: sets tmp dir path\n\
- --logdir <path>: sets log dir path\n\
- --workdir <path>: sets current directory\n\
- --check: checks config file and exits\n\
- --pidfile <path>: prints pid to file, used for daemons\n\
- --daemonize: used to make daemons\n\
- --quiet: print only error messages\n\
- --verbose: print lots of irrelevant information\n\
- --loglevel <nr>: 0 prints only errors, 5 prints everything\n\
- --debugmask 0x<nr>: debugmask in hex\n\
- --reuse <nr>: used for graceful restart, should never be used otherwise\n\
+ -d --download: download file and exit\n\
+ -o --output: set path where to save file\n\
+ -v --version: prints version information\n\
+    --config <path>: sets config path\n\
+    --tmpdir <path>: sets tmp dir path\n\
+    --logdir <path>: sets log dir path\n\
+    --workdir <path>: sets current directory\n\
+    --check: checks config file and exits\n\
+    --pidfile <path>: prints pid to file, used for daemons\n\
+    --daemonize: spawn a daemon from this process's zombie\n\
+ -q --quiet: print only error messages\n\
+ -V --verbose: print lots of irrelevant information\n\
+    --loglevel <nr>: 0 prints only errors, 5 prints everything\n\
+    --debugmask 0x<nr>: debugmask in hex\n\
+    --reuse <nr>: used for graceful restart, should never be used otherwise\n\
+ -h --help: print this help\n\
 ");
 }
+
+static http_client_t * current_download = NULL;
 
 int hin_process_argv (basic_args_t * args, const char * name) {
   if (basic_args_cmp (name, "-v", "--version", NULL)) {
@@ -186,6 +192,53 @@ int hin_process_argv (basic_args_t * args, const char * name) {
       return -1;
     }
     hin_vhost_set_debug (strtol (path, NULL, 16));
+
+  // download
+  } else if (basic_args_cmp (name, "-d", "--download", NULL)) {
+    const char * path = basic_args_get (args);
+    if (path == NULL) {
+      printf ("missing uri\n");
+      print_help ();
+      return -1;
+    }
+    http_client_t * http_download_raw (http_client_t * http, const char * url1);
+    http_client_t * http = http_download_raw (NULL, path);
+    current_download = http;
+    master.flags |= HIN_SKIP_CONFIG;
+    master.debug &= ~(DEBUG_BASIC | DEBUG_CONFIG);
+    master.flags |= HIN_QUIT;
+    master.quit = 1;
+
+  } else if (basic_args_cmp (name, "-o", "--output", NULL)) {
+    const char * path = basic_args_get (args);
+    if (path == NULL) {
+      printf ("missing arg for output path\n");
+      print_help ();
+      return -1;
+    }
+    if (current_download == NULL) {
+      printf ("no current download for outpath '%s'\n", path);
+      return -1;
+    }
+    http_client_t * http = current_download;
+    http->save_fd = open (path, O_RDWR | O_CLOEXEC | O_TRUNC | O_CREAT, 0666);
+    if (http->save_fd < 0) {
+      perror ("httpd open");
+      return -1;
+    }
+
+  } else if (basic_args_cmp (name, "-p", "--progress", NULL)) {
+    if (current_download == NULL) {
+      printf ("no current download\n");
+      return -1;
+    }
+    http_client_t * http = current_download;
+    http->debug |= DEBUG_PROGRESS;
+
+  } else {
+    printf ("unkown option '%s'\n", name);
+    print_help ();
+    return -1;
   }
   return 0;
 }
@@ -230,8 +283,6 @@ int main (int argc, const char * argv[], const char * envp[]) {
   }
 
   int hin_conf_load (const char * path);
-  if (master.debug & DEBUG_CONFIG)
-    printf ("loading config '%s'\n", master.conf_path);
   if (hin_conf_load (master.conf_path) < 0) {
     hin_lua_report_error ();
     return -1;
@@ -265,8 +316,6 @@ int main (int argc, const char * argv[], const char * envp[]) {
 
   void * hin_cache_create ();
   hin_cache_create ();
-
-  //http_download ("http://localhost:28005/", "/tmp/dl.txt", NULL);
 
   void hin_event_loop ();
   hin_event_loop ();
