@@ -133,7 +133,7 @@ static int l_hin_proxy (lua_State *L) {
     printf ("lua hin_proxy need a valid client\n");
     return 0;
   }
-  #ifdef BASIC_USE_PROXY
+  #ifdef HIN_USE_RPROXY
   const char * url = lua_tostring (L, 2);
   if (url == NULL) { printf ("no path supplied\n"); return 0; }
 
@@ -174,12 +174,16 @@ static int l_hin_fastcgi (lua_State *L) {
     return 0;
   }
 
+  #ifdef HIN_USE_FCGI
   void * group = lua_touserdata (L, 2);
   const char * script_path = lua_tostring (L, 3);
   const char * path_info = lua_tostring (L, 4);
 
   if (hin_fastcgi (http, group, script_path, path_info) < 0) {
   }
+  #else
+  httpd_error (http, 500, "no fcgi compiled");
+  #endif
   return 0;
 }
 

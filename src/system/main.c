@@ -46,8 +46,10 @@ void hin_clean () {
   hin_socket_clean ();
   void hin_vhost_clean ();
   hin_vhost_clean ();
+  #ifdef HIN_USE_FCGI
   void hin_fcgi_clean ();
   hin_fcgi_clean ();
+  #endif
   // shouldn't clean pidfile it can incur a race condition
   free ((void*)master.exe_path);
   free ((void*)master.logdir_path);
@@ -68,6 +70,7 @@ static void print_help () {
   printf ("usage hinsightd [OPTION]...\n\
  -d --download: download file and exit\n\
  -o --output: set path where to save file\n\
+ -p --progress: show download progress\n\
  -v --version: prints version information\n\
     --config <path>: sets config path\n\
     --tmpdir <path>: sets tmp dir path\n\
@@ -89,7 +92,20 @@ static http_client_t * current_download = NULL;
 
 int hin_process_argv (basic_args_t * args, const char * name) {
   if (basic_args_cmp (name, "-v", "--version", NULL)) {
-    printf ("%s\n", HIN_HTTPD_SERVER_BANNER);
+    printf ("%s", HIN_HTTPD_SERVER_BANNER);
+    #ifdef HIN_USE_OPENSSL
+    printf (" openssl");
+    #endif
+    #ifdef HIN_USE_RPROXY
+    printf (" rproxy");
+    #endif
+    #ifdef HIN_USE_FCGI
+    printf (" fcgi");
+    #endif
+    #ifdef HIN_USE_CGI
+    printf (" cgi");
+    #endif
+    printf ("\n");
     return 1;
   } else if (basic_args_cmp (name, "-h", "--help", NULL)) {
     print_help ();

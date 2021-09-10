@@ -21,8 +21,10 @@ int hin_fcgi_pipe_init (hin_fcgi_worker_t * worker) {
 
   worker->header_buf = buf;
 
+  #ifdef HIN_USE_FCGI
   int hin_fcgi_send (httpd_client_t * http, hin_buffer_t * buf);
   hin_fcgi_send (http, buf);
+  #endif
 
   return 0;
 }

@@ -8,8 +8,6 @@
 #include "conf.h"
 #include "file.h"
 
-#ifdef BASIC_USE_RPROXY
-
 int http_client_finish_request (http_client_t * http);
 int hin_cache_finish (httpd_client_t * client, hin_pipe_t * pipe);
 
@@ -395,5 +393,4 @@ http_client_t * hin_proxy (hin_client_t * parent_c, const char * url1) {
   return http;
 }
 
-#endif
 

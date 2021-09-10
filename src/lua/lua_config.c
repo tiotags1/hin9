@@ -216,6 +216,7 @@ static int l_hin_create_cert (lua_State *L) {
 }
 
 static int l_hin_create_fcgi (lua_State *L) {
+  #ifdef HIN_USE_FCGI
   const char * uri = lua_tostring (L, 1);
 
   void * hin_fcgi_start (const char * uri);
@@ -227,6 +228,9 @@ static int l_hin_create_fcgi (lua_State *L) {
 
   lua_pushlightuserdata (L, ptr);
   return 1;
+  #else
+  return luaL_error (L, "error! fcgi not compiled\n");
+  #endif
 }
 
 int l_hin_add_vhost (lua_State *L);

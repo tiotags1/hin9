@@ -1,4 +1,6 @@
 
+#ifdef HIN_USE_CGI
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -19,8 +21,6 @@
 #include "file.h"
 
 #include "fcgi.h"
-
-#ifdef HIN_USE_CGI
 
 typedef struct {
   int pos;

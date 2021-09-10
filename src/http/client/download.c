@@ -58,7 +58,7 @@ static int connected (hin_buffer_t * buffer, int ret) {
   return 0;
 }
 
-static int state_callback (http_client_t * http, int state) {
+static int state_callback (http_client_t * http, uint32_t state) {
   string_t url = http->uri.all;
   switch (state) {
   case HIN_HTTP_STATE_CONNECTED: // fall-through
@@ -132,7 +132,7 @@ http_client_t * http_download_raw (http_client_t * http, const char * url1) {
   http->c.ai_addrlen = sizeof (http->c.ai_addr);
 
   int http_client_start_headers (http_client_t * http, int ret);
-  http->read_buffer = http_client_start_headers;
+  http->read_buffer = (hin_buffer_t*)http_client_start_headers;
 
   http->read_callback = read_callback;
   http->state_callback = state_callback;

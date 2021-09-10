@@ -21,10 +21,24 @@ ENDIF()
 
 if (USE_CGI)
   add_definitions (-DHIN_USE_CGI)
+  set (other_src ${other_src} src/http/cgi/httpd_cgi.c)
+ENDIF()
+
+if (USE_FCGI)
+  add_definitions (-DHIN_USE_FCGI)
+  set (other_src ${other_src}
+src/http/cgi/fcgi.c
+src/http/cgi/fcgi_read.c
+src/http/cgi/fcgi_write.c
+src/http/cgi/fcgi_post.c
+src/http/cgi/fcgi_socket.c
+src/http/cgi/fcgi_util.c
+src/http/cgi/fcgi_worker.c)
 ENDIF()
 
 if (USE_RPROXY)
   add_definitions (-DHIN_USE_RPROXY)
+  set (other_src ${other_src} src/http/proxy/rproxy.c)
 ENDIF()
 
 set (external_src
@@ -42,15 +56,7 @@ external/basic/basic_timer.c
 )
 
 set (hin_src
-src/http/cgi/fcgi.c
-src/http/cgi/fcgi_read.c
-src/http/cgi/fcgi_write.c
-src/http/cgi/fcgi_post.c
-src/http/cgi/fcgi_socket.c
-src/http/cgi/fcgi_util.c
-src/http/cgi/fcgi_worker.c
 src/http/cgi/cgi_parse.c
-src/http/cgi/httpd_cgi.c
 src/http/client/dl_client.c
 src/http/client/download.c
 src/http/client/headers.c
@@ -58,7 +64,6 @@ src/http/client/data.c
 src/http/utils/http_utils.c
 src/http/utils/http_misc.c
 src/http/utils/filters.c
-src/http/proxy/rproxy.c
 src/http/server/httpd_read.c
 src/http/server/httpd_req.c
 src/http/server/httpd_head.c
@@ -92,12 +97,12 @@ src/lua/lua_os.c
 src/lua/lua_vhost.c
 )
 
-add_executable (hin9 ${hin_src} ${external_src})
+add_executable (hin9 ${hin_src} ${external_src} ${other_src})
 target_link_libraries (hin9 ${TARGET_LIBS})
 
 add_executable (hin9_pid_helper external/tools/pid_helper.c)
 
-install(TARGETS hin9 DESTINATION sbin)
-install(TARGETS hin9_pid_helper DESTINATION bin)
+install(PROGRAMS $<TARGET_FILE:hin9> DESTINATION sbin RENAME hinsightd)
+install(PROGRAMS $<TARGET_FILE:hin9_pid_helper> DESTINATION bin RENAME hinsightd_pid_helper)
 
 

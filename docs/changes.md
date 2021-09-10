@@ -1,4 +1,8 @@
 
+* httpd made fcgi optional
+* fixed compilation errors
+
+commit 29738af7c8c43481fa79c6fca472373692fd1be5
 * added download mode, where it downloads files and then exits
 * made old cgi and reverse proxy code optional for extra small server
 * httpd added verbose error messages and a config to control it

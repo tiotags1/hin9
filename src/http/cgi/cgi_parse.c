@@ -20,6 +20,8 @@
 
 #include "fcgi.h"
 
+#ifdef HIN_USE_CGI
+
 static int hin_pipe_cgi_server_finish_callback (hin_pipe_t * pipe) {
   hin_fcgi_worker_t * worker = (hin_fcgi_worker_t *)pipe->parent1;
   httpd_client_t * http = (httpd_client_t*)pipe->parent;
@@ -44,6 +46,10 @@ static int hin_pipe_cgi_server_finish_callback (hin_pipe_t * pipe) {
   return 0;
 }
 
+#endif
+
+#ifdef HIN_USE_FCGI
+
 static int hin_fcgi_pipe_finish_callback (hin_pipe_t * pipe) {
   hin_fcgi_worker_t * worker = pipe->parent1;
   hin_fcgi_socket_t * socket = worker->socket;
@@ -65,6 +71,10 @@ static int hin_fcgi_pipe_finish_callback (hin_pipe_t * pipe) {
 
   return 0;
 }
+
+#endif
+
+#if defined (HIN_USE_CGI) || defined (HIN_USE_FCGI)
 
 static int hin_cgi_location (httpd_client_t * http, hin_buffer_t * buf, string_t * origin) {
   string_t source = *origin;
@@ -125,14 +135,19 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer, int received) {
   pipe->out.pos = 0;
   pipe->parent = http;
   pipe->parent1 = worker;
-  pipe->finish_callback = hin_pipe_cgi_server_finish_callback;
   pipe->debug = http->debug;
 
   if (worker->socket) {
     pipe->in.flags = HIN_INACTIVE;
+    #ifdef HIN_USE_FCGI
     pipe->finish_callback = hin_fcgi_pipe_finish_callback;
+    #endif
     worker->out = pipe;
     worker->header_buf = NULL;
+  } else {
+    #ifdef HIN_USE_CGI
+    pipe->finish_callback = hin_pipe_cgi_server_finish_callback;
+    #endif
   }
 
   http->disable |= disable;
@@ -263,5 +278,7 @@ int hin_fcgi_send (httpd_client_t * http, hin_buffer_t * buf) {
   lines->close_callback = hin_cgi_headers_close_callback;
   return 0;
 }
+
+#endif
 
 
