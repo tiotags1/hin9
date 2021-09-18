@@ -1,4 +1,14 @@
 
+* config can now map urls to specific lua callbacks
+* config can include all the lua files in a dir
+* config files reorganized for new include system, old system is deprecated and will be removed in the future
+* added list\_dir1, map and get\_vhost function to lua
+* vhost add doesn't require an explicit parent anymore, uses default parent, default parent is the first vhost that listens to sockets
+* fixed and improved error messages
+* fixed possible lua stack overflow
+* fixed issuing https redirect for vhosts that didn't have a callback
+
+commit 5dcff74a40f57f76a4de13621156ddb8e985856c
 * httpd made fcgi optional
 * fixed compilation errors
 

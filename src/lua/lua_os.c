@@ -43,8 +43,9 @@ static int hin_child_callback (hin_child_t * child1, int status) {
     num++;
   }
 
-  if (lua_pcall (L, num, LUA_MULTRET, 0) != 0) {
+  if (lua_pcall (L, num, 0, 0) != 0) {
     printf ("error running child close callback '%s'\n", lua_tostring (L, -1));
+    lua_pop (L, 1);
     return -1;
   }
 
@@ -169,9 +170,51 @@ static int l_hin_app_state (lua_State *L) {
   return 0;
 }
 
+#include <sys/types.h>
+#include <dirent.h>
+#include <libgen.h>
+
+static int l_hin_list_dir1 (lua_State *L) {
+  char * conf_path = strdup (master.conf_path);
+  char * path = dirname (conf_path);
+
+  if (lua_isstring (L, 1)) {
+    const char * new = lua_tostring (L, 1);
+    char * old = path;
+    if (asprintf (&path, "%s/%s", old, new) < 0) {
+      perror ("asprintf");
+      return 0;
+    }
+    free (old);
+  }
+  DIR *d;
+  struct dirent *dir;
+  d = opendir (path);
+
+  free (path);
+
+  if (d == NULL) {
+    lua_pushnil (L);
+    lua_pushstring (L, strerror (errno));
+    return 2;
+  }
+
+  lua_newtable (L);
+  int n = 1;
+  while ((dir = readdir (d)) != NULL) {
+    lua_pushnumber (L, n++);
+    lua_pushstring (L, dir->d_name);
+    lua_settable (L, -3);
+  }
+
+  closedir (d);
+  return 1;
+}
+
 static lua_function_t functs [] = {
 {"exec",		l_hin_exec },
 {"app_state",		l_hin_app_state },
+{"list_dir1",		l_hin_list_dir1 },
 {NULL, NULL},
 };
 

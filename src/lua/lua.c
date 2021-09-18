@@ -12,13 +12,11 @@
 #include "vhost.h"
 #include "system/hin_lua.h"
 
+int hin_vhost_map_callback (hin_vhost_map_t * map_start, httpd_client_t * http);
+
 int hin_server_callback (hin_client_t * client) {
   httpd_client_t * http = (httpd_client_t*)client;
   hin_vhost_t * vhost = http->vhost;
-  for (; vhost; vhost = vhost->parent) {
-    if (vhost->request_callback) { break; }
-    if (vhost->parent == NULL) break;
-  }
 
   hin_server_t * socket = client->parent;
   if (vhost->hsts &&
@@ -28,12 +26,23 @@ int hin_server_callback (hin_client_t * client) {
     return 0;
   }
 
+  int ret = hin_vhost_map_callback (vhost->map_start, http);
+  if (ret <= 0) {
+    return ret;
+  }
+
+  for (; vhost; vhost = vhost->parent) {
+    if (vhost->request_callback) { break; }
+    if (vhost->parent == NULL) break;
+  }
+
   lua_State * L = vhost->L;
   lua_rawgeti (L, LUA_REGISTRYINDEX, vhost->request_callback);
   lua_pushlightuserdata (L, client);
 
-  if (lua_pcall (L, 1, LUA_MULTRET, 0) != 0) {
+  if (lua_pcall (L, 1, 0, 0) != 0) {
     printf ("error! request callback '%s' '%s'\n", vhost->hostname, lua_tostring (L, -1));
+    lua_pop (L, 1);
     return -1;
   }
   return 0;
@@ -59,8 +68,9 @@ int hin_server_error_callback (hin_client_t * client, int error_code, const char
   lua_pushnumber (L, error_code);
   lua_pushstring (L, msg);
 
-  if (lua_pcall (L, 3, LUA_MULTRET, 0) != 0) {
+  if (lua_pcall (L, 3, 0, 0) != 0) {
     printf ("error! error callback '%s' '%s'\n", vhost->hostname, lua_tostring (L, -1));
+    lua_pop (L, 1);
     return -1;
   }
   if (http->state & HIN_REQ_DATA) return 1;
@@ -70,10 +80,17 @@ int hin_server_error_callback (hin_client_t * client, int error_code, const char
 int hin_server_finish_callback (hin_client_t * client) {
   httpd_client_t * http = (httpd_client_t*)client;
   hin_vhost_t * vhost = http->vhost;
+
+  int ret = hin_vhost_map_callback (vhost->map_finish, http);
+  if (ret <= 0) {
+    return ret;
+  }
+
   for (; vhost; vhost = vhost->parent) {
     if (vhost->error_callback) { break; }
     if (vhost->parent == NULL) break;
   }
+
   if (vhost->finish_callback == 0) return 0;
 
   lua_State * L = vhost->L;
@@ -81,8 +98,9 @@ int hin_server_finish_callback (hin_client_t * client) {
   lua_rawgeti (L, LUA_REGISTRYINDEX, vhost->finish_callback);
   lua_pushlightuserdata (L, client);
 
-  if (lua_pcall (L, 1, LUA_MULTRET, 0) != 0) {
+  if (lua_pcall (L, 1, 0, 0) != 0) {
     printf ("error! finish callback '%s' '%s'\n", vhost->hostname, lua_tostring (L, -1));
+    lua_pop (L, 1);
     return -1;
   }
   return 0;
@@ -103,8 +121,9 @@ int hin_timeout_callback (float dt) {
   if (lua_isnil (L, 1)) { return 0; }
   lua_pushnumber (L, 1);
 
-  if (lua_pcall (L, 1, LUA_MULTRET, 0) != 0) {
+  if (lua_pcall (L, 1, 0, 0) != 0) {
     printf ("error running timeout callback '%s'\n", lua_tostring (L, -1));
+    lua_pop (L, 1);
     return -1;
   }
 
@@ -133,6 +152,9 @@ void lua_server_clean (hin_vhost_t * server) {
   hin_ssl_ctx_t * box = server->ssl;
   if (box)
     hin_ssl_ctx_unref (box);
+
+  void hin_vhost_map_clean (hin_vhost_t * vhost);
+  hin_vhost_map_clean (server);
 
   if (server->hostname) free (server->hostname);
   if (server->cwd_fd && server->cwd_fd != AT_FDCWD) close (server->cwd_fd);
@@ -193,7 +215,7 @@ int hin_conf_load (const char * path) {
   if (master.flags & HIN_SKIP_CONFIG) return 0;
 
   if (master.debug & DEBUG_CONFIG)
-    printf ("loading config '%s'\n", master.conf_path);
+    printf ("lua config '%s'\n", master.conf_path);
 
   if (run_file (internal_lua, path)) {
     printf ("can't load config at '%s'\n", path);
@@ -207,6 +229,7 @@ int hin_lua_run (const char * data, int len) {
   int ret = hin_lua_run_string (L, data, len, "console");
   if (ret < 0) {
     fprintf (stderr, "error! lua parsing '%.*s': %s\n", len, data, lua_tostring (L, -1));
+    lua_pop (L, lua_gettop (L));
   }
   return ret;
 }

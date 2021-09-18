@@ -29,8 +29,10 @@ int run_file (lua_State * L, const char * path) {
     return -1;
   }
 
-  err = lua_pcall (L, 0, LUA_MULTRET, 0);
+  err = lua_pcall (L, 0, 0, 0);
   if (err) {
+    printf ("error! run_file '%s':'%s'\n", path, lua_tostring (L, -1));
+    lua_pop (L, 1);
     return -1;
   }
   return 0;
@@ -43,8 +45,10 @@ int hin_lua_run_string (lua_State * L, const char * data, int len, const char * 
     return -1;
   }
 
-  err = lua_pcall (L, 0, LUA_MULTRET, 0);
+  err = lua_pcall (L, 0, 0, 0);
   if (err) {
+    printf ("error! run_string '%s':'%s'\n", name, lua_tostring (L, -1));
+    lua_pop (L, 1);
     return -1;
   }
   return 0;
@@ -54,7 +58,8 @@ int run_function (lua_State * L, const char * name) {
   lua_getglobal(L, name);
 
   if (lua_pcall (L, 0, 0, 0) != 0) {
-    fprintf (stderr, "Failed to run function '%s': %s\n", name, lua_tostring (L, -1));
+    printf ("error! run_function '%s':'%s'\n", name, lua_tostring (L, -1));
+    lua_pop (L, 1);
     return -1;
   }
   return 0;
@@ -81,6 +86,8 @@ static int l_hin_require (lua_State *L) {
   char * new = NULL;
   ret = asprintf (&new, "%s/%s", dir_path, path);
   if (ret < 0) { perror ("asprintf"); return 0; }
+  if (master.debug & DEBUG_CONFIG)
+    printf ("lua require '%s'\n", new);
   ret = run_file (L, new);
   free (conf_path);
   free (new);
@@ -105,6 +112,8 @@ static int l_hin_include (lua_State *L) {
   char * new = NULL;
   ret = asprintf (&new, "%s/%s", dir_path, path);
   if (ret < 0) { perror ("asprintf"); return 0; }
+  if (master.debug & DEBUG_CONFIG)
+    printf ("lua include '%s'\n", new);
   ret = run_file (L, new);
   free (conf_path);
   free (new);

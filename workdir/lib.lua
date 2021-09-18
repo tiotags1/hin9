@@ -64,6 +64,27 @@ function redirect (req, uri, status)
   return respond (req, status, nil)
 end
 
+function require_dir (path)
+  local dir, err = list_dir1 (path)
+  if (dir == nil or err) then
+    printf ("require dir %s gave error %s\n", path, err)
+    return
+  end
+  table.sort (dir, function(a, b) return a:upper() < b:upper() end)
+  for i, fname in pairs (dir) do
+    if (not string.match (fname, '^_')
+      and string.match (fname, '.lua$')) then
+      --printf ("found config file to include '%s / %s'\n", path, fname)
+      local new = string.format ("%s/%s", path, fname)
+      local err = include (new)
+      if (err) then
+        printf ("%s: %s\n", new, err)
+        error ()
+      end
+    end
+  end
+end
+
 function create_round_robin (...)
   local arg = {...}
   if (#arg < 1) then return nil end

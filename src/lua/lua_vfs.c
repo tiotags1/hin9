@@ -123,8 +123,7 @@ finalize: ;
 int l_hin_list_dir (lua_State *L) {
   httpd_client_t * http = (httpd_client_t*)lua_touserdata (L, 1);
   if (http == NULL || http->c.magic != HIN_CLIENT_MAGIC) {
-    httpd_error (http, 500, "invalid client");
-    return 0;
+    return luaL_error (L, "requires valid client");
   }
 
   basic_vfs_node_t * node = http->file;
@@ -163,7 +162,8 @@ int l_hin_list_dir (lua_State *L) {
 
   httpd_respond_buffer (http, 200, buf);
 
-  return 0;
+  lua_pushboolean (L, 1);
+  return 1;
 }
 
 int hin_epoll_request_read (hin_buffer_t * buf);

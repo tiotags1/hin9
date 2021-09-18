@@ -234,6 +234,7 @@ static int l_hin_create_fcgi (lua_State *L) {
 }
 
 int l_hin_add_vhost (lua_State *L);
+int l_hin_map (lua_State *L);
 
 static lua_function_t functs [] = {
 {"create_log",		l_hin_create_log },
@@ -242,6 +243,7 @@ static lua_function_t functs [] = {
 {"create_cert",		l_hin_create_cert },
 {"create_fcgi",		l_hin_create_fcgi },
 {"add_vhost",		l_hin_add_vhost },
+{"map",			l_hin_map },
 {NULL, NULL},
 };
 

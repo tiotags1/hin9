@@ -13,8 +13,7 @@
 static int l_hin_parse_path (lua_State *L) {
   hin_client_t *client = (hin_client_t*)lua_touserdata (L, 1);
   if (client == NULL || client->magic != HIN_CLIENT_MAGIC) {
-    printf ("lua hin_parse_path need a valid client\n");
-    return 0;
+    return luaL_error (L, "requires valid client");
   }
   httpd_client_t * http = (httpd_client_t*)client;
 
@@ -44,8 +43,7 @@ static int l_hin_parse_path (lua_State *L) {
 static int l_hin_parse_headers (lua_State *L) {
   hin_client_t *client = (hin_client_t*)lua_touserdata (L, 1);
   if (client == NULL || client->magic != HIN_CLIENT_MAGIC) {
-    printf ("lua hin_parse_headers need a valid client\n");
-    return 0;
+    return luaL_error (L, "requires valid client");
   }
   httpd_client_t * http = (httpd_client_t*)client;
   string_t temp = http->headers;
@@ -114,8 +112,7 @@ int httpd_handle_file_request (hin_client_t * client, const char * path, off_t p
 static int l_hin_send_file (lua_State *L) {
   hin_client_t *client = (hin_client_t*)lua_touserdata (L, 1);
   if (client == NULL || client->magic != HIN_CLIENT_MAGIC) {
-    printf ("lua hin_send_file need a valid client\n");
-    return 0;
+    return luaL_error (L, "requires valid client");
   }
   const char * path = lua_tostring (L, 2);
   off_t pos = 0, count = -1;
@@ -124,14 +121,14 @@ static int l_hin_send_file (lua_State *L) {
 
   httpd_handle_file_request (client, path, pos, count, 0);
 
+  lua_pushboolean (L, 1);
   return 1;
 }
 
 static int l_hin_proxy (lua_State *L) {
   httpd_client_t *http = (httpd_client_t*)lua_touserdata (L, 1);
   if (http == NULL || http->c.magic != HIN_CLIENT_MAGIC) {
-    printf ("lua hin_proxy need a valid client\n");
-    return 0;
+    return luaL_error (L, "requires valid client");
   }
   #ifdef HIN_USE_RPROXY
   const char * url = lua_tostring (L, 2);
@@ -143,14 +140,14 @@ static int l_hin_proxy (lua_State *L) {
   httpd_error (http, 500, "no rproxy compiled");
   #endif
 
+  lua_pushboolean (L, 1);
   return 1;
 }
 
 static int l_hin_cgi (lua_State *L) {
   httpd_client_t *http = (httpd_client_t*)lua_touserdata (L, 1);
   if (http == NULL || http->c.magic != HIN_CLIENT_MAGIC) {
-    printf ("lua hin_cgi need a valid client\n");
-    return 0;
+    return luaL_error (L, "requires valid client");
   }
   #ifdef HIN_USE_CGI
   const char * exe_path = lua_tostring (L, 2);
@@ -164,14 +161,14 @@ static int l_hin_cgi (lua_State *L) {
   #else
   httpd_error (http, 500, "no cgi compiled");
   #endif
-  return 0;
+  lua_pushboolean (L, 1);
+  return 1;
 }
 
 static int l_hin_fastcgi (lua_State *L) {
   httpd_client_t *http = (httpd_client_t*)lua_touserdata (L, 1);
   if (http == NULL || http->c.magic != HIN_CLIENT_MAGIC) {
-    printf ("lua hin_cgi need a valid client\n");
-    return 0;
+    return luaL_error (L, "requires valid client");
   }
 
   #ifdef HIN_USE_FCGI
@@ -184,21 +181,22 @@ static int l_hin_fastcgi (lua_State *L) {
   #else
   httpd_error (http, 500, "no fcgi compiled");
   #endif
-  return 0;
+  lua_pushboolean (L, 1);
+  return 1;
 }
 
 static int l_hin_respond (lua_State *L) {
   hin_client_t *client = (hin_client_t*)lua_touserdata (L, 1);
   if (client == NULL || client->magic != HIN_CLIENT_MAGIC) {
-    printf ("lua hin_respond need a valid client\n");
-    return 0;
+    return luaL_error (L, "requires valid client");
   }
   int status = lua_tonumber (L, 2);
   const char * body = lua_tostring (L, 3);
   httpd_client_t * http = (httpd_client_t*)client;
 
   httpd_respond_text (http, status, body);
-  return 0;
+  lua_pushboolean (L, 1);
+  return 1;
 }
 
 static int temp_cat (char * dest, const char * source, int sz) {
@@ -210,8 +208,7 @@ static int temp_cat (char * dest, const char * source, int sz) {
 static int l_hin_sanitize_path (lua_State *L) {
   hin_client_t *client = (hin_client_t*)lua_touserdata (L, 1);
   if (client == NULL || client->magic != HIN_CLIENT_MAGIC) {
-    printf ("lua hin_sanitize_path need a valid client\n");
-    return 0;
+    return luaL_error (L, "requires valid client");
   }
 
   size_t len1 = 0, len2 = 0, len3 = 1, used;
@@ -281,8 +278,7 @@ static int l_hin_sanitize_path (lua_State *L) {
 static int l_hin_remote_address (lua_State *L) {
   hin_client_t *client = (hin_client_t*)lua_touserdata (L, 1);
   if (client == NULL || client->magic != HIN_CLIENT_MAGIC) {
-    printf ("lua hin_remote_address need a valid client\n");
-    return 0;
+    return luaL_error (L, "requires valid client");
   }
 
   char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
@@ -305,8 +301,7 @@ static int l_hin_remote_address (lua_State *L) {
 static int l_hin_add_header (lua_State *L) {
   hin_client_t *client = (hin_client_t*)lua_touserdata (L, 1);
   if (client == NULL || client->magic != HIN_CLIENT_MAGIC) {
-    printf ("lua hin_add_header need a valid client\n");
-    return 0;
+    return luaL_error (L, "requires valid client");
   }
   httpd_client_t * http = (httpd_client_t*)client;
 
@@ -326,8 +321,7 @@ static int l_hin_add_header (lua_State *L) {
 static int l_hin_shutdown (lua_State *L) {
   hin_client_t *client = (hin_client_t*)lua_touserdata (L, 1);
   if (client == NULL || client->magic != HIN_CLIENT_MAGIC) {
-    printf ("lua hin_add_header need a valid client\n");
-    return 0;
+    return luaL_error (L, "requires valid client");
   }
   httpd_client_t * http = (httpd_client_t*)client;
   http->state |= HIN_REQ_END;
@@ -337,8 +331,7 @@ static int l_hin_shutdown (lua_State *L) {
 static int l_hin_set_content_type (lua_State *L) {
   hin_client_t *client = (hin_client_t*)lua_touserdata (L, 1);
   if (client == NULL || client->magic != HIN_CLIENT_MAGIC) {
-    printf ("lua hin_add_header need a valid client\n");
-    return 0;
+    return luaL_error (L, "requires valid client");
   }
   httpd_client_t * http = (httpd_client_t*)client;
   const char * str = lua_tostring (L, 2);
@@ -346,6 +339,16 @@ static int l_hin_set_content_type (lua_State *L) {
   if (http->content_type) free (http->content_type);
   http->content_type = strdup (str);
   return 0;
+}
+
+static int l_hin_get_vhost (lua_State *L) {
+  hin_client_t *client = (hin_client_t*)lua_touserdata (L, 1);
+  if (client == NULL || client->magic != HIN_CLIENT_MAGIC) {
+    return luaL_error (L, "requires valid client");
+  }
+  httpd_client_t * http = (httpd_client_t*)client;
+  lua_pushlightuserdata (L, http->vhost);
+  return 1;
 }
 
 int l_hin_set_path (lua_State *L);
@@ -366,6 +369,7 @@ static lua_function_t functs [] = {
 {"set_content_type",	l_hin_set_content_type },
 {"set_path",		l_hin_set_path },
 {"list_dir",		l_hin_list_dir },
+{"get_vhost",		l_hin_get_vhost },
 {NULL, NULL},
 };
 

@@ -19,7 +19,16 @@ typedef struct hin_ssl_ctx_struct {
   struct hin_ssl_ctx_struct * next;
 } hin_ssl_ctx_t;
 
-typedef struct hin_server_data_struct {
+typedef struct hin_vhost_map_struct {
+  int state;
+  const char * pattern;
+  struct hin_vhost_struct * vhost;
+  lua_State * lua;
+  int callback;
+  struct hin_vhost_map_struct * next, * prev;
+} hin_vhost_map_t;
+
+typedef struct hin_vhost_struct {
   // callback
   int refcount;
   int request_callback;
@@ -35,9 +44,10 @@ typedef struct hin_server_data_struct {
   void * cwd_dir;
   hin_ssl_ctx_t * ssl;
   void * ssl_ctx;
+  hin_vhost_map_t * map_start, * map_finish;
   int hsts;
   lua_State *L;
-  struct hin_server_data_struct * parent, * next;
+  struct hin_vhost_struct * parent, * next;
 } hin_vhost_t;
 
 int hin_server_set_work_dir (hin_vhost_t * vhost, const char * rel_path);

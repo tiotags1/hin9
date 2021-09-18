@@ -95,6 +95,7 @@ src/lua/lua_vfs.c
 src/lua/lua_req.c
 src/lua/lua_os.c
 src/lua/lua_vhost.c
+src/lua/lua_map.c
 )
 
 add_executable (hin9 ${hin_src} ${external_src} ${other_src})

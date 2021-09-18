@@ -22,18 +22,17 @@ static int hin_lua_mask_from_str (lua_State * L, int pos, uint32_t * ptr1) {
     char * ptr = NULL;
     uint32_t nr = strtol (mask, &ptr, 16);
     if (ptr <= mask) {
-      printf ("can't parse debug mask\n");
-      return -1;
+      return luaL_error (L, "can't parse mask");
     }
     *ptr1 = nr;
     return 1;
   } else if (!lua_isnil (L, 3)) {
-    printf ("debug mask needs to be a string\n");
+    return luaL_error (L, "mask needs to be a string");
   }
   return -1;
 }
 
-static uint32_t get_mask (const char * name) {
+static uint32_t get_mask (lua_State * L, const char * name) {
   if (strcmp (name, "keepalive") == 0) {
     return HIN_HTTP_KEEPALIVE;
   } else if (strcmp (name, "range") == 0) {
@@ -65,28 +64,27 @@ static uint32_t get_mask (const char * name) {
   } else if (strcmp (name, "all") == 0) {
     return ~0;
   } else {
-    printf ("unknown option %s\n", name);
-    return 0;
+    return luaL_error (L, "value unknown");
   }
 }
 
 static int l_hin_get_server_option (lua_State *L) {
   hin_vhost_t *client = (hin_vhost_t*)lua_touserdata (L, 1);
   if (client == NULL || client->magic != HIN_VHOST_MAGIC) {
-    printf ("lua hin_get_option need a valid server\n");
-    return 0;
+    return luaL_error (L, "requires valid vhost");
   }
   const char * name = lua_tostring (L, 2);
-  if (name == NULL) { printf ("option nil\n"); return 0; }
+  if (name == NULL) {
+    return luaL_error (L, "missing option name");
+  }
 
   if (strcmp (name, "enable") == 0) {
     const char * param = lua_tostring (L, 3);
-    int ret = client->disable & get_mask (param);
+    int ret = client->disable & get_mask (L, param);
     lua_pushboolean (L, ret);
     return 1;
   } else {
-    printf ("get_server_option unknown '%s'\n", name);
-    return 0;
+    return luaL_error (L, "unknown option '%s'", name);
   }
   return 0;
 }
@@ -94,20 +92,21 @@ static int l_hin_get_server_option (lua_State *L) {
 static int l_hin_set_server_option (lua_State *L) {
   hin_vhost_t *client = (hin_vhost_t*)lua_touserdata (L, 1);
   if (client == NULL || client->magic != HIN_VHOST_MAGIC) {
-    printf ("lua hin_set_option need a valid server\n");
-    return 0;
+    return luaL_error (L, "requires valid vhost");
   }
   const char * name = lua_tostring (L, 2);
-  if (name == NULL) { printf ("option nil\n"); return 0; }
+  if (name == NULL) {
+    return luaL_error (L, "missing option name");
+  }
 
   if (strcmp (name, "enable") == 0) {
     const char * param = lua_tostring (L, 3);
-    client->disable &= ~get_mask (param);
+    client->disable &= ~get_mask (L, param);
     if (client->debug & DEBUG_CONFIG) printf ("lua server enable %s\n", param);
     return 0;
   } else if (strcmp (name, "disable") == 0) {
     const char * param = lua_tostring (L, 3);
-    client->disable |= get_mask (param);
+    client->disable |= get_mask (L, param);
     if (client->debug & DEBUG_CONFIG) printf ("lua server disable %s\n", param);
     return 0;
   } else if (strcmp (name, "timeout") == 0) {
@@ -142,8 +141,7 @@ static int l_hin_set_server_option (lua_State *L) {
     return 0;
 
   } else {
-    printf ("set_server_option unknown '%s'\n", name);
-    return 0;
+    return luaL_error (L, "unkown option '%s'", name);
   }
   return 0;
 }
@@ -151,11 +149,12 @@ static int l_hin_set_server_option (lua_State *L) {
 static int l_hin_get_option (lua_State *L) {
   hin_client_t *client = (hin_client_t*)lua_touserdata (L, 1);
   if (client == NULL || client->magic != HIN_CLIENT_MAGIC) {
-    printf ("lua hin_get_option need a valid client\n");
-    return 0;
+    return luaL_error (L, "requires valid client");
   }
   const char * name = lua_tostring (L, 2);
-  if (name == NULL) { printf ("option nil\n"); return 0; }
+  if (name == NULL) {
+    return luaL_error (L, "missing option name");
+  }
 
   httpd_client_t * http = (httpd_client_t*)client;
   if (strcmp (name, "id") == 0) {
@@ -170,12 +169,11 @@ static int l_hin_get_option (lua_State *L) {
     return 1;
   } else if (strcmp (name, "enable") == 0) {
     const char * param = lua_tostring (L, 3);
-    int ret = http->disable & get_mask (param);
+    int ret = http->disable & get_mask (L, param);
     lua_pushboolean (L, ret);
     return 1;
   } else {
-    printf ("get_option unknown '%s'\n", name);
-    return 0;
+    return luaL_error (L, "unkown option '%s'", name);
   }
   return 0;
 }
@@ -183,18 +181,19 @@ static int l_hin_get_option (lua_State *L) {
 static int l_hin_set_option (lua_State *L) {
   hin_client_t *client = (hin_client_t*)lua_touserdata (L, 1);
   if (client == NULL || client->magic != HIN_CLIENT_MAGIC) {
-    printf ("lua hin_set_option need a valid client\n");
-    return 0;
+    return luaL_error (L, "requires valid client");
   }
   const char * name = lua_tostring (L, 2);
-  if (name == NULL) { printf ("option nil\n"); return 0; }
+  if (name == NULL) {
+    return luaL_error (L, "missing option name");
+  }
 
   httpd_client_t * http = (httpd_client_t*)client;
   if (strcmp (name, "enable") == 0) {
-    http->disable &= ~get_mask (lua_tostring (L, 3));
+    http->disable &= ~get_mask (L, lua_tostring (L, 3));
     return 0;
   } else if (strcmp (name, "disable") == 0) {
-    http->disable |= get_mask (lua_tostring (L, 3));
+    http->disable |= get_mask (L, lua_tostring (L, 3));
     return 0;
   } else if (strcmp (name, "status") == 0) {
     http->status = lua_tonumber (L, 3);
@@ -234,15 +233,16 @@ static int l_hin_set_option (lua_State *L) {
     }
     return 0;
   } else {
-    printf ("set_option unknown '%s'\n", name);
-    return 0;
+    return luaL_error (L, "unknown option '%s'", name);
   }
   return 0;
 }
 
 static int l_hin_set_global_option (lua_State *L) {
   const char * name = lua_tostring (L, 1);
-  if (name == NULL) { printf ("option nil\n"); return 0; }
+  if (name == NULL) {
+    return luaL_error (L, "missing option name");
+  }
 
   if (strcmp (name, "create_directory") == 0) {
     int val = lua_toboolean (L, 2);
@@ -257,8 +257,7 @@ static int l_hin_set_global_option (lua_State *L) {
     return 0;
 
   } else {
-    printf ("set_global_option unknown '%s'\n", name);
-    return 0;
+    return luaL_error (L, "unknown option '%s'", name);
   }
   return 0;
 }

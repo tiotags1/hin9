@@ -13,6 +13,8 @@
 
 #include <fcntl.h>
 
+static hin_vhost_t * default_parent = NULL;
+
 static const char * l_hin_get_str (lua_State *L, int tpos, const char * name) {
   const char * ret = NULL;
   lua_pushstring (L, name);
@@ -47,9 +49,10 @@ static int l_hin_add_socket (lua_State *L, hin_vhost_t * vhost, int tpos) {
       ctx = box->ctx;
     if (ctx == NULL) {
       #if HIN_HTTPD_ERROR_ON_MISSING_CERT
-      return luaL_error (L, "error! vhost %s:%s no cert\n", bind, port);
+      return luaL_error (L, "%s:%s lacks cert\n", bind, port);
+      #else
+      printf ("error! vhost %s:%s lacks cert\n", bind, port);
       #endif
-      printf ("error! vhost %s:%s no cert\n", bind, port);
       return 0;
     }
   }
@@ -77,9 +80,14 @@ static int l_hin_vhost_get_callback (lua_State *L, int tpos, const char * name) 
   return ret;
 }
 
+static void hin_vhost_free (hin_vhost_t * vhost) {
+  if (vhost == NULL) return;
+  free (vhost);
+}
+
 int l_hin_add_vhost (lua_State *L) {
   if (lua_type (L, 1) != LUA_TTABLE) {
-    return luaL_error (L, "error! add_vhost requires a table\n");
+    return luaL_error (L, "requires a table");
   }
 
   // TODO check if this is an actual ssl context
@@ -108,7 +116,7 @@ int l_hin_add_vhost (lua_State *L) {
     }
   } else if (lua_type (L, -1) == LUA_TBOOLEAN) {
     #if HIN_HTTPD_ERROR_ON_MISSING_CERT
-    return luaL_error (L, "error! vhost invalid cert\n");
+    return luaL_error (L, "invalid cert\n");
     #else
     printf ("error! vhost invalid cert\n");
     #endif
@@ -126,18 +134,27 @@ int l_hin_add_vhost (lua_State *L) {
       if (l_hin_add_socket (L, vhost, lua_gettop (L)) >= 0) {
         nsocket++;
       } else {
-        return luaL_error (L, "error! vhost invalid socket\n");
+        return luaL_error (L, "invalid socket");
       }
       lua_pop (L, 1);
+    }
+    if (default_parent == NULL) {
+      default_parent = vhost;
     }
   }
   lua_pop (L, 1);
 
+  if (parent == NULL && default_parent && default_parent != vhost) {
+    parent = default_parent;
+  }
+
   if (nsocket == 0) {
     if (parent == NULL) {
-      return luaL_error (L, "error! vhost requires parent\n");
+      hin_vhost_free (vhost);
+      return luaL_error (L, "requires parent");
     } else if (parent->magic != HIN_VHOST_MAGIC) {
-      return luaL_error (L, "error! vhost requires valid parent %x!=%x\n", parent->magic, HIN_VHOST_MAGIC);
+      hin_vhost_free (vhost);
+      return luaL_error (L, "requires valid parent %x!=%x", parent->magic, HIN_VHOST_MAGIC);
     }
   }
 
@@ -154,14 +171,12 @@ int l_hin_add_vhost (lua_State *L) {
       if (master.debug & DEBUG_HTTP)
         printf ("vhost '%s'\n", name);
       if (hin_vhost_get (name, len)) {
-        printf ("error! vhost duplicate '%s'\n", name);
-        return luaL_error (L, "error! vhost duplicate '%s'\n", name);
+        return luaL_error (L, "vhost duplicate '%s'", name);
       }
       int ret = hin_vhost_add (name, len, vhost);
       if (ret < 0) {
-        printf ("error! vhost add '%s'\n", name);
         // TODO cancel the whole host
-        return luaL_error (L, "error! vhost add '%s'\n", name);
+        return luaL_error (L, "vhost add '%s'\n", name);
       }
       lua_pop (L, 1);
     }
@@ -205,9 +220,6 @@ int l_hin_add_vhost (lua_State *L) {
   lua_pop (L, 1);
 
   vhost->request_callback = l_hin_vhost_get_callback (L, 1, "onRequest");
-  if (nsocket > 0 && vhost->request_callback == 0) {
-    return luaL_error (L, "error! missing onRequest handler\n");
-  }
   vhost->error_callback = l_hin_vhost_get_callback (L, 1, "onError");
   vhost->finish_callback = l_hin_vhost_get_callback (L, 1, "onFinish");
 
