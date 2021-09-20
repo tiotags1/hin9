@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include <unistd.h>
 
@@ -138,9 +139,9 @@ static int create_and_bind (const char * addr, const char *port, const char * so
     hints.ai_socktype = SOCK_STREAM;	// We want a TCP socket
     hints.ai_flags = AI_PASSIVE;	// All interfaces
 
-    s = getaddrinfo (addr, port, &hints, &result);
-    if (s != 0) {
-      fprintf (stderr, "getaddrinfo: %s\n", gai_strerror (s));
+    int err = getaddrinfo (addr, port, &hints, &result);
+    if (err) {
+      fprintf (stderr, "getaddrinfo: %s\n", gai_strerror (err));
       return -1;
     }
 
@@ -190,13 +191,12 @@ static int create_and_bind (const char * addr, const char *port, const char * so
 
 int hin_socket_listen (const char * address, const char * port, const char * sock_type, hin_client_t * client) {
   int sockfd = create_and_bind (address, port, sock_type, client);
-  int err;
   if (sockfd == -1) {
     perror ("create and bind");
     return -1;
   }
 
-  err = listen (sockfd, SOMAXCONN);
+  int err = listen (sockfd, SOMAXCONN);
   if (err == -1) {
     perror ("listen");
     return -1;
@@ -213,9 +213,9 @@ int hin_socket_request_listen (const char * addr, const char *port, const char *
   hints.ai_socktype	= SOCK_STREAM;		// We want a TCP socket
   hints.ai_flags	= AI_PASSIVE;		// All interfaces
 
-  int s = getaddrinfo (addr, port, &hints, &result);
-  if (s != 0) {
-    fprintf (stderr, "getaddrinfo: %s\n", gai_strerror (s));
+  int err = getaddrinfo (addr, port, &hints, &result);
+  if (err) {
+    fprintf (stderr, "getaddrinfo: %s\n", gai_strerror (err));
     return -1;
   }
 

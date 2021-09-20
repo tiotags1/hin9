@@ -144,25 +144,25 @@ static int hin_fcgi_headers (hin_buffer_t * buf, hin_fcgi_worker_t * worker) {
   char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
   int err;
   err = getnameinfo (&socket->ai_addr, socket->ai_addrlen,
-        hbuf, sizeof hbuf,
-        sbuf, sizeof sbuf,
-        NI_NUMERICHOST | NI_NUMERICSERV);
+			hbuf, sizeof hbuf,
+			sbuf, sizeof sbuf,
+			NI_NUMERICHOST | NI_NUMERICSERV);
   if (err == 0) {
     sz += param (buf, "SERVER_PORT", "%s", sbuf);
     sz += param (buf, "SERVER_ADDR", "%s", hbuf);
   } else {
-    fprintf (stderr, "getnameinfo2 err '%s'\n", gai_strerror (err));
+    fprintf (stderr, "getnameinfo: %s\n", gai_strerror (err));
   }
 
   err = getnameinfo (&client->ai_addr, client->ai_addrlen,
-        hbuf, sizeof hbuf,
-        sbuf, sizeof sbuf,
-        NI_NUMERICHOST | NI_NUMERICSERV);
+			hbuf, sizeof hbuf,
+			sbuf, sizeof sbuf,
+			NI_NUMERICHOST | NI_NUMERICSERV);
   if (err == 0) {
     sz += param (buf, "REMOTE_ADDR", "%s", hbuf);
     sz += param (buf, "REMOTE_PORT", "%s", sbuf);
   } else {
-    fprintf (stderr, "getnameinfo2 err '%s'\n", gai_strerror (err));
+    fprintf (stderr, "getnameinfo: %s\n", gai_strerror (err));
   }
 
   if (client->flags & HIN_SSL) {

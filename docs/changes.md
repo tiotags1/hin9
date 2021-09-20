@@ -1,4 +1,11 @@
 
+* command line argument to start a no-config file server in current directory `--serve _port_`
+* fastcgi enabled by default
+* fixed logrotate script
+* fixed compilation errors
+* fixed the tabs vs spaces debate forever, use spaces for indenting and tabs for aligning
+
+commit 6cdda6cf849642d343e469da552f2dadad347575
 * config can now map urls to specific lua callbacks
 * config can include all the lua files in a dir
 * config files reorganized for new include system, old system is deprecated and will be removed in the future

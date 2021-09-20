@@ -11,6 +11,7 @@ add_definitions (-D_GNU_SOURCE -D_LARGEFILE_SOURCE -Os -Wall -Werror=vla)
 include_directories ("src/hin/" "src/hin/http/" "external/basic/" "external/basic/vfs/")
 
 option (USE_OPENSSL "Use openssl" ON)
+option (USE_FCGI "Compile fastcgi support" ON)
 
 set (TARGET_LIBS ${TARGET_LIBS} ${LUA_LIBRARIES} uring z)
 

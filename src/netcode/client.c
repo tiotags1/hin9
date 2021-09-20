@@ -59,11 +59,11 @@ void hin_client_list_add (hin_client_t ** list, hin_client_t * new) {
 int hin_client_addr (char * str, int len, struct sockaddr * ai_addr, socklen_t ai_addrlen) {
   char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
   int err = getnameinfo (ai_addr, ai_addrlen,
-        hbuf, sizeof hbuf,
-        sbuf, sizeof sbuf,
-        NI_NUMERICHOST | NI_NUMERICSERV);
+			hbuf, sizeof hbuf,
+			sbuf, sizeof sbuf,
+			NI_NUMERICHOST | NI_NUMERICSERV);
   if (err) {
-    printf ("getnameinfo2 err '%s'\n", gai_strerror (err));
+    fprintf (stderr, "getnameinfo: %s\n", gai_strerror (err));
     return -1;
   }
   snprintf (str, len, "%s:%s", hbuf, sbuf);

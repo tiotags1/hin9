@@ -1,5 +1,6 @@
 
 #include <assert.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -18,11 +19,63 @@
 
 basic_vfs_t * vfs = NULL;
 
+int hin_send_raw_path (httpd_client_t * http) {
+  hin_vhost_t * vhost = http->vhost;
+
+  string_t source = http->headers;
+  string_t path;
+  if (match_string (&source, "%a+ ("HIN_HTTP_PATH_ACCEPT")", &path) <= 0) {}
+
+  basic_vfs_node_t * cwd = vhost->cwd_dir;
+
+  match_string (&path, "/");
+
+  basic_vfs_node_t * node = NULL;
+  if (path.len > 0) {
+    node = basic_vfs_ref_path (vfs, cwd, &path);
+  } else {
+    node = cwd;
+  }
+  if (node == NULL) {
+    return 0;
+  }
+
+  if (node->type == BASIC_ENT_DIR) {
+    basic_vfs_dir_t * dir = basic_vfs_get_dir (vfs, node);
+    const char * name = "index.html";
+    size_t name_len = strlen (name);
+    basic_vfs_node_t * new = basic_vfs_search_dir (vfs, dir, name, name_len);
+    if (new && new->type == BASIC_ENT_FILE) {
+      basic_vfs_unref (vfs, node);
+      basic_vfs_ref (vfs, new);
+      node = new;
+    }
+    if (node->type == BASIC_ENT_DIR && dir) {
+      http->file = node;
+      return -1;
+    }
+  }
+
+  basic_vfs_file_t * file = basic_vfs_get_file (vfs, node);
+  if (file == NULL) {
+    return -1;
+  }
+
+  if (http->file) {
+    basic_vfs_unref (vfs, http->file);
+  }
+  http->file = node;
+
+  int httpd_handle_file_request (httpd_client_t * http, const char * path, off_t pos, off_t count, uintptr_t param);
+  httpd_handle_file_request (http, NULL, 0, 0, 0);
+
+  return 1;
+}
+
 int l_hin_set_path (lua_State *L) {
   hin_client_t *client = (hin_client_t*)lua_touserdata (L, 1);
   if (client == NULL || client->magic != HIN_CLIENT_MAGIC) {
-    printf ("lua set_path need a valid client\n");
-    return 0;
+    return luaL_error (L, "requires a valid client");
   }
   httpd_client_t * http = (httpd_client_t*)client;
   hin_vhost_t * vhost = http->vhost;

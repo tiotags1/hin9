@@ -1,4 +1,5 @@
 /var/log/hinsightd/*.log {
+su hinsightd hinsightd
 daily
 missingok
 rotate 7

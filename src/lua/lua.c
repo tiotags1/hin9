@@ -37,6 +37,13 @@ int hin_server_callback (hin_client_t * client) {
   }
 
   lua_State * L = vhost->L;
+  if (L == NULL) {
+    int hin_send_raw_path (httpd_client_t * http);
+    if (hin_send_raw_path (http) <= 0) {
+      httpd_respond_text (http, 404, NULL);
+    }
+    return 0;
+  }
   lua_rawgeti (L, LUA_REGISTRYINDEX, vhost->request_callback);
   lua_pushlightuserdata (L, client);
 
@@ -136,7 +143,9 @@ void hin_ssl_ctx_unref (hin_ssl_ctx_t * box) {
   free ((void*)box->cert);
   free ((void*)box->key);
   // free ssl ctx
+  #ifdef HIN_USE_OPENSSL
   SSL_CTX_free (box->ctx);
+  #endif
   free (box);
 }
 

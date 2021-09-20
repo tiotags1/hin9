@@ -244,4 +244,21 @@ int l_hin_add_vhost (lua_State *L) {
   return 1;
 }
 
+static hin_vhost_t * default_vhost = NULL;
+
+hin_vhost_t * hin_vhost_get_default () {
+  if (default_vhost) return default_vhost;
+  hin_vhost_t * vhost = calloc (1, sizeof (*vhost));
+  vhost->magic = HIN_VHOST_MAGIC;
+  vhost->timeout = HIN_HTTPD_TIMEOUT;
+  vhost->debug = master.debug;
+  hin_server_set_work_dir (vhost, ".");
+
+  hin_vhost_t * prev = master.vhosts;
+  vhost->next = prev;
+  master.vhosts = vhost;
+  default_vhost = vhost;
+  return vhost;
+}
+
 

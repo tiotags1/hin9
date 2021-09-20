@@ -71,6 +71,7 @@ static void print_help () {
  -d --download: download file and exit\n\
  -o --output: set path where to save file\n\
  -p --progress: show download progress\n\
+    --serve <port>: start server on <port> without loading any config file\n\
  -v --version: prints version information\n\
     --config <path>: sets config path\n\
     --tmpdir <path>: sets tmp dir path\n\
@@ -107,9 +108,11 @@ int hin_process_argv (basic_args_t * args, const char * name) {
     #endif
     printf ("\n");
     return 1;
+
   } else if (basic_args_cmp (name, "-h", "--help", NULL)) {
     print_help ();
     return 1;
+
   } else if (basic_args_cmp (name, "--pidfile", NULL)) {
     const char * path = basic_args_get (args);
     if (path == NULL) {
@@ -118,11 +121,14 @@ int hin_process_argv (basic_args_t * args, const char * name) {
       return -1;
     }
     if (*path) master.pid_path = path;
+
   } else if (basic_args_cmp (name, "--daemonize", NULL)) {
     master.flags |= HIN_DAEMONIZE;
+
   } else if (basic_args_cmp (name, "--pretend", "--check", NULL)) {
     master.flags |= HIN_PRETEND;
     hin_vhost_set_debug (0);
+
   } else if (basic_args_cmp (name, "--workdir", "--cwd", NULL)) {
     const char * path = basic_args_get (args);
     if (path == NULL) {
@@ -132,6 +138,7 @@ int hin_process_argv (basic_args_t * args, const char * name) {
     }
     hin_directory_path (path, &master.workdir_path);
     if (chdir (master.workdir_path) < 0) perror ("chdir");
+
   } else if (basic_args_cmp (name, "--logdir", NULL)) {
     const char * path = basic_args_get (args);
     if (path == NULL) {
@@ -140,6 +147,7 @@ int hin_process_argv (basic_args_t * args, const char * name) {
       return -1;
     }
     hin_directory_path (path, &master.logdir_path);
+
   } else if (basic_args_cmp (name, "--tmpdir", NULL)) {
     const char * path = basic_args_get (args);
     if (path == NULL) {
@@ -148,6 +156,7 @@ int hin_process_argv (basic_args_t * args, const char * name) {
       return -1;
     }
     hin_directory_path (path, &master.tmpdir_path);
+
   } else if (basic_args_cmp (name, "--config", NULL)) {
     const char * path = basic_args_get (args);
     if (path == NULL) {
@@ -156,6 +165,8 @@ int hin_process_argv (basic_args_t * args, const char * name) {
       return -1;
     }
     master.conf_path = path;
+    master.flags &= ~HIN_SKIP_CONFIG;
+
   } else if (basic_args_cmp (name, "--log", NULL)) {
     const char * path = basic_args_get (args);
     if (path == NULL) {
@@ -164,6 +175,7 @@ int hin_process_argv (basic_args_t * args, const char * name) {
       return -1;
     }
     if (hin_redirect_log (path) < 0) return -1;
+
   } else if (basic_args_cmp (name, "--reuse", NULL)) {
     const char * path = basic_args_get (args);
     if (path == NULL) {
@@ -177,10 +189,13 @@ int hin_process_argv (basic_args_t * args, const char * name) {
       exit (1);
     }
     master.sharefd = fd;
+
   } else if (basic_args_cmp (name, "-V", "--verbose", NULL)) {
     hin_vhost_set_debug (0xffffffff);
+
   } else if (basic_args_cmp (name, "-q", "--quiet", NULL)) {
     hin_vhost_set_debug (0);
+
   } else if (basic_args_cmp (name, "--loglevel", NULL)) {
     const char * path = basic_args_get (args);
     if (path == NULL) {
@@ -200,6 +215,7 @@ int hin_process_argv (basic_args_t * args, const char * name) {
     default: printf ("unkown loglevel '%s'\n", path); return -1; break;
     }
     hin_vhost_set_debug (master.debug);
+
   } else if (basic_args_cmp (name, "--debugmask", NULL)) {
     const char * path = basic_args_get (args);
     if (path == NULL) {
@@ -250,6 +266,21 @@ int hin_process_argv (basic_args_t * args, const char * name) {
     }
     http_client_t * http = current_download;
     http->debug |= DEBUG_PROGRESS;
+
+  } else if (basic_args_cmp (name, "--serve", NULL)) {
+    const char * port = basic_args_get (args);
+    if (port == NULL) {
+      printf ("missing port for serve\n");
+      print_help ();
+      return -1;
+    }
+    if (master.debug & DEBUG_CONFIG)
+      printf ("serving folder '%s' on port %s\n", ".", port);
+    hin_server_t * sock = httpd_create (NULL, port, NULL, NULL);
+    hin_vhost_t * hin_vhost_get_default ();
+    hin_vhost_t * vhost = hin_vhost_get_default ();
+    sock->c.parent = vhost;
+    master.flags |= HIN_SKIP_CONFIG;
 
   } else {
     printf ("unkown option '%s'\n", name);

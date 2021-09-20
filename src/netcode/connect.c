@@ -25,12 +25,12 @@ static int complete (hin_buffer_t * buf, int ret) {
   hin_connect_t * conn = (hin_connect_t*)buf->buffer;
   char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
   int err = getnameinfo (conn->ai_addr, *conn->ai_addrlen,
-        hbuf, sizeof hbuf,
-        sbuf, sizeof sbuf,
-        NI_NUMERICHOST | NI_NUMERICSERV);
+			hbuf, sizeof hbuf,
+			sbuf, sizeof sbuf,
+			NI_NUMERICHOST | NI_NUMERICSERV);
   if (err) {
     hbuf[0] = sbuf[0] = '\0';
-    printf ("getnameinfo2 err '%s' len %d\n", gai_strerror (err), *conn->ai_addrlen);
+    fprintf (stderr, "getnameinfo: %s\n", gai_strerror (err));
   }
 
   if (ret >= 0) {
@@ -86,10 +86,10 @@ static int hin_connect_recheck (hin_buffer_t * buf, int ret) {
 }
 
 int hin_connect (const char * host, const char * port, hin_callback_t callback, void * parent, struct sockaddr * ai_addr, socklen_t * ai_addrlen) {
-  if (master.debug & DEBUG_SOCKET) printf ("connect start %s:%s\n", host, port);
+  if (master.debug & DEBUG_SOCKET)
+    printf ("connect start %s:%s\n", host, port);
   struct addrinfo hints;
   struct addrinfo *result;
-  int s;
   if (parent == NULL || callback == NULL) {
     fprintf (stderr, "can't connect without a callback ?\n");
     return -1;
@@ -101,9 +101,9 @@ int hin_connect (const char * host, const char * port, hin_callback_t callback, 
   hints.ai_flags = 0;
   hints.ai_protocol = 0;
 
-  s = getaddrinfo (host, port, &hints, &result);
-  if (s != 0) {
-    fprintf (stderr, "getaddrinfo: %s\n", gai_strerror (s));
+  int err = getaddrinfo (host, port, &hints, &result);
+  if (err) {
+    fprintf (stderr, "getaddrinfo: %s\n", gai_strerror (err));
     return -1;
   }
 
