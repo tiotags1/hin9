@@ -4,6 +4,9 @@ php_bin = "/usr/bin/php-cgi"
 function timeout_callback (dt)
 end
 
+index_files = {"index.html"}
+fpm_apps = {}
+
 require "lib.lua"
 require_dir ("config")
 

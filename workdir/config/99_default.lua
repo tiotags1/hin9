@@ -18,7 +18,7 @@ map (main, "*", 0, function (req)
 
   set_option (req, "cache_key", path, "?", query)
 
-  local dir_path, file_name, ext, path_info, location = set_path (req, path, "index.php", "index.html")
+  local dir_path, file_name, ext, path_info, location = set_path (req, path, index_files)
   if (location) then
     return redirect (req, location, 301)
   end

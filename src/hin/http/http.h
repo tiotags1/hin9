@@ -95,6 +95,7 @@ typedef struct http_client_struct {
 
   uint32_t debug;
   hin_buffer_t * read_buffer;
+  void * progress;
 
   int (*state_callback) (struct http_client_struct * http, uint32_t state);
   int (*read_callback) (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush);

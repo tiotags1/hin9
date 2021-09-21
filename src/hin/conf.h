@@ -18,6 +18,9 @@
 #define HIN_RLIMIT_MEMLOCK ((long)0x100000)
 #define HIN_RLIMIT_NOFILE ((long)2048)
 
+// 1 for warning, 2 for program abort
+#define HIN_RESTRICT_ROOT 1
+
 #define HIN_HTTPD_TIMEOUT 10
 // in miliseconds
 #define HIN_HTTPD_TIME_DT 200

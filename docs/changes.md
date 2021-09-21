@@ -1,4 +1,12 @@
 
+* progress bar show speed
+* progress bar reduce update frequency
+* progress bar human readable file sizes
+* config allow easier adding of index files
+* warn if started as root
+* fix config error if fcgi isn't compiled
+
+commit c77203bace58f08a2332db89d80462465261bcd4
 * command line argument to start a no-config file server in current directory `--serve _port_`
 * fastcgi enabled by default
 * fixed logrotate script

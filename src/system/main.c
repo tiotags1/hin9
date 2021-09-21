@@ -68,23 +68,23 @@ void hin_clean () {
 
 static void print_help () {
   printf ("usage hinsightd [OPTION]...\n\
- -d --download: download file and exit\n\
- -o --output: set path where to save file\n\
+ -d --download <url>: download file and exit\n\
+ -o --output <path>: save download to file\n\
  -p --progress: show download progress\n\
     --serve <port>: start server on <port> without loading any config file\n\
- -v --version: prints version information\n\
     --config <path>: sets config path\n\
     --tmpdir <path>: sets tmp dir path\n\
     --logdir <path>: sets log dir path\n\
     --workdir <path>: sets current directory\n\
-    --check: checks config file and exits\n\
+    --check: checks config file and exit\n\
     --pidfile <path>: prints pid to file, used for daemons\n\
     --daemonize: spawn a daemon from this process's zombie\n\
  -q --quiet: print only error messages\n\
- -V --verbose: print lots of irrelevant information\n\
+ -V --verbose: print lots of information\n\
     --loglevel <nr>: 0 prints only errors, 5 prints everything\n\
     --debugmask 0x<nr>: debugmask in hex\n\
     --reuse <nr>: used for graceful restart, should never be used otherwise\n\
+ -v --version: print program version\n\
  -h --help: print this help\n\
 ");
 }
@@ -308,6 +308,15 @@ int main (int argc, const char * argv[], const char * envp[]) {
 
   if (master.debug & DEBUG_BASIC)
     printf ("hin start ...\n");
+
+  if (HIN_RESTRICT_ROOT && geteuid () == 0) {
+    if (HIN_RESTRICT_ROOT == 1) {
+      printf ("WARNING! process started as root\n");
+    } else if (HIN_RESTRICT_ROOT == 2) {
+      printf ("ERROR! not allowed to run as root\n");
+      exit (1);
+    }
+  }
 
   hin_linux_set_limits ();
   void hin_init_sharedmem ();

@@ -1,26 +1,25 @@
 hin9
 ====
 
-hinsightd is a http/1.1 webserver designed for use with linux io_uring
+hinsightd is a http/1.1 webserver designed for the new linux async api: io_uring
 
-main features are http1.1 pipelining, reverse proxy, local file-based cache, cgi and fastcgi, ssl, dynamic deflate, per request debug information, graceful restart, customizable logging, customizable cache control headers, customizable everything
+main features are http1.1 pipelining, reverse proxy, local file-based cache, cgi and fastcgi, ssl, dynamic deflate, per request debug information, graceful restart, http/1.1 http downloader...
 
-uses lua for everything related to configuration
+the server core is written in c but the main decisions related to what each request does is handled by lua, lua can either proxy the request, send it to the fastcgi handler or just serve an arbritrary static file
 
-fun features that can be implemented just in lua and have been left out as an excercise to the user
+fun features that can be implemented just in lua and are left out as an excercise to the user
 * rewrites
 * per vhost logging
-* zero or full logging and everything in between
+* custom logging formats
 * basic auth
-* most kinds of load balancing
+* most kinds of load balancing (already has basic round robin)
 
-whenever possible coherency, ease of understanding and algorithm aesthetic are prioritized over speed, optimization or features
-
+whenever possible prioritizes coherency, ease of understanding and algorithm beauty over speed, optimization or features. Spaces for indenting and tabs for aligning.
 
 requirements
 ------------
 
-* linux kernel >5.6 (march 2020), liburing, lua (5.1-5.4), libz
+* linux kernel 5.6 (march 2020), liburing, lua (5.1-5.4), libz
 * optional: openssl/libressl
 * cmake build system for compilation
 
@@ -33,7 +32,7 @@ install & run
 download mode
 -------------
 
-you can use the program as a http/1.1 downloader
+you can also use the program as a http/1.1 downloader
 * download and show to console: `build/hin9 -d _url_`
 * download and save to file: `build/hin9 -do _url_ _path_`
 * download multiple files: `build/hin9 -dodo _url1_ _path1_ _url2_ _path2_`
@@ -43,18 +42,14 @@ you can use the program as a http/1.1 downloader
 simple server mode
 ------------------
 
-can also be used just to serve the current directory
+Can also be used just to serve the current directory without any kind of config. Skipping config file also skipps any kind of mime type matching, http compression, logging, etc.
 
-`cd htdocs && _build/hin9 --serve 8080_`
+`cd htdocs && build/hin9 --serve 8080`
 
-configuration
--------------
+compilation options
+-------------------
 
 * cmake options: enable/disable ssl, cgi, fastcgi, reverse proxy code
-* lots of knobs can be found in src/hin/conf.h
+* misc settings can be found in src/hin/conf.h
 
-roadmap
--------
-
-* static deflate caching
 

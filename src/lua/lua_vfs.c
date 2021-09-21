@@ -19,38 +19,52 @@
 
 basic_vfs_t * vfs = NULL;
 
-int hin_send_raw_path (httpd_client_t * http) {
-  hin_vhost_t * vhost = http->vhost;
+static basic_vfs_node_t * hin_search_dir (basic_vfs_node_t * node, const char * name, int name_len) {
+  basic_vfs_dir_t * dir = basic_vfs_get_dir (vfs, node);
+  basic_vfs_node_t * new = basic_vfs_search_dir (vfs, dir, name, name_len);
+  if (new && new->type == BASIC_ENT_FILE) {
+    basic_vfs_ref (vfs, new);
+    basic_vfs_unref (vfs, node);
+    return new;
+  }
+  return NULL;
+}
 
+static basic_vfs_node_t * get_path_node (httpd_client_t * http, string_t * path, string_t * orig) {
+  hin_vhost_t * vhost = http->vhost;
   string_t source = http->headers;
-  string_t path;
-  if (match_string (&source, "%a+ ("HIN_HTTP_PATH_ACCEPT")", &path) <= 0) {}
+
+  if (match_string (&source, "%a+ ("HIN_HTTP_PATH_ACCEPT")", path) <= 0) {}
+  if (orig)
+    *orig = *path;
+  match_string (path, "/");
 
   basic_vfs_node_t * cwd = vhost->cwd_dir;
-
-  match_string (&path, "/");
-
   basic_vfs_node_t * node = NULL;
-  if (path.len > 0) {
-    node = basic_vfs_ref_path (vfs, cwd, &path);
+
+  if (path->len > 0) {
+    node = basic_vfs_ref_path (vfs, cwd, path);
   } else {
     node = cwd;
   }
   if (node == NULL) {
-    return 0;
+    return NULL;
   }
+  return node;
+}
+
+int hin_send_raw_path (httpd_client_t * http) {
+  string_t path;
+  basic_vfs_node_t * node = get_path_node (http, &path, NULL);
+  if (node == NULL) return -1;
 
   if (node->type == BASIC_ENT_DIR) {
-    basic_vfs_dir_t * dir = basic_vfs_get_dir (vfs, node);
     const char * name = "index.html";
     size_t name_len = strlen (name);
-    basic_vfs_node_t * new = basic_vfs_search_dir (vfs, dir, name, name_len);
-    if (new && new->type == BASIC_ENT_FILE) {
-      basic_vfs_unref (vfs, node);
-      basic_vfs_ref (vfs, new);
+    basic_vfs_node_t * new = hin_search_dir (node, name, name_len);
+    if (new) {
       node = new;
-    }
-    if (node->type == BASIC_ENT_DIR && dir) {
+    } else {
       http->file = node;
       return -1;
     }
@@ -80,39 +94,42 @@ int l_hin_set_path (lua_State *L) {
   httpd_client_t * http = (httpd_client_t*)client;
   hin_vhost_t * vhost = http->vhost;
 
-  string_t path, orig;
-  basic_vfs_node_t * cwd = vhost->cwd_dir;
   int is_dir = 0;
-
-  path.ptr = (char*)lua_tolstring (L, 2, &path.len);
-  orig = path;
-  match_string (&path, "/");
-
-  basic_vfs_node_t * node = NULL;
-  if (path.len > 0) {
-    node = basic_vfs_ref_path (vfs, cwd, &path);
-  } else {
-    node = cwd;
-  }
-  if (node == NULL) {
-    return 0;
-  }
+  string_t path, orig;
+  basic_vfs_node_t * node = get_path_node (http, &path, &orig);
+  if (node == NULL) return 0;
 
   if (node->type == BASIC_ENT_DIR) {
-    basic_vfs_dir_t * dir = basic_vfs_get_dir (vfs, node);
     is_dir = 1;
     for (int i=3; i <= lua_gettop (L); i++) {
-      size_t name_len = 0;
-      const char * name = lua_tolstring (L, i, &name_len);
-      basic_vfs_node_t * new = basic_vfs_search_dir (vfs, dir, name, name_len);
-      if (new && new->type == BASIC_ENT_FILE) {
-        basic_vfs_unref (vfs, node);
-        basic_vfs_ref (vfs, new);
-        node = new;
-        break;
+      if (lua_istable (L, i)) {
+        int sz = hin_lua_rawlen (L, i);
+        for (int j = 1; j <= sz; j++) {
+          lua_rawgeti (L, i, j);
+          size_t name_len = 0;
+          const char * name = lua_tolstring (L, -1, &name_len);
+          basic_vfs_node_t * new = hin_search_dir (node, name, name_len);
+          if (new) {
+            node = new;
+            is_dir = 0;
+            break;
+          }
+          lua_pop (L, 1);
+        }
+        if (is_dir == 0) break;
+      } else if (lua_isstring (L, i)) {
+        size_t name_len = 0;
+        const char * name = lua_tolstring (L, i, &name_len);
+        basic_vfs_node_t * new = hin_search_dir (node, name, name_len);
+        if (new) {
+          node = new;
+          is_dir = 0;
+          break;
+        }
       }
     }
-    if (node->type == BASIC_ENT_DIR && dir) {
+    if (node->type == BASIC_ENT_DIR) {
+      basic_vfs_dir_t * dir = basic_vfs_get_dir (vfs, node);
       http->file = node;
       lua_pushlstring (L, dir->path, dir->path_len);
       lua_pushnil (L);

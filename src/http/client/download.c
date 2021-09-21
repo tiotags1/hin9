@@ -82,6 +82,66 @@ static int state_callback (http_client_t * http, uint32_t state) {
   return 0;
 }
 
+typedef struct {
+  hin_pipe_t * pipe;
+  time_t last;
+  off_t last_sz;
+} hin_download_tracker_t;
+
+static int to_human_bytes (off_t amount, double * out, char ** unit) {
+  *unit = "B";
+  *out = amount;
+  if (amount < 1024) goto end;
+  *unit = "KB";
+  *out = amount / 1024.0;
+  amount /= 1024;
+  if (amount < 1024) goto end;
+  *unit = "MB";
+  *out = amount / 1024.0;
+  amount /= 1024;
+  if (amount < 1024) goto end;
+  *unit = "GB";
+  *out = amount / 1024.0;
+  amount /= 1024;
+  if (amount < 1024) goto end;
+  *unit = "TB";
+end:
+  return 0;
+}
+
+static int download_progress (hin_download_tracker_t * p, int num, int flush) {
+  hin_pipe_t * pipe = p->pipe;
+  http_client_t * http = pipe->parent;
+  p->last_sz += num;
+  if ((time (NULL) == p->last) && (flush == 0)) return 0;
+  int single = 0;
+  p->last = time (NULL);
+  if (single) {
+    printf ("\r");
+  }
+  char * u1, * u2, * u3;
+  double s1, s2, s3;
+  to_human_bytes (pipe->out.pos + num, &s1, &u1);
+  to_human_bytes (http->sz, &s2, &u2);
+  to_human_bytes (p->last_sz, &s3, &u3);
+
+  printf ("%.*s: %.1f%s/%.1f%s \t%.1f %s/sec%s",
+	(int)http->uri.all.len, http->uri.all.ptr,
+	s1, u1,
+	s2, u2,
+	s3, u3,
+	flush ? " finished" : "");
+  p->last_sz = 0;
+  if (!single || flush) {
+    printf ("\n");
+  }
+  if (flush) {
+    free (p);
+    http->progress = NULL;
+  }
+  return 0;
+}
+
 static int read_callback (hin_pipe_t * pipe, hin_buffer_t * buf, int num, int flush) {
   if (num <= 0) return 1;
   buf->count = num;
@@ -92,13 +152,13 @@ static int read_callback (hin_pipe_t * pipe, hin_buffer_t * buf, int num, int fl
   }
 
   if (http->debug & DEBUG_PROGRESS) {
-    if (1) {
-      printf ("\r");
+    hin_download_tracker_t * progress = http->progress;
+    if (progress == NULL) {
+      progress = calloc (1, sizeof (*progress));
+      progress->pipe = pipe;
+      http->progress = progress;
     }
-    printf ("%.*s: %lld/%lld%s", (int)http->uri.all.len, http->uri.all.ptr, (long long)(pipe->out.pos + num), (long long)http->sz, flush ? " finished" : "");
-    if (0 || flush) {
-      printf ("\n");
-    }
+    download_progress (progress, num, flush);
   }
   //if (flush) return 1; // already cleaned in the write done handler
   return 0;
