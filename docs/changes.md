@@ -1,4 +1,9 @@
 
+* readme changes
+* better proxy example
+* fixed graceful reload
+
+commit db14c5e01de0629234320b63b1ebea3328550e35
 * progress bar show speed
 * progress bar reduce update frequency
 * progress bar human readable file sizes

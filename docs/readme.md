@@ -1,20 +1,13 @@
 hin9
 ====
 
-hinsightd is a http/1.1 webserver designed for the new linux async api: io_uring
+hinsightd is a http/1.1 webserver designed around the linux async api io_uring. It tries to solve complicated problems with simple solutions.
 
-main features are http1.1 pipelining, reverse proxy, local file-based cache, cgi and fastcgi, ssl, dynamic deflate, per request debug information, graceful restart, http/1.1 http downloader...
+It has most of the features you'd expect out of more mature server but in a lighter format: http1.1 pipelining, reverse proxy, local file-based cache, cgi and fastcgi, ssl, dynamic deflate, per request debug information, graceful restart. And some exotic features like a http downloader.
 
-the server core is written in c but the main decisions related to what each request does is handled by lua, lua can either proxy the request, send it to the fastcgi handler or just serve an arbritrary static file
+The server core is written in c but the main decisions related to what each request does is handled by scripts interpreted by Lua. This offers a flexible way to write 'plugins', examples include: custom logging formats, per vhost logging, different load balancing strategies, http authentication, rewrites, timed callback actions, and other fun exercises.
 
-fun features that can be implemented just in lua and are left out as an excercise to the user
-* rewrites
-* per vhost logging
-* custom logging formats
-* basic auth
-* most kinds of load balancing (already has basic round robin)
-
-whenever possible prioritizes coherency, ease of understanding and algorithm beauty over speed, optimization or features. Spaces for indenting and tabs for aligning.
+Whenever possible code prioritizes coherency, ease of understanding and algorithm beauty over speed, optimization or features. Spaces for indenting and tabs for aligning. Code comments are rare.
 
 requirements
 ------------
@@ -44,7 +37,7 @@ simple server mode
 
 Can also be used just to serve the current directory without any kind of config. Skipping config file also skipps any kind of mime type matching, http compression, logging, etc.
 
-`cd htdocs && build/hin9 --serve 8080`
+`cd htdocs && ../build/hin9 --serve 8080`
 
 compilation options
 -------------------

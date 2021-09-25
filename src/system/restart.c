@@ -73,7 +73,7 @@ static void hin_restart_do_exec () {
   argv[i++] = buf;
   argv[i++] = "--config";
   argv[i++] = master.conf_path;
-  argv[i++] = "--workdir_path";
+  argv[i++] = "--workdir";
   argv[i++] = master.workdir_path;
   argv[i++] = "--logdir";
   argv[i++] = master.logdir_path;
