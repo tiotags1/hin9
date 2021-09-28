@@ -40,7 +40,8 @@ extern basic_vfs_t * vfs;
 
 static int done_file (hin_pipe_t * pipe) {
   if (pipe->debug & DEBUG_PIPE) printf ("pipe %d>%d file transfer finished bytes %lld\n", pipe->in.fd, pipe->out.fd, (long long)pipe->count);
-  httpd_client_finish_request (pipe->parent);
+  httpd_client_t * http = pipe->parent;
+  httpd_client_finish_request (http, pipe);
   void hin_cache_unref (void *);
   if (pipe->parent1) hin_cache_unref (pipe->parent1);
 

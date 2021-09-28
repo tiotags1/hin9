@@ -111,7 +111,7 @@ static int hin_fcgi_headers (hin_buffer_t * buf, hin_fcgi_worker_t * worker) {
   }
   dir = file->parent;
 
-/*
+/*  TODO
   if (path_info && *path_info != '\0') {
     var (&env, "PATH_INFO=%s", path_info);
     char * ptr = (char*)path_info;

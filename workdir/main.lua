@@ -2,7 +2,9 @@
 php_bin = "/usr/bin/php-cgi"
 
 function timeout_callback (dt)
+  current_date = os.date('%d/%m/%Y:%T %z')
 end
+current_date = os.date('%d/%m/%Y:%T %z')
 
 index_files = {"index.html"}
 fpm_apps = {}
@@ -22,7 +24,7 @@ if (access_log) then
 else
   access = nil_log ()
 end
-access ("start server on %s\n", os.date ("%c"))
+access ("start server on %s\n", os.date ("%F %T %z"))
 
 init ()
 

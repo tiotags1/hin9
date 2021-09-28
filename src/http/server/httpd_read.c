@@ -32,7 +32,7 @@ static int post_done (hin_pipe_t * pipe) {
 
   http->state &= ~HIN_REQ_POST;
   if (http->state & HIN_REQ_DATA) return 0;
-  return httpd_client_finish_request (http);
+  return httpd_client_finish_request (http, pipe);
 }
 
 static int httpd_client_start_post (httpd_client_t * http, string_t * source) {

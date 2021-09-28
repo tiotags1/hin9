@@ -7,7 +7,8 @@ map (main, "*", 99, function (req)
   local path, query, method, version, host = parse_path (req)
   local ip, port = remote_address (req)
   local id = get_option (req, "id")
-  access ("%s - - - \"%s %s?%s %s\" %d %d\n", ip, method, path, query, version, status, 0)
+  local sz = get_option (req, "response_size")
+  access ("%s - - [%s] \"%s %s?%s %s\" %d %d\n", ip, current_date, method, path, query, version, status, sz)
 end)
 
 -- default map

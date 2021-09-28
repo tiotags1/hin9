@@ -19,7 +19,7 @@ static int httpd_proxy_close (http_client_t * http) {
     parent->state &= ~HIN_REQ_PROXY;
     if ((parent->state & HIN_REQ_ERROR) == 0) {
       parent->state &= ~(HIN_REQ_PROXY | HIN_REQ_DATA);
-      httpd_client_finish_request (parent);
+      httpd_client_finish_request (parent, NULL);
     }
   } else {
     if (http->debug & DEBUG_PROXY) printf ("proxy close %d\n", http->c.sockfd);
@@ -37,11 +37,13 @@ static int httpd_proxy_pipe_close (hin_pipe_t * pipe) {
   http->io_state &= ~HIN_REQ_DATA;
 
   httpd_client_t * parent = pipe->parent;
+  http->count = pipe->count;
+
   if (parent->c.type == HIN_CACHE_OBJECT) {
+    hin_cache_finish (parent, pipe);
     if (http->c.sockfd >= 0) {
       http_client_finish_request (http);
     }
-    hin_cache_finish (parent, pipe);
     return 0;
   }
 

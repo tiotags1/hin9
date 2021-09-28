@@ -1,4 +1,10 @@
 
+* better support for common log format (added response size field and moved date)
+* create\_log will no longer print date unless you pass true as a parameter
+* documentation changes
+* fixed previous commit not exiting properly when you use fcgi
+
+commit 0b14a77d6d56789b38697954dfcd426015d4c365
 * fixed downloader exiting before it even began downloading
 * changed default log format to be closer to apache format
 

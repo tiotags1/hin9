@@ -30,6 +30,8 @@ void hin_fcgi_socket_close (hin_fcgi_socket_t * socket) {
     close (socket->fd);
   socket->fd = -1;
 
+  master.num_connection--;
+
   free (socket);
 }
 

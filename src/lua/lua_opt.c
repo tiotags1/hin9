@@ -172,6 +172,11 @@ static int l_hin_get_option (lua_State *L) {
     int ret = http->disable & get_mask (L, param);
     lua_pushboolean (L, ret);
     return 1;
+
+  } else if (strcmp (name, "response_size") == 0) {
+    lua_pushnumber (L, http->count);
+    return 1;
+
   } else {
     return luaL_error (L, "unkown option '%s'", name);
   }
@@ -228,10 +233,12 @@ static int l_hin_set_option (lua_State *L) {
     if (value) {  }
     else { http->peer_flags &= ~HIN_HTTP_KEEPALIVE; }
     return 0;
+
   } else if (strcmp (name, "debug") == 0) {
     if (hin_lua_mask_from_str (L, 3, &http->debug) >= 0) {
     }
     return 0;
+
   } else {
     return luaL_error (L, "unknown option '%s'", name);
   }

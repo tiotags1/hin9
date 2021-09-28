@@ -1,23 +1,30 @@
 hin9
 ====
 
-hinsightd is a http/1.1 webserver designed around the linux async api io_uring. It tries to solve complicated problems with simple solutions.
+hinsightd is a HTTP/1.1 webserver designed to be light on used resources but not light on features. It uses the new linux async API io\_uring for network and file access.
 
-It has most of the features you'd expect out of more mature server but in a lighter format: http1.1 pipelining, reverse proxy, local file-based cache, cgi and fastcgi, ssl, dynamic deflate, per request debug information, graceful restart. And some exotic features like a http downloader.
+It has most of the features you'd expect out of more mature server: HTTP/1.1 pipelining, ssl, reverse proxy, cgi and fastcgi, local caching for cgi and proxy content, dynamic deflate, per request debug information, graceful restart. And some exotic features like a http downloader.
 
-The server core is written in c but the main decisions related to what each request does is handled by scripts interpreted by Lua. This offers a flexible way to write 'plugins', examples include: custom logging formats, per vhost logging, different load balancing strategies, http authentication, rewrites, timed callback actions, and other fun exercises.
+The server core is written in C but the main decisions related to what each request does is handled by scripts interpreted by Lua. This offers a flexible way to write 'plug-ins', examples include: custom logging formats, per vhost logging, different load balancing strategies, http authentication, rewrites, timed callback actions, and other fun exercises.
 
 Whenever possible code prioritizes coherency, ease of understanding and algorithm beauty over speed, optimization or features. Spaces for indenting and tabs for aligning. Code comments are rare.
+
+security features
+-----------------
+
+To combat buffer overflows, server receive all network data in a single expanding buffer and process it in place using a single pattern matching library with proper bounds checking.
+
+It only uses a single linux capability: `cap_net_bind_service` (bind to ports lower that 1024).
 
 requirements
 ------------
 
-* linux kernel 5.6 (march 2020), liburing, lua (5.1-5.4), libz
+* a recent linux kernel (~5.6 - march 2020), liburing, lua (5.1-5.4), libz
 * optional: openssl/libressl
 * cmake build system for compilation
 
 
-install & run
+compile & run
 -------------
 
 `mkdir -p build && cd build && cmake .. && make && cd .. && build/hin9`
@@ -25,7 +32,7 @@ install & run
 download mode
 -------------
 
-you can also use the program as a http/1.1 downloader
+you can also use the program as a HTTP/1.1 downloader
 * download and print output: `build/hin9 -d _url_`
 * download and save to file: `build/hin9 -do _url_ _path_`
 * download multiple files: `build/hin9 -dodo _url1_ _path1_ _url2_ _path2_`
@@ -35,7 +42,7 @@ you can also use the program as a http/1.1 downloader
 simple server mode
 ------------------
 
-Can also be used just to serve the current directory without any kind of config. Skipping config file also skipps any kind of mime type matching, http compression, logging, etc.
+You can also serve the current directory without a config file with the `--server port` command line argument. Doing so also bypasses any kind of MIME type matching, http compression, logging, etc
 
 `cd htdocs && ../build/hin9 --serve 8080`
 

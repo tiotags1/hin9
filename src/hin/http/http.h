@@ -91,7 +91,7 @@ typedef struct http_client_struct {
   char * host, * port;
 
   int save_fd;
-  off_t sz;
+  off_t sz, count;
 
   uint32_t debug;
   hin_buffer_t * read_buffer;
@@ -135,7 +135,7 @@ int hin_client_ssl_init (hin_client_t * client);
 void hin_client_ssl_cleanup (hin_client_t * client);
 
 int httpd_client_start_request (httpd_client_t * http);
-int httpd_client_finish_request (httpd_client_t * http);
+int httpd_client_finish_request (httpd_client_t * http, hin_pipe_t * pipe);
 int httpd_client_shutdown (httpd_client_t * http);
 int http_client_shutdown (http_client_t * http);
 

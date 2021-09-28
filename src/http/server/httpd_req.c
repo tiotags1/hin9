@@ -162,7 +162,7 @@ static int http_raw_response_callback (hin_buffer_t * buffer, int ret) {
   if (ret < 0) {
     printf ("httpd sending error %s\n", strerror (-ret));
   } else if (ret != buffer->count) {
-    printf ("httpd http_error_write_callback not sent all of it %d/%d\n", ret, buffer->count);
+    http->count += ret;
     buffer->ptr += ret;
     buffer->count -= ret;
     hin_request_write (buffer);
@@ -174,8 +174,10 @@ static int http_raw_response_callback (hin_buffer_t * buffer, int ret) {
     return 1;
   }
 
+  http->count += ret;
+
   http->state &= ~HIN_REQ_ERROR;
-  httpd_client_finish_request (http);
+  httpd_client_finish_request (http, NULL);
 
   return 1;
 }

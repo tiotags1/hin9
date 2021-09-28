@@ -28,6 +28,8 @@ static int hin_pipe_cgi_server_finish_callback (hin_pipe_t * pipe) {
   if (pipe->debug & (DEBUG_CGI|DEBUG_PIPE))
     printf ("pipe %d>%d cgi transfer finished bytes %lld\n", pipe->in.fd, pipe->out.fd, (long long)pipe->count);
 
+  http->count = pipe->count;
+
   if (pipe->debug & (DEBUG_CGI|DEBUG_SYSCALL))
     printf ("  cgi read done, close %d\n", pipe->in.fd);
   close (pipe->in.fd);
@@ -38,12 +40,7 @@ static int hin_pipe_cgi_server_finish_callback (hin_pipe_t * pipe) {
   free (worker);
   #endif
 
-  if (http->c.type == HIN_CACHE_OBJECT) {
-    return hin_cache_finish (http, pipe);
-  } else {
-    httpd_client_finish_request (http);
-  }
-  return 0;
+  return httpd_client_finish_request (pipe->parent);
 }
 
 #endif
@@ -57,19 +54,14 @@ static int hin_fcgi_pipe_finish_callback (hin_pipe_t * pipe) {
   if (http && http->debug & DEBUG_CGI)
     printf ("fcgi %d worker %d done.\n", socket->fd, worker->req_id);
 
+  http->state &= ~HIN_REQ_FCGI;
   worker->http = NULL;
   hin_fcgi_worker_reset (worker);
   if (worker->socket)
     hin_fcgi_socket_close (worker->socket);
 
   httpd_client_t * http1 = pipe->parent;
-  if (http1->c.type == HIN_CACHE_OBJECT) {
-    return hin_cache_finish (http1, pipe);
-  } else {
-    httpd_client_finish_request (http1);
-  }
-
-  return 0;
+  return httpd_client_finish_request (http1, pipe);
 }
 
 #endif

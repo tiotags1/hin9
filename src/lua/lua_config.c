@@ -44,20 +44,23 @@ static int hin_log_flush_single (hin_buffer_t * buf) {
 
 static int l_hin_log_callback (lua_State *L) {
   hin_buffer_t * buf = lua_touserdata (L, lua_upvalueindex (1));
+  int print_date = lua_toboolean (L, lua_upvalueindex (2));
   size_t len = 0;
   const char * fmt = lua_tolstring (L, 1, &len);
   const char * max = fmt + len;
   if (fmt == NULL) { printf ("fmt nil\n"); return 0; }
 
-  time_t t;
-  time (&t);
+  if (print_date) {
+    time_t t;
+    time (&t);
 
-  char buffer1[80];
-  struct tm data;
-  struct tm *info = gmtime_r (&t, &data);
-  if (info == NULL) { perror ("gmtime_r"); return 0; }
-  int ret1 = strftime (buffer1, sizeof buffer1, "%F %R ", info);
-  header_raw (buf, buffer1, ret1);
+    char buffer1[80];
+    struct tm data;
+    struct tm *info = gmtime_r (&t, &data);
+    if (info == NULL) { perror ("gmtime_r"); return 0; }
+    int ret1 = strftime (buffer1, sizeof buffer1, "%F %R ", info);
+    header_raw (buf, buffer1, ret1);
+  }
 
   const char * last = fmt;
   char buffer[30];
@@ -118,6 +121,7 @@ int hin_log_flush () {
 
 static int l_hin_create_log (lua_State *L) {
   const char * path = lua_tostring (L, 1);
+  int print_date = lua_toboolean (L, 2);
   int fd = hin_open_file_and_create_path (AT_FDCWD, path, O_WRONLY | O_APPEND | O_CLOEXEC | O_CREAT, 0660);
   if (fd < 0) {
     return luaL_error (L, "create_log '%s' %s\n", path, strerror (errno));
@@ -138,7 +142,8 @@ static int l_hin_create_log (lua_State *L) {
   buf->callback = hin_log_write_callback;
 
   lua_pushlightuserdata (L, buf);
-  lua_pushcclosure (L, l_hin_log_callback, 1);
+  lua_pushboolean (L, print_date);
+  lua_pushcclosure (L, l_hin_log_callback, 2);
 
   logs = buf;
 

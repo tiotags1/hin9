@@ -4,6 +4,25 @@ hin9
 function reference
 ------------------
 
+add\_vhost (vhost-table)
+  * adds a vhost using the vhost-table
+  * returns the vhost object
+
+map (vhost-object, path, mode, callback)
+  * vhost-object - a valid vhost
+  * path - the path to match (end it with * to match everything under it)
+  * mode - 0 runs the callback at the beginning of a request, 99 runs it at the end
+  * callback - a callback that takes a single request object and returns nil if passthrough or true if it ends the process chain
+  * no return
+  * map callbacks are processed in the order they are added
+
+set\_path (request-object, path, index\_files...)
+  * request-object - a valid request object
+  * path - path to the file requested relative to htdocs of the vhost
+  * index\_files - a list of either tables containing multiple names or a single string
+  * if path points to a file returns: dirname(), basename(), last file extension, path\_info (if present)
+  * if path points to a directory: directory path, nil, nil, path\_info, and location is present only if a redirect would be issued (for more info check server option directory\_no\_redirect)
+
 redirect\_log (log path, debug mask)
   * log path - a file path for where to redirect stdout & stderr (optional)
   * debug mask - a string that represents a mask for what debug output to show (optional)
@@ -124,9 +143,6 @@ create\_log (path)
 nil\_log ()
   * create a nil log to replace create\_log, when speed is needed
 
-add\_vhost (vhost-table)
-  * adds a vhost using the vhost-table
-  * returns the vhost pointer
 
 
 

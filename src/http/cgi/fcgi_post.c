@@ -16,7 +16,7 @@ static int hin_fcgi_post_done_callback (hin_pipe_t * pipe) {
 
   http->state &= ~HIN_REQ_POST;
   if (http->state & HIN_REQ_DATA) return 0;
-  return httpd_client_finish_request (http);
+  return httpd_client_finish_request (http, pipe);
 }
 
 int hin_fcgi_post_read_callback (hin_pipe_t * pipe, hin_buffer_t * buf, int num, int flush) {

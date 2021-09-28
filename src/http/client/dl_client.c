@@ -123,7 +123,6 @@ int http_client_finish_request (http_client_t * http) {
 static int connected (hin_buffer_t * buffer, int ret) {
   http_client_t * http = (http_client_t*)buffer->parent;
 
-  master.num_connection++;
   int (*finish_callback) (http_client_t * http, int ret) = (void*)http->read_buffer;
   http->read_buffer = NULL;
 
