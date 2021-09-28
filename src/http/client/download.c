@@ -22,7 +22,6 @@ void http_client_unlink (http_client_t * http);
 static int connected (hin_buffer_t * buffer, int ret) {
   http_client_t * http = (http_client_t*)buffer->parent;
 
-  master.num_connection++;
   int (*finish_callback) (http_client_t * http, int ret) = (void*)http->read_buffer;
   http->read_buffer = NULL;
 
@@ -125,7 +124,7 @@ static int download_progress (hin_download_tracker_t * p, int num, int flush) {
   to_human_bytes (http->sz, &s2, &u2);
   to_human_bytes (p->last_sz, &s3, &u3);
 
-  printf ("%.*s: %.1f%s/%.1f%s \t%.1f %s/sec%s",
+  fprintf (stderr, "%.*s: %.1f%s/%.1f%s \t%.1f %s/sec%s",
 	(int)http->uri.all.len, http->uri.all.ptr,
 	s1, u1,
 	s2, u2,
@@ -168,7 +167,7 @@ http_client_t * http_download_raw (http_client_t * http, const char * url1) {
   hin_uri_t info;
   char * url = strdup (url1);
   if (hin_parse_uri (url, 0, &info) < 0) {
-    printf ("can't parse uri '%s'\n", url1);
+    fprintf (stderr, "can't parse uri '%s'\n", url1);
     free (url);
     return NULL;
   }

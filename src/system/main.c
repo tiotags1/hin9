@@ -239,7 +239,6 @@ int hin_process_argv (basic_args_t * args, const char * name) {
     master.flags |= HIN_SKIP_CONFIG;
     master.debug &= ~(DEBUG_BASIC | DEBUG_CONFIG);
     master.flags |= HIN_QUIT;
-    master.quit = 1;
 
   } else if (basic_args_cmp (name, "-o", "--output", NULL)) {
     const char * path = basic_args_get (args);
@@ -366,12 +365,18 @@ int main (int argc, const char * argv[], const char * envp[]) {
     return -1;
   }
 
-  if (master.debug & DEBUG_BASIC)
+  if (master.flags & HIN_QUIT) {
+  } else if (master.num_listen <= 0) {
+    printf ("WARNING! no listen sockets\n");
+    return -1;
+  } else if (master.debug & DEBUG_BASIC)
     printf ("hin serve ...\n");
   master.share->done = 1;
 
   void * hin_cache_create ();
   hin_cache_create ();
+
+  hin_check_alive ();
 
   void hin_event_loop ();
   hin_event_loop ();

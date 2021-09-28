@@ -18,8 +18,8 @@ static int l_hin_parse_path (lua_State *L) {
   httpd_client_t * http = (httpd_client_t*)client;
 
   string_t temp = http->headers;
-  string_t line, method, path, param;
-  if (find_line (&temp, &line) == 0 || match_string (&line, "(%a+) ("HIN_HTTP_PATH_ACCEPT") (HTTP/1.%d)", &method, &path, &param) <= 0) {
+  string_t line, method, path, version;
+  if (find_line (&temp, &line) == 0 || match_string (&line, "(%a+) ("HIN_HTTP_PATH_ACCEPT") (HTTP/1.%d)", &method, &path, &version) <= 0) {
     printf ("httpd parsing error 1\n");
     return 0;
   }
@@ -34,7 +34,7 @@ static int l_hin_parse_path (lua_State *L) {
   lua_pushlstring (L, uri.path.ptr, uri.path.len);
   lua_pushlstring (L, uri.query.ptr, uri.query.len);
   lua_pushlstring (L, method.ptr, method.len);
-  lua_pushlstring (L, param.ptr, param.len);
+  lua_pushlstring (L, version.ptr, version.len);
   lua_pushstring (L, http->hostname);
 
   return 5;

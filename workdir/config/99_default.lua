@@ -1,15 +1,13 @@
 
 -- logging
-map (main, "*", 0, function (req)
+--[[map (main, "*", 0, function (req)
+end)]]
+map (main, "*", 99, function (req)
+  local status = get_option (req, "status")
   local path, query, method, version, host = parse_path (req)
   local ip, port = remote_address (req)
   local id = get_option (req, "id")
-  access ("%x %s %s %s %s\n", id, ip, method, path, query)
-end)
-map (main, "*", 99, function (req)
-  local status = get_option (req, "status")
-  local id = get_option (req, "id")
-  access ("%x    status %d\n", id or -1, status or 1)
+  access ("%s - - - \"%s %s?%s %s\" %d %d\n", ip, method, path, query, version, status, 0)
 end)
 
 -- default map

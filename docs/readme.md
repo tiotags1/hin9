@@ -26,11 +26,11 @@ download mode
 -------------
 
 you can also use the program as a http/1.1 downloader
-* download and show to console: `build/hin9 -d _url_`
+* download and print output: `build/hin9 -d _url_`
 * download and save to file: `build/hin9 -do _url_ _path_`
 * download multiple files: `build/hin9 -dodo _url1_ _path1_ _url2_ _path2_`
 * multiple files 2: `build/hin9 -do _url1_ _path1_ -do _url2_ _out2_`
-* download with progress bar: `build/hin9 -dopdo _url1_ _path1_ _url2_ _path2_`
+* download with progress bar: `build/hin9 -dopdop _url1_ _path1_ _url2_ _path2_`
 
 simple server mode
 ------------------

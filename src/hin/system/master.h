@@ -37,7 +37,6 @@ typedef struct {
 
 typedef struct {
   int id;
-  int quit;
   uint32_t flags;
   uint32_t debug;
   const char * exe_path;
@@ -51,6 +50,7 @@ typedef struct {
   int restart_pid;
   int num_client;
   int num_connection;
+  int num_listen;
   hin_master_socket1_t * socket, * last_socket;
   hin_client_t * server_list;
   hin_client_t * connection_list;

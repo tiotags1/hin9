@@ -1,4 +1,8 @@
 
+* fixed downloader exiting before it even began downloading
+* changed default log format to be closer to apache format
+
+commit 633297f6a25da604dd11f384b6026a7bcf98aede
 * readme changes
 * better proxy example
 * fixed graceful reload

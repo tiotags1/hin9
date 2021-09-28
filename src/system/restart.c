@@ -25,7 +25,7 @@ int hin_check_alive () {
       master.share->done = 0;
     }
   }
-  if (master.quit == 0) return 1;
+  if (master.num_listen > 0) return 1;
   if (master.debug & DEBUG_CONFIG) printf ("hin live client %d conn %d\n", master.num_client, master.num_connection);
   if (master.num_client > 0) return 1;
   if (master.num_connection > 0) return 1;
@@ -46,7 +46,7 @@ int hin_check_alive_timer () {
 }
 
 void hin_stop () {
-  master.quit = 1;
+  master.num_listen = 0;
   void httpd_proxy_connection_close_all ();
   httpd_proxy_connection_close_all ();
   void hin_timer_flush ();

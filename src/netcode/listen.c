@@ -42,7 +42,7 @@ int hin_server_accept (hin_buffer_t * buffer, int ret) {
   hin_server_t * bp = (hin_server_t*)server;
 
   if (ret < 0) {
-    if (master.quit) return 1;
+    if (master.num_listen <= 0) return 1;
     printf ("failed to accept on fd %d '%s'\n", server->sockfd, strerror (-ret));
     switch (-ret) {
     case EBADF:
@@ -67,7 +67,7 @@ int hin_server_accept (hin_buffer_t * buffer, int ret) {
     printf ("socket %d accept '%s' at %lld\n", ret, buf1, (long long)time (NULL));
   }
   if (hin_server_handle_client (client) < 0) {
-    if (master.quit) return 1;
+    if (master.num_listen <= 0) return 1;
     if (hin_request_accept (buffer, bp->accept_flags) < 0) {
       printf ("accept sync failed\n");
       return -1;
@@ -78,7 +78,7 @@ int hin_server_accept (hin_buffer_t * buffer, int ret) {
 
   hin_client_list_add (&bp->active_client, client);
 
-  if (master.quit) return 1;
+  if (master.num_listen <= 0) return 1;
 
   hin_client_t * new = hin_server_new_client (client->parent);
   buffer->parent = new;
@@ -318,6 +318,7 @@ just_use:
       printf ("conf error\n");
       return -1;
     }
+    master.num_listen++;
   }
 
   int err = 0;

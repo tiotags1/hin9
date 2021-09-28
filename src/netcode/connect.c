@@ -118,6 +118,8 @@ int hin_connect (const char * host, const char * port, hin_callback_t callback, 
   conn->ai_addrlen = ai_addrlen;
   hin_connect_try_next (buf);
 
+  master.num_connection++;
+
   return 0;
 }
 
