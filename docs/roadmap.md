@@ -2,8 +2,7 @@
 * bugs
   * only unreported ones
 
-* reverse proxy
-  * cache gzipped files
+* cache gzipped files
 
 * sandboxing
   * syscall filtering
@@ -11,7 +10,7 @@
 
 * one day
   * traffic shaping
-  * rewrite cache handling
+  * refactor cache subsystem
   * per socket vhosts
   * wildcard vhosts
   * better error handling

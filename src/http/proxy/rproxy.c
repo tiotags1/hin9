@@ -40,10 +40,10 @@ static int httpd_proxy_pipe_close (hin_pipe_t * pipe) {
   http->count = pipe->count;
 
   if (parent->c.type == HIN_CACHE_OBJECT) {
-    hin_cache_finish (parent, pipe);
     if (http->c.sockfd >= 0) {
       http_client_finish_request (http);
     }
+    hin_cache_finish (parent, pipe);
     return 0;
   }
 
@@ -360,7 +360,7 @@ int http_proxy_start_request (http_client_t * http, int ret) {
 
 http_client_t * hin_http_connect (http_client_t * http1, string_t * host, string_t * port, int (*finish_callback) (http_client_t * http, int ret));
 
-http_client_t * hin_proxy (hin_client_t * parent_c, const char * url1) {
+http_client_t * hin_proxy1 (hin_client_t * parent_c, const char * url1) {
   httpd_client_t * parent = (httpd_client_t*)parent_c;
 
   if (parent->state & HIN_REQ_DATA) return NULL;

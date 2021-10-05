@@ -28,8 +28,6 @@ static int hin_pipe_cgi_server_finish_callback (hin_pipe_t * pipe) {
   if (pipe->debug & (DEBUG_CGI|DEBUG_PIPE))
     printf ("pipe %d>%d cgi transfer finished bytes %lld\n", pipe->in.fd, pipe->out.fd, (long long)pipe->count);
 
-  http->count = pipe->count;
-
   if (pipe->debug & (DEBUG_CGI|DEBUG_SYSCALL))
     printf ("  cgi read done, close %d\n", pipe->in.fd);
   close (pipe->in.fd);

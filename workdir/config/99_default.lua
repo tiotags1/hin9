@@ -14,8 +14,9 @@ end)
 -- default map
 map (main, "*", 0, function (req)
   local path, query, method, version, host = parse_path (req)
+  local vhost = get_option (req, "vhost")
 
-  set_option (req, "cache_key", path, "?", query)
+  set_option (req, "cache_key", vhost, ":", path, "?", query)
 
   local dir_path, file_name, ext, path_info, location = set_path (req, path, index_files)
   if (location) then

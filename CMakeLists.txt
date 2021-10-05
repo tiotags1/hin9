@@ -64,6 +64,7 @@ src/http/client/dl_client.c
 src/http/client/download.c
 src/http/client/headers.c
 src/http/client/data.c
+src/http/client/utils.c
 src/http/utils/http_utils.c
 src/http/utils/http_misc.c
 src/http/utils/filters.c

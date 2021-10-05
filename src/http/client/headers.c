@@ -37,10 +37,12 @@ static int http_parse_headers (http_client_t * http, string_t * source) {
     if (source->len <= 0) return 0;
   }
 
+  http->io_state &= ~HIN_REQ_HEADERS;
+
   *source = orig;
 
   if (find_line (source, &line) == 0 || match_string (&line, "HTTP/1.%d ([%d]+) %w+", &param1) <= 0) {
-    printf ("http %d parsing error\n", http->c.sockfd);
+    httpc_error (http, 0, "http parsing error");
     // close connection return error
     return -1;
   }
@@ -55,13 +57,23 @@ static int http_parse_headers (http_client_t * http, string_t * source) {
     }
   }
 
+  hin_pipe_t * http_client_start_pipe (http_client_t * http, string_t * source);
+  hin_pipe_t * pipe = http_client_start_pipe (http, source);
+
+  int used = hin_http_state (http, HIN_HTTP_STATE_HEADERS, (uintptr_t)pipe);
+  if (used > 0) {
+    return used;
+  }
+
+  hin_pipe_start (pipe);
+
   return (uintptr_t)source->ptr - (uintptr_t)orig.ptr;
 }
 
 static int http_client_headers_close_callback (hin_buffer_t * buf, int ret) {
   http_client_t * http = buf->parent;
   if ((http->io_state & HIN_REQ_HEADERS)) {
-    hin_http_state (http, HIN_HTTP_STATE_HEADERS_FAILED);
+    hin_http_state (http, HIN_HTTP_STATE_HEADERS_FAILED, ret);
   }
   http_client_shutdown (http);
   return 0;
@@ -76,13 +88,6 @@ static int http_client_headers_read_callback (hin_buffer_t * buffer, int receive
 
   int used = http_parse_headers (http, &data);
 
-  int http_client_start_pipe (http_client_t * http, string_t * source);
-  if (used > 0) {
-    http->io_state &= ~HIN_REQ_HEADERS;
-    hin_http_state (http, HIN_HTTP_STATE_HEADERS);
-    http_client_start_pipe (http, &data);
-  }
-
   return used;
 }
 
@@ -90,13 +95,21 @@ static int http_client_sent_callback (hin_buffer_t * buf, int ret) {
   if (ret < 0) {
     http_client_t * http = buf->parent;
     printf ("http %d header send failed %s\n", buf->fd, strerror (-ret));
-    hin_http_state (http, HIN_HTTP_STATE_HEADERS_FAILED);
+    hin_http_state (http, HIN_HTTP_STATE_HEADERS_FAILED, ret);
     http_client_shutdown (http);
   }
   return 1;
 }
 
-static int http_send_request (http_client_t * http) {
+int http_client_start_headers (http_client_t * http, hin_buffer_t * received) {
+  if (http->debug & DEBUG_HTTP) printf ("http %d request begin\n", http->c.sockfd);
+
+  hin_lines_t * lines = (hin_lines_t*)&http->read_buffer->buffer;
+  lines->read_callback = http_client_headers_read_callback;
+  lines->close_callback = http_client_headers_close_callback;
+
+  http->io_state |= HIN_REQ_HEADERS;
+
   hin_buffer_t * buf = malloc (sizeof (*buf) + READ_SZ);
   memset (buf, 0, sizeof (*buf));
   buf->flags = HIN_SOCKET | (http->c.flags & HIN_SSL);
@@ -108,8 +121,6 @@ static int http_send_request (http_client_t * http) {
   buf->parent = http;
   buf->ssl = &http->c.ssl;
   buf->debug = http->debug;
-
-  http->io_state |= HIN_REQ_HEADERS;
 
   char * path = http->uri.path.ptr;
   char * path_max = path + http->uri.path.len;
@@ -123,36 +134,19 @@ static int http_send_request (http_client_t * http) {
   } else {
     header (buf, "Host: %.*s\r\n", http->uri.host.len, http->uri.host.ptr);
   }
-  if (0) {
+  if (http->flags & HIN_HTTP_KEEPALIVE) {
     header (buf, "Connection: keep-alive\r\n");
   } else {
     header (buf, "Connection: close\r\n");
   }
   header (buf, "\r\n");
+
   if (http->debug & DEBUG_RW) printf ("http %d request '\n%.*s'\n", http->c.sockfd, buf->count, buf->ptr);
+
   if (hin_request_write (buf) < 0) {
     http_client_shutdown (http);
     return -1;
   }
   return 0;
 }
-
-int http_client_start_headers (http_client_t * http, int ret) {
-  if (ret < 0) {
-    fprintf (stderr, "can't connect '%s:%s' '%s'\n", http->host, http->port, strerror (-ret));
-    hin_http_state (http, HIN_HTTP_STATE_CONNECTION_FAILED);
-    return -1;
-  }
-  hin_http_state (http, HIN_HTTP_STATE_CONNECTED);
-
-  if (http->debug & DEBUG_HTTP) printf ("http %d request begin\n", ret);
-
-  hin_lines_t * lines = (hin_lines_t*)&http->read_buffer->buffer;
-  lines->read_callback = http_client_headers_read_callback;
-  lines->close_callback = http_client_headers_close_callback;
-
-  http_send_request (http);
-  return 0;
-}
-
 

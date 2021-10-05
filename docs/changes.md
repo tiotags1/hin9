@@ -1,4 +1,13 @@
 
+* refactored reverse proxy code
+* regression: no more post support
+* regression: no connection reuse
+* regression: no more rproxy cache
+* rproxy: hopefully better connection reuse
+* fixed cache ignoring vhost
+* fixed vhost map maching being restricted to the first vhost causing 500 errors for all other vhosts
+
+commit 8fcbc9927f2eb72c0fae28ac2bbb9db4f1dd15dc
 * better support for common log format (added response size field and moved date)
 * create\_log will no longer print date unless you pass true as a parameter
 * documentation changes

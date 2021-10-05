@@ -12,7 +12,7 @@
 #include "vhost.h"
 #include "system/hin_lua.h"
 
-int hin_vhost_map_callback (hin_vhost_map_t * map_start, httpd_client_t * http);
+int hin_vhost_map_callback (httpd_client_t * http, int type);
 
 int hin_server_callback (hin_client_t * client) {
   httpd_client_t * http = (httpd_client_t*)client;
@@ -26,7 +26,7 @@ int hin_server_callback (hin_client_t * client) {
     return 0;
   }
 
-  int ret = hin_vhost_map_callback (vhost->map_start, http);
+  int ret = hin_vhost_map_callback (http, HIN_VHOST_MAP_START);
   if (ret <= 0) {
     return ret;
   }
@@ -88,7 +88,7 @@ int hin_server_finish_callback (hin_client_t * client) {
   httpd_client_t * http = (httpd_client_t*)client;
   hin_vhost_t * vhost = http->vhost;
 
-  int ret = hin_vhost_map_callback (vhost->map_finish, http);
+  int ret = hin_vhost_map_callback (http, HIN_VHOST_MAP_FINISH);
   if (ret <= 0) {
     return ret;
   }

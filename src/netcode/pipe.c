@@ -45,6 +45,15 @@ int hin_pipe_write (hin_pipe_t * pipe, hin_buffer_t * buffer) {
   return 0;
 }
 
+void hin_pipe_write_prepend (hin_pipe_t * pipe, hin_buffer_t * buf) {
+  hin_buffer_t * append = pipe->write;
+  pipe->write = NULL;
+  pipe->num_write = 0;
+
+  hin_pipe_write (pipe, buf);
+  hin_pipe_write (pipe, append);
+}
+
 int hin_pipe_append (hin_pipe_t * pipe, hin_buffer_t * buffer) {
   buffer->parent = pipe;
 

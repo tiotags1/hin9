@@ -91,7 +91,6 @@ function create_round_robin (...)
   local n = 1
   return function (req, url)
     local value = arg[n]
-    printf ("round robin at %d %s\n", n, value)
     n = n + 1
     if (n > #arg) then n = 1 end
     return proxy (req, value .. url)

@@ -43,7 +43,7 @@ void hin_vhost_map_clean (hin_vhost_t * vhost) {
   vhost->map_finish = NULL;
 }
 
-int hin_vhost_map_callback (hin_vhost_map_t * map_start, httpd_client_t * http) {
+int hin_vhost_map_callback (httpd_client_t * http, int type) {
   hin_vhost_t * vhost = http->vhost;
   lua_State * L = vhost->L;
 
@@ -53,6 +53,12 @@ int hin_vhost_map_callback (hin_vhost_map_t * map_start, httpd_client_t * http) 
   const char * max = path.ptr + path.len;
 
   while (vhost) {
+    hin_vhost_map_t * map_start;
+    switch (type) {
+    case HIN_VHOST_MAP_START: map_start = vhost->map_start; break;
+    case HIN_VHOST_MAP_FINISH: map_start = vhost->map_finish; break;
+    default: printf ("error! %d", 32534543); map_start = NULL; break;
+    }
     for (hin_vhost_map_t * map = map_start; map; map = map->next) {
       const char * pattern = map->pattern;
       int skip = 1;

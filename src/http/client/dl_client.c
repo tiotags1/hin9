@@ -10,13 +10,30 @@
 
 int http_client_headers_read_callback (hin_buffer_t * buffer, int received);
 
+int http_connection_allocate (http_client_t * http) {
+  if (http->io_state & HIN_REQ_IDLE)
+    hin_client_list_remove (&master.connection_list, &http->c);
+  http->io_state &= ~HIN_REQ_IDLE;
+  return 0;
+}
+
+int http_connection_release (http_client_t * http) {
+  if (HIN_HTTPD_PROXY_CONNECTION_REUSE) {
+    http->io_state |= HIN_REQ_IDLE;
+    hin_client_list_add (&master.connection_list, &http->c);
+  } else {
+    http_client_shutdown (http);
+  }
+  return 0;
+}
+
 void http_client_clean (http_client_t * http) {
   if (http->debug & DEBUG_MEMORY) printf ("http %d clean\n", http->c.sockfd);
   if (http->uri.all.ptr) free ((void*)http->uri.all.ptr);
   if (http->host) free (http->host);
   if (http->port) free (http->port);
   http->host = http->port = NULL;
-  if (http->save_fd) {
+  if (http->save_fd) { // TODO should it clean save_fd ?
     if (http->debug & DEBUG_SYSCALL) printf ("  close save_fd %d\n", http->save_fd);
     close (http->save_fd);
     http->save_fd = 0;
@@ -26,12 +43,14 @@ void http_client_clean (http_client_t * http) {
 
 void http_client_unlink (http_client_t * http) {
   if (http->debug & DEBUG_HTTP) printf ("http %d unlink\n", http->c.sockfd);
+
+  master.num_connection--;
+
   http_client_clean (http);
   if (http->read_buffer) {
     hin_buffer_clean (http->read_buffer);
   }
   free (http);
-  master.num_connection--;
   hin_check_alive ();
 }
 
@@ -50,6 +69,9 @@ int http_client_shutdown (http_client_t * http) {
   if (http->io_state & HIN_REQ_END) return 0;
   http->io_state |= HIN_REQ_END;
 
+  if (http->io_state & HIN_REQ_IDLE)
+    hin_client_list_remove (&master.connection_list, &http->c);
+
   if (http->debug & DEBUG_HTTP) printf ("http %d shutdown\n", http->c.sockfd);
   hin_buffer_t * buf = malloc (sizeof *buf);
   memset (buf, 0, sizeof (*buf));
@@ -64,7 +86,7 @@ int http_client_shutdown (http_client_t * http) {
     buf->flags |= HIN_SYNC;
     hin_request_close (buf);
   }
-  hin_client_list_remove (&master.connection_list, &http->c);
+
   return 0;
 }
 
@@ -107,14 +129,15 @@ void httpd_proxy_connection_close_all () {
 
 int http_client_finish_request (http_client_t * http) {
   if (http->debug & DEBUG_HTTP) printf ("http %d request done\n", http->c.sockfd);
-  if (HIN_HTTPD_PROXY_CONNECTION_REUSE && http->read_buffer) {
-    http->c.parent = NULL;
-    if (hin_request_read (http->read_buffer) < 0) {
-      http_client_shutdown (http);
-      return 0;
-    }
-    hin_client_list_add (&master.connection_list, (hin_client_t*)http);
-  } else {
+
+  http_connection_release (http);
+
+  if ((http->flags & HIN_HTTP_KEEPALIVE) == 0) {
+    http_client_shutdown (http);
+    return 0;
+  }
+  http->c.parent = NULL;
+  if (hin_request_read (http->read_buffer) < 0) {
     http_client_shutdown (http);
   }
   return 0;
@@ -192,6 +215,5 @@ http_client_t * hin_http_connect (http_client_t * prev, string_t * host, string_
 
   return http;
 }
-
 
 

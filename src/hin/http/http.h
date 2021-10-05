@@ -9,7 +9,8 @@
 enum {
 HIN_REQ_HEADERS = 0x1, HIN_REQ_DATA = 0x2, HIN_REQ_POST = 0x4, HIN_REQ_WAIT = 0x8,
 HIN_REQ_PROXY = 0x10, HIN_REQ_CGI = 0x20, HIN_REQ_FCGI = 0x40, HIN_REQ_END = 0x80,
-HIN_REQ_ENDING = 0x100, HIN_REQ_ERROR = 0x200, HIN_REQ_ERROR_HANDLED = 0x400
+HIN_REQ_ENDING = 0x100, HIN_REQ_ERROR = 0x200,
+HIN_REQ_ERROR_HANDLED = 0x400, HIN_REQ_IDLE = 0x800,
 };
 
 enum {
@@ -32,6 +33,7 @@ HIN_HTTP_DATE = 0x1000, HIN_HTTP_POST = 0x2000,
 enum {
 HIN_HTTP_STATE_NIL,
 HIN_HTTP_STATE_CONNECTED, HIN_HTTP_STATE_CONNECTION_FAILED,
+HIN_HTTP_STATE_SSL_FAILED,
 HIN_HTTP_STATE_HEADERS, HIN_HTTP_STATE_HEADERS_FAILED,
 HIN_HTTP_STATE_FINISH,
 HIN_HTTP_STATE_ERROR,
@@ -97,7 +99,7 @@ typedef struct http_client_struct {
   hin_buffer_t * read_buffer;
   void * progress;
 
-  int (*state_callback) (struct http_client_struct * http, uint32_t state);
+  int (*state_callback) (struct http_client_struct * http, uint32_t state, uintptr_t data);
   int (*read_callback) (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush);
 } http_client_t;
 
@@ -108,6 +110,7 @@ typedef struct http_client_struct {
 #include <stdarg.h>
 
 int httpd_error (httpd_client_t * http, int status, const char * fmt, ...);
+int httpc_error (http_client_t * http, int status, const char * fmt, ...);
 
 int vheader (hin_buffer_t * buffer, const char * fmt, va_list ap);
 int header (hin_buffer_t * buffer, const char * fmt, ...);
@@ -127,6 +130,7 @@ int httpd_respond_fatal_and_full (httpd_client_t * http, int status, const char 
 int httpd_respond_buffer (httpd_client_t * http, int status, hin_buffer_t * data);
 int httpd_respond_redirect (httpd_client_t * http, int status, const char * location);
 int httpd_respond_redirect_https (httpd_client_t * http);
+http_client_t * hin_proxy (httpd_client_t * parent, http_client_t * http, const char * url1);
 
 hin_pipe_t * send_file (hin_client_t * client, int filefd, off_t pos, off_t count, uint32_t flags, int (*extra) (hin_pipe_t *));
 hin_pipe_t * receive_file (hin_client_t * client, int filefd, off_t pos, off_t count, uint32_t flags, int (*extra) (hin_pipe_t *));
@@ -155,7 +159,10 @@ int hin_cache_finish (httpd_client_t * client, hin_pipe_t * pipe);
 int hin_cache_check (void * store, httpd_client_t * client);
 
 // internal
-int hin_http_state (http_client_t * http, int state);
+int hin_http_state (http_client_t * http, int state, uintptr_t data);
+
+int http_connection_allocate (http_client_t * http);
+int http_connection_release (http_client_t * http);
 
 #include "utils.h"
 

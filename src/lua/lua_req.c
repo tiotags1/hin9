@@ -134,8 +134,7 @@ static int l_hin_proxy (lua_State *L) {
   const char * url = lua_tostring (L, 2);
   if (url == NULL) { printf ("no path supplied\n"); return 0; }
 
-  int hin_proxy (httpd_client_t * client, const char * url);
-  hin_proxy (http, url);
+  hin_proxy (http, NULL, url);
   #else
   httpd_error (http, 500, "no rproxy compiled");
   #endif

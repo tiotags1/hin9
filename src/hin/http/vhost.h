@@ -10,6 +10,8 @@ HIN_HSTS_NO_REDIRECT = 0x4, HIN_HSTS_NO_HEADER = 0x8,
 HIN_DIRECTORY_LISTING = 0x10, HIN_DIRECTORY_NO_REDIRECT = 0x20,
 };
 
+enum { HIN_VHOST_MAP_START = 1, HIN_VHOST_MAP_FINISH };
+
 typedef struct hin_ssl_ctx_struct {
   int refcount;
   uint32_t magic;

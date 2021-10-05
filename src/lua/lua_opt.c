@@ -177,6 +177,11 @@ static int l_hin_get_option (lua_State *L) {
     lua_pushnumber (L, http->count);
     return 1;
 
+  } else if (strcmp (name, "vhost") == 0) {
+    hin_vhost_t * vhost = http->vhost;
+    lua_pushstring (L, vhost->hostname);
+    return 1;
+
   } else {
     return luaL_error (L, "unkown option '%s'", name);
   }

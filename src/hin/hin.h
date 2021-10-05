@@ -162,6 +162,7 @@ int hin_pipe_advance (hin_pipe_t * pipe);
 int hin_pipe_finish (hin_pipe_t * pipe);
 int hin_pipe_append (hin_pipe_t * pipe, hin_buffer_t * buffer);
 int hin_pipe_write (hin_pipe_t * client, hin_buffer_t * buffer);
+void hin_pipe_write_prepend (hin_pipe_t * pipe, hin_buffer_t * buf);
 
 hin_buffer_t * hin_buffer_create_from_data (void * parent, const char * ptr, int sz);
 void hin_buffer_clean (hin_buffer_t * buffer);

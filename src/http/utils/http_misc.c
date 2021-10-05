@@ -154,3 +154,21 @@ int httpd_error (httpd_client_t * http, int status, const char * fmt, ...) {
 }
 
 
+int httpc_error (http_client_t * http, int status, const char * fmt, ...) {
+  va_list ap, ap1;
+  va_start (ap, fmt);
+  va_copy (ap1, ap);
+
+  printf ("error! http %d %d ", http->c.sockfd, status);
+  vprintf (fmt, ap);
+  printf ("\n");
+
+  if (status == 0) {
+    va_end (ap);
+    return 0;
+  }
+
+  va_end (ap);
+  return 0;
+}
+

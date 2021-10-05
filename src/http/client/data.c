@@ -11,25 +11,14 @@ static int hin_http_pipe_finish_callback (hin_pipe_t * pipe) {
   http_client_t * http = (http_client_t*)pipe->parent;
   if (pipe->debug & DEBUG_PIPE) printf ("http %d download file transfer finished infd %d outfd %d\n", http->c.sockfd, pipe->in.fd, pipe->out.fd);
 
-  hin_http_state (http, HIN_HTTP_STATE_FINISH);
-
-  if (http->save_fd) {
-    close (http->save_fd);
-    http->save_fd = 0;
-  }
-
-  if (HIN_HTTPD_PROXY_CONNECTION_REUSE) {
-    //hin_client_list_add (&master.connection_list, &http->c);
-  } else {
-    http_client_shutdown (http);
-  }
+  hin_http_state (http, HIN_HTTP_STATE_FINISH, (uintptr_t)pipe);
 
   int http_client_finish_request (http_client_t * http);
   http_client_finish_request (http);
   return 0;
 }
 
-int http_client_start_pipe (http_client_t * http, string_t * source) {
+hin_pipe_t * http_client_start_pipe (http_client_t * http, string_t * source) {
   off_t len = source->len;
   off_t sz = http->sz;
   if (sz && sz < len) {
@@ -59,7 +48,7 @@ int http_client_start_pipe (http_client_t * http, string_t * source) {
   if (http->flags & HIN_HTTP_CHUNKED) {
     int hin_pipe_decode_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush);
     pipe->decode_callback = hin_pipe_decode_chunked;
-  } else if (sz > 0) {
+  } else if (http->sz > 0) {
     pipe->in.flags |= HIN_COUNT;
     pipe->left = pipe->sz = sz;
   }
@@ -69,12 +58,10 @@ int http_client_start_pipe (http_client_t * http, string_t * source) {
     hin_pipe_append (pipe, buf1);
   }
 
-  hin_pipe_start (pipe);
-
   source->ptr += len;
   source->len -= len;
 
-  return len;
+  return pipe;
 }
 
 
