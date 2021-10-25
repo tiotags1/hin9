@@ -23,6 +23,8 @@ static int http_parse_headers_line (http_client_t * http, string_t * line) {
       printf ("http %d transport encoding '%.*s' not supported\n", http->c.sockfd, (int)line->len, line->ptr);
       return -1;
     }
+  } else if (match_string (line, "Cache-Control:") > 0) {
+    httpd_parse_cache_str (line->ptr, line->len, &http->cache_flags, &http->cache);
   }
   return 1;
 }

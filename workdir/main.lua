@@ -19,11 +19,7 @@ for ext, uri in pairs (fpm_apps) do
   fpm_socks[ext] = create_fcgi (uri)
 end
 
-if (access_log) then
-  access = create_log (access_log)
-else
-  access = nil_log ()
-end
+access = create_log (access_log)
 access ("start server on %s\n", os.date ("%F %T %z"))
 
 init ()

@@ -196,7 +196,10 @@ http_client_t * hin_proxy (httpd_client_t * parent, http_client_t * http, const 
   if (parent->state & HIN_REQ_DATA) return NULL;
   parent->state |= HIN_REQ_DATA | HIN_REQ_PROXY;
 
-  // TODO cache
+  int hin_cache_check (void * store, httpd_client_t * client);
+  if (hin_cache_check (NULL, parent) > 0) {
+    return 0;
+  }
 
   hin_uri_t info;
   char * url = strdup (url1);

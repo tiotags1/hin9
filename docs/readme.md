@@ -19,7 +19,10 @@ It only uses a single linux capability: `cap_net_bind_service` (bind to ports lo
 requirements
 ------------
 
-* a recent linux kernel (~5.6 - march 2020), liburing, lua (5.1-5.4), libz
+* a recent linux kernel (>=5.6 - march 2020)
+* liburing
+* lua (5.1-5.4)
+* libz
 * optional: openssl/libressl
 * cmake build system for compilation
 

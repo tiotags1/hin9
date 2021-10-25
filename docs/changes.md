@@ -1,4 +1,10 @@
 
+* use ffcall for lua log format specifiers
+* fixed some issues with the non-ffcall lua log function
+* create\_log function can now create a nil log by just passing a nil path, you can force the previous behaviour by passing the 3rd parameter as true
+* changed header\_date function to take a strftime format instead of a header name
+
+commit cf388dbe6d7c0c2c3eea1ea170d7846afc6c285c
 * refactored reverse proxy code
 * regression: no more post support
 * regression: no connection reuse

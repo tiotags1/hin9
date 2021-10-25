@@ -99,12 +99,17 @@ typedef struct http_client_struct {
   hin_buffer_t * read_buffer;
   void * progress;
 
+  // cache
+  uint32_t cache_flags;
+  time_t cache;
+
   int (*state_callback) (struct http_client_struct * http, uint32_t state, uintptr_t data);
   int (*read_callback) (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush);
 } http_client_t;
 
 // TODO no [], pending changes to match_pattern
 #define HIN_HTTP_PATH_ACCEPT "[%w%.%%_-/+&#$?=,:;~@!'*()[]+"
+#define HIN_HTTP_DATE_FORMAT "%a, %d %b %Y %X GMT"
 
 #include <basic_pattern.h>
 #include <stdarg.h>

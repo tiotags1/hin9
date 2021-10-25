@@ -14,6 +14,7 @@ option (USE_OPENSSL "Use openssl" ON)
 option (USE_FCGI "Compile fastcgi support" ON)
 option (USE_CGI "Compile cgi support" OFF)
 option (USE_RPROXY "Compile reverse proxy support" ON)
+option (USE_FFCALL "Use ffcall library for lua log function (more format specifiers)" OFF)
 
 set (TARGET_LIBS ${TARGET_LIBS} ${LUA_LIBRARIES} uring z)
 
@@ -42,6 +43,11 @@ ENDIF()
 if (USE_RPROXY)
   add_definitions (-DHIN_USE_RPROXY)
   set (other_src ${other_src} src/http/proxy/rproxy.c)
+ENDIF()
+
+if (USE_FFCALL)
+  add_definitions (-DHIN_USE_FFCALL)
+  set (TARGET_LIBS ${TARGET_LIBS} ffcall)
 ENDIF()
 
 set (external_src

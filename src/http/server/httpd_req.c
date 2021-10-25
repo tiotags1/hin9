@@ -104,20 +104,25 @@ void * header_ptr (hin_buffer_t * buffer, int len) {
   return ptr;
 }
 
-int header_date (hin_buffer_t * buf, const char * name, time_t time) {
-  char buffer[80];
+int header_date (hin_buffer_t * buf, const char * fmt, time_t time) {
   struct tm data;
   struct tm *info = gmtime_r (&time, &data);
   if (info == NULL) { perror ("gmtime_r"); return 0; }
-  strftime (buffer, sizeof buffer, "%a, %d %b %Y %X GMT", info);
-  return header (buf, "%s: %s\r\n", name, buffer);
+  int sz = 80;
+  char * buffer = header_ptr (buf, sz);
+  int len = strftime (buffer, sz, fmt, info);
+  if (len <= 0) {
+    len = 0;
+  }
+  buf->count -= (sz - len);
+  return len;
 }
 
 int httpd_write_common_headers (httpd_client_t * http, hin_buffer_t * buf) {
   if ((http->disable & HIN_HTTP_DATE) == 0) {
     time_t rawtime;
     time (&rawtime);
-    header_date (buf, "Date", rawtime);
+    header_date (buf, "Date: " HIN_HTTP_DATE_FORMAT "\r\n", rawtime);
   }
   if ((http->disable & HIN_HTTP_BANNER) == 0) {
     header (buf, "Server: %s\r\n", HIN_HTTPD_SERVER_BANNER);

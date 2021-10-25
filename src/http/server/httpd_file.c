@@ -140,7 +140,7 @@ int httpd_send_file (httpd_client_t * http, hin_cache_item_t * item, hin_buffer_
   httpd_write_common_headers (http, buf);
 
   if ((http->disable & HIN_HTTP_MODIFIED) == 0 && item->modified) {
-    header_date (buf, "Last-Modified", item->modified);
+    header_date (buf, "Last-Modified: " HIN_HTTP_DATE_FORMAT "\r\n", item->modified);
   }
   if ((http->disable & HIN_HTTP_ETAG) == 0 && item->etag) {
     header (buf, "ETag: \"%llx\"\r\n", item->etag);

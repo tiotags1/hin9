@@ -14,6 +14,10 @@
 
 #include <fcntl.h>
 
+#ifdef HIN_USE_FFCALL
+#include <avcall.h>
+#endif
+
 hin_buffer_t * logs = NULL;
 
 static int hin_log_write_callback (hin_buffer_t * buf, int ret) {
@@ -42,58 +46,112 @@ static int hin_log_flush_single (hin_buffer_t * buf) {
   return 0;
 }
 
+static const char * hin_log_skip_format (const char * init) {
+  const char * ptr = init;
+  ptr++;
+  while (*ptr == '-' || *ptr == '+' || *ptr == ' ' || *ptr == '#' || *ptr == '0') ptr++;
+  while ((*ptr >= '0' && *ptr <= '9') || *ptr == '.') ptr++;
+  if (*ptr == 'l') { ptr++; }
+  if (*ptr == '*') {
+    return init; // force exit I don't think this one is useful atm
+  }
+  return ptr;
+}
+
 static int l_hin_log_callback (lua_State *L) {
   hin_buffer_t * buf = lua_touserdata (L, lua_upvalueindex (1));
   int print_date = lua_toboolean (L, lua_upvalueindex (2));
   size_t len = 0;
   const char * fmt = lua_tolstring (L, 1, &len);
-  const char * max = fmt + len;
   if (fmt == NULL) { printf ("fmt nil\n"); return 0; }
 
   if (print_date) {
     time_t t;
     time (&t);
-
-    char buffer1[80];
-    struct tm data;
-    struct tm *info = gmtime_r (&t, &data);
-    if (info == NULL) { perror ("gmtime_r"); return 0; }
-    int ret1 = strftime (buffer1, sizeof buffer1, "%F %R ", info);
-    header_raw (buf, buffer1, ret1);
+    header_date (buf, "%F %R ", t);
   }
 
+#ifdef HIN_USE_FFCALL
+  int ret = 0;
+  av_alist alist;
+  av_start_int (alist, header, &ret);
+  av_ptr (alist, void *, buf);
+  av_ptr (alist, char *, fmt);
+  int nparam = 2;
+  for (const char * ptr = fmt; *ptr; ptr++) {
+    if (*ptr != '%') continue;
+    ptr = hin_log_skip_format (ptr);
+    switch (*ptr) {
+    case 's':
+      av_ptr (alist, char *, lua_tostring (L, nparam));
+    break;
+    case 'f': // fall-through
+    case 'F': // fall-through
+    case 'e': // fall-through
+    case 'E': // fall-through
+    case 'g': // fall-through
+    case 'a': // fall-through
+    case 'A':
+      av_double (alist, lua_tonumber (L, nparam));
+    break;
+    case 'n':
+    case '%':
+    break;
+    case 'p':
+      av_int (alist, lua_tonumber (L, nparam));
+    break;
+    default:
+      av_int (alist, lua_tonumber (L, nparam));
+    break;
+    }
+    nparam++;
+  }
+  av_call (alist);
+#else
+  const char * max = fmt + len;
   const char * last = fmt;
-  char buffer[30];
+  char newfmt[30];
   int ret = 2;
   for (const char * ptr = fmt; ptr < max; ptr++) {
-    if (*ptr == '%') {
-      int prev_len = ptr - last;
-      header_raw (buf, last, prev_len);
-      ptr++;
-      switch (*ptr) {
-      case 's':
-        buffer[0] = '%';
-        buffer[1] = 's';
-        buffer[2] = '\0';
-        header (buf, buffer, lua_tostring (L, ret++));
-      break;
-      case 'd':
-      case 'x':
-      case 'p':
-      case 'D':
-      case 'X':
-        buffer[0] = '%';
-        buffer[1] = *ptr;
-        buffer[2] = '\0';
-        header (buf, buffer, lua_tointeger (L, ret++));
-      break;
-      default: header (buf, "%%%c", *ptr);
-      }
-      last = ptr+1;
+    if (*ptr != '%') continue;
+
+    int len = ptr - last;
+    header_raw (buf, last, len);
+
+    last = ptr;
+    ptr = hin_log_skip_format (ptr);
+    len = ptr-last + 1;
+    if (len >= (int)sizeof (newfmt)) continue;
+    memcpy (newfmt, last, len);
+    newfmt[len] = '\0';
+    switch (*ptr) {
+    case 's':
+      header (buf, newfmt, lua_tostring (L, ret++));
+    break;
+    case 'f': // fall-through
+    case 'F': // fall-through
+    case 'e': // fall-through
+    case 'E': // fall-through
+    case 'g': // fall-through
+    case 'a': // fall-through
+    case 'A':
+      header (buf, newfmt, lua_tonumber (L, ret++));
+    break;
+    case 'u':
+    case 'i':
+    case 'd':
+    case 'D':
+    case 'x':
+    case 'X':
+    case 'p':
+      header (buf, newfmt, lua_tointeger (L, ret++));
+    break;
+    default: header (buf, "%s", newfmt);
     }
+    last = ptr+1;
   }
   header_raw (buf, last, max-last);
-
+#endif
   if (buf->next == NULL) { return 0; }
 
   lua_pushlightuserdata (L, buf->next);
@@ -119,9 +177,26 @@ int hin_log_flush () {
   return 0;
 }
 
+static int l_hin_nil_log_callback (lua_State *L) {
+  return 0;
+}
+
+static int l_hin_nil_log (lua_State *L) {
+  if (master.debug & DEBUG_CONFIG)
+    printf ("create nil log\n");
+
+  lua_pushcclosure (L, l_hin_nil_log_callback, 0);
+  return 1;
+}
+
 static int l_hin_create_log (lua_State *L) {
   const char * path = lua_tostring (L, 1);
   int print_date = lua_toboolean (L, 2);
+  int force_alive = lua_toboolean (L, 3);
+  if (path == NULL) {
+    if (force_alive) return luaL_error (L, "create_log path nil");
+    return l_hin_nil_log (L);
+  }
   int fd = hin_open_file_and_create_path (AT_FDCWD, path, O_WRONLY | O_APPEND | O_CLOEXEC | O_CREAT, 0660);
   if (fd < 0) {
     return luaL_error (L, "create_log '%s' %s\n", path, strerror (errno));
@@ -129,6 +204,7 @@ static int l_hin_create_log (lua_State *L) {
 
   if (master.debug & DEBUG_CONFIG)
     printf ("create log on %d '%s'\n", fd, path);
+
   int sz = READ_SZ;
   hin_buffer_t * buf = malloc (sizeof (hin_buffer_t) + sz);
   memset (buf, 0, sizeof (hin_buffer_t));
@@ -147,15 +223,6 @@ static int l_hin_create_log (lua_State *L) {
 
   logs = buf;
 
-  return 1;
-}
-
-static int l_hin_nil_log_callback (lua_State *L) {
-  return 0;
-}
-
-static int l_hin_nil_log (lua_State *L) {
-  lua_pushcclosure (L, l_hin_nil_log_callback, 0);
   return 1;
 }
 
