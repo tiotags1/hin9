@@ -8,29 +8,28 @@
 #include <unistd.h>
 
 #include "hin.h"
-#include "http.h"
+#include "listen.h"
 
 void hin_client_unlink (hin_client_t * client) {
   if (master.debug & DEBUG_SOCKET) printf ("socket %d unlink\n", client->sockfd);
+  hin_server_t * server = (hin_server_t*)client->parent;
 
-  hin_client_t * server = (hin_client_t*)client->parent;
-  hin_server_t * bp = (hin_server_t*)server;
-  hin_client_list_remove (&bp->active_client, client);
-
+  hin_client_list_remove (&server->active_client, client);
   free (client);
   master.num_client--;
+
   hin_check_alive ();
 }
 
-void hin_server_clean (hin_client_t * server) {
-  hin_server_t * bp = (hin_server_t*)server;
-
-  free (bp->accept_client);
-  hin_buffer_clean (bp->accept_buffer);
+void hin_server_clean (hin_server_t * server) {
+  hin_client_t * accept_client = (hin_client_t*)server->accept_buffer->parent;
+  free (accept_client);
+  hin_buffer_clean (server->accept_buffer);
 
   if (master.debug & DEBUG_SOCKET)
-    printf ("server sockfd %d close\n", server->sockfd);
-  close (server->sockfd);
+    printf ("server sockfd %d close\n", server->c.sockfd);
+
+  close (server->c.sockfd);
   free (server);
 }
 

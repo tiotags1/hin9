@@ -115,12 +115,6 @@ int hin_server_finish_callback (hin_client_t * client) {
 
 static lua_State * internal_lua = NULL;
 
-void hin_lua_report_error () {
-  lua_State *L = internal_lua;
-  const char * reason = lua_tostring (L, -1);
-  printf ("error! '%s'\n", reason);
-}
-
 int hin_timeout_callback (float dt) {
   lua_State * L = internal_lua;
 
@@ -188,6 +182,12 @@ void hin_lua_clean () {
 
   lua_close (internal_lua);
   internal_lua = NULL;
+}
+
+void hin_lua_report_error () {
+  lua_State *L = internal_lua;
+  const char * reason = lua_tostring (L, -1);
+  printf ("error! '%s'\n", reason);
 }
 
 int lua_init () {

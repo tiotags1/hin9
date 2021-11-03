@@ -233,10 +233,7 @@ int httpd_client_accept (hin_client_t * client) {
 hin_server_t * httpd_create (const char * addr, const char * port, const char * sock_type, void * ssl_ctx) {
   hin_server_t * server = calloc (1, sizeof (hin_server_t));
 
-  server->c.sockfd = -1;
-  server->c.type = HIN_SERVER;
-  server->c.magic = HIN_SERVER_MAGIC;
-  server->client_handle = httpd_client_accept;
+  server->accept_callback = httpd_client_accept;
   server->user_data_size = sizeof (httpd_client_t);
   server->ssl_ctx = ssl_ctx;
   server->accept_flags = SOCK_CLOEXEC;
@@ -244,8 +241,6 @@ hin_server_t * httpd_create (const char * addr, const char * port, const char * 
 
   if (master.debug & (DEBUG_BASIC|DEBUG_SOCKET))
     printf ("http%sd listening on '%s':'%s'\n", ssl_ctx ? "s" : "", addr ? addr : "all", port);
-
-  hin_client_list_add (&master.server_list, &server->c);
 
   int err = hin_socket_request_listen (addr, port, sock_type, server);
   if (err < 0) {

@@ -65,6 +65,20 @@ external/basic/basic_timer.c
 )
 
 set (hin_src
+src/netcode/header.c
+src/netcode/hin.c
+src/netcode/ssl.c
+src/netcode/ssl_init.c
+src/netcode/connect.c
+src/netcode/epoll.c
+src/netcode/uring.c
+src/netcode/client.c
+src/netcode/listen.c
+src/netcode/buffer.c
+src/netcode/pipe.c
+)
+
+set (hin_exe
 src/http/cgi/cgi_parse.c
 src/http/client/dl_client.c
 src/http/client/download.c
@@ -88,15 +102,6 @@ src/system/restart.c
 src/system/main.c
 src/system/vhost.c
 src/system/timing.c
-src/netcode/ssl.c
-src/netcode/ssl_init.c
-src/netcode/connect.c
-src/netcode/epoll.c
-src/netcode/uring.c
-src/netcode/client.c
-src/netcode/listen.c
-src/netcode/buffer.c
-src/netcode/pipe.c
 src/lua/lua.c
 src/lua/lua_config.c
 src/lua/lua_opt.c
@@ -108,8 +113,10 @@ src/lua/lua_vhost.c
 src/lua/lua_map.c
 )
 
-add_executable (hin9 ${hin_src} ${external_src} ${other_src})
-target_link_libraries (hin9 ${TARGET_LIBS})
+add_library (hinsightd SHARED ${hin_src} ${external_src} ${other_src})
+
+add_executable (hin9 ${hin_exe})
+target_link_libraries (hin9 hinsightd ${TARGET_LIBS})
 
 add_executable (hin9_pid_helper external/tools/pid_helper.c)
 

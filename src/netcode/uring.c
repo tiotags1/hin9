@@ -323,6 +323,8 @@ int hin_event_loop () {
   struct io_uring_cqe *cqe;
   int err;
 
+  hin_check_alive ();
+
   while (1) {
     if (queue) {
       hin_process_sqe_queue ();

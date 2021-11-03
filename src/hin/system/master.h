@@ -53,6 +53,7 @@ typedef struct {
   int num_listen;
   hin_master_socket1_t * socket, * last_socket;
   hin_client_t * server_list;
+  hin_client_t * server_retry;
   hin_client_t * connection_list;
   void * vhosts;
   void * certs;

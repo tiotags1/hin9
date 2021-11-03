@@ -11,33 +11,6 @@
 #include "hin.h"
 #include "system/child.h"
 
-int hin_check_alive () {
-  if (master.flags & HIN_RESTARTING) {
-    if (master.share->done == 0) {
-      printf ("not done\n");
-    } else if (master.share->done > 0) {
-      printf ("restart succesful\n");
-      master.share->done = 0;
-      master.flags &= (~HIN_RESTARTING);
-      hin_stop ();
-    } else {
-      printf ("failed to restart\n");
-      master.share->done = 0;
-    }
-  }
-  if (master.num_listen > 0) return 1;
-  if (master.num_client || master.num_connection) {
-    if (master.debug & DEBUG_CONFIG) printf ("hin live client %d conn %d\n", master.num_client, master.num_connection);
-    return 1;
-  }
-
-  void hin_clean ();
-  hin_clean ();
-
-  exit (0);
-  return -1;
-}
-
 int hin_check_alive_timer () {
   if (master.restart_pid && master.share->done) {
     hin_stop ();

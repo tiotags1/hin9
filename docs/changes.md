@@ -1,4 +1,10 @@
 
+* split code into library part and a server part
+* rewrote parts of the base networking code to make it more generic
+* split hin.h into multiple headers
+* regression: rewriting base logic is hard and affects lots of other parts, so expect bugs
+
+commit a1acab0d18546703c9149ca10c28fc163c92d590
 * use ffcall for lua log format specifiers
 * fixed some issues with the non-ffcall lua log function
 * create\_log function can now create a nil log by just passing a nil path, you can force the previous behaviour by passing the 3rd parameter as true

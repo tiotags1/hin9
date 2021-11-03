@@ -18,10 +18,11 @@ static int hin_server_handle_client (hin_client_t * client) {
     hin_ssl_accept_init (client);
   }
 
-  if (server->client_handle) {
-    server->client_handle (client);
+  if (server->accept_callback) {
+    server->accept_callback (client);
   }
 
+  server->num_client++;
   master.num_client++;
 
   return 0;
@@ -32,7 +33,6 @@ static hin_client_t * hin_server_new_client (hin_server_t * server) {
   new->type = HIN_CLIENT;
   new->magic = HIN_CLIENT_MAGIC;
   new->parent = server;
-  server->accept_client = new;
   return new;
 }
 
@@ -87,7 +87,6 @@ int hin_server_accept (hin_buffer_t * buffer, int ret) {
     printf ("accept sync failed\n");
     return -1;
   }
-  bp->accept_client = new;
   return 0;
 }
 
@@ -189,7 +188,7 @@ static int create_and_bind (const char * addr, const char *port, const char * so
   return sockfd;
 }
 
-int hin_socket_listen (const char * address, const char * port, const char * sock_type, hin_client_t * client) {
+int hin_server_listen (const char * address, const char * port, const char * sock_type, hin_server_t * client) {
   int sockfd = create_and_bind (address, port, sock_type, client);
   if (sockfd == -1) {
     perror ("create and bind");
@@ -206,6 +205,12 @@ int hin_socket_listen (const char * address, const char * port, const char * soc
 }
 
 int hin_socket_request_listen (const char * addr, const char *port, const char * sock_type, hin_server_t * server) {
+  server->c.sockfd = -1;
+  server->c.type = HIN_SERVER;
+  server->c.magic = HIN_SERVER_MAGIC;
+
+  hin_client_list_add (&master.server_list, &server->c);
+
   struct addrinfo hints, *result, *rp;
 
   memset (&hints, 0, sizeof (struct addrinfo));

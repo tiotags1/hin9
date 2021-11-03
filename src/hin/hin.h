@@ -10,33 +10,10 @@
 
 #include <basic_banned.h>
 
-typedef struct hin_buffer_struct hin_buffer_t;
-typedef struct hin_client_struct hin_client_t;
-typedef struct hin_pipe_struct hin_pipe_t;
-
-#define READ_SZ 4096
-//65536
-//16k prob
-
+#include "define.h"
+#include "listen.h"
 #include "system/ssl.h"
 #include "system/master.h"
-
-#define HIN_CONNECT_MAGIC 0xfeabc321
-#define HIN_CLIENT_MAGIC 0xfeabc111
-#define HIN_SERVER_MAGIC 0xfcadc123
-#define HIN_VHOST_MAGIC 0xeeefcac1
-#define HIN_CERT_MAGIC 0xfaaaacc
-#define HIN_FCGI_MAGIC 0xeaeaeaea
-
-enum {
-HIN_DONE = 0x1, HIN_SOCKET = 0x2, HIN_FILE = 0x4, HIN_OFFSETS = 0x8,
-HIN_SSL = 0x10, HIN_COUNT = 0x20, HIN_HASH = 0x40, HIN_SYNC = 0x80,
-HIN_EPOLL_READ = 0x100, HIN_EPOLL_WRITE = 0x200, HIN_INACTIVE = 0x400,
-};
-
-#define HIN_EPOLL (HIN_EPOLL_READ | HIN_EPOLL_WRITE)
-
-enum { HIN_CLIENT = 1, HIN_DYN_BUFFER, HIN_SERVER, HIN_DOWNLOAD, HIN_CACHE_OBJECT };
 
 enum {
 DEBUG_BASIC=0x1, DEBUG_CONFIG=0x2, DEBUG_VFS=0x4, DEBUG_SOCKET=0x8,
@@ -45,23 +22,6 @@ DEBUG_HTTP=0x100, DEBUG_CGI=0x200, DEBUG_PROXY=0x400, DEBUG_HTTP_FILTER=0x800,
 DEBUG_POST=0x1000, DEBUG_CHILD=0x2000, DEBUG_CACHE=0x4000, DEBUG_TIMEOUT=0x8000,
 DEBUG_RW=0x10000, DEBUG_RW_ERROR=0x20000, DEBUG_PIPE=0x40000, DEBUG_INFO=0x80000,
 DEBUG_PROGRESS=0x100000,
-};
-
-typedef int (*hin_callback_t) (hin_buffer_t * buffer, int ret);
-
-struct hin_buffer_struct {
-  int type;
-  int fd;
-  uint32_t flags;
-  uint32_t debug;
-  hin_callback_t callback;
-  off_t pos;
-  int count, sz;
-  void * parent;
-  struct hin_buffer_struct * prev, * next, * ssl_buffer;
-  char * ptr;
-  hin_ssl_t * ssl;
-  char buffer[];
 };
 
 typedef struct {
@@ -91,44 +51,12 @@ struct hin_pipe_struct {
   void * extra;
 };
 
-struct hin_client_struct {
-  int type;
-  int sockfd;
-  uint32_t flags;
-  uint32_t magic;
-  void * parent;
-  struct sockaddr ai_addr;
-  socklen_t ai_addrlen;
-  hin_ssl_t ssl;
-  struct hin_client_struct * prev, * next;
-};
-
-typedef struct hin_server_struct {
-  hin_client_t c;
-  int (*client_handle) (hin_client_t * client);
-  int (*client_close) (hin_client_t * client);
-  int (*client_error) (hin_client_t * client);
-  int user_data_size;
-  void * ssl_ctx;
-  int accept_flags;
-  uint32_t debug;
-  hin_buffer_t * accept_buffer;
-  hin_client_t * accept_client;
-  hin_client_t * active_client;
-  char extra[];
-} hin_server_t;
-
-typedef struct {
-  int (*read_callback) (hin_buffer_t * buffer, int received);
-  int (*eat_callback) (hin_buffer_t * buffer, int num);
-  int (*close_callback) (hin_buffer_t * buffer, int ret);
-  int count;
-  char * base;
-} hin_lines_t;
+int hin_init ();
+int hin_cleanup ();
 
 int hin_connect (const char * host, const char * port, hin_callback_t callback, void * parent, struct sockaddr * ai_addr, socklen_t * ai_addrlen);
 int hin_unix_sock (const char * path, hin_callback_t callback, void * parent);
-int hin_socket_listen (const char * address, const char * port, const char * sock_type, hin_client_t * client);
+int hin_server_listen (const char * address, const char * port, const char * sock_type, hin_server_t * client);
 
 int hin_socket_request_listen (const char * addr, const char *port, const char * sock_type, hin_server_t * client);
 int hin_socket_do_listen ();
