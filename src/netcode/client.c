@@ -14,11 +14,16 @@ void hin_client_unlink (hin_client_t * client) {
   if (master.debug & DEBUG_SOCKET) printf ("socket %d unlink\n", client->sockfd);
   hin_server_t * server = (hin_server_t*)client->parent;
 
-  hin_client_list_remove (&server->active_client, client);
+  hin_client_list_remove (&server->client_list, client);
   free (client);
   master.num_client--;
 
-  hin_check_alive ();
+  if (server->client_list) return;
+
+  hin_buffer_t * buf = server->accept_buffer;
+  if (buf) return ;
+
+  hin_server_unlink (server);
 }
 
 void hin_server_clean (hin_server_t * server) {

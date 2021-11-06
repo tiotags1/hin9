@@ -189,7 +189,7 @@ int hin_process_argv (basic_args_t * args, const char * name) {
     current_download = http;
     master.flags |= HIN_SKIP_CONFIG;
     master.debug &= ~(DEBUG_BASIC | DEBUG_CONFIG);
-    master.flags |= HIN_QUIT;
+    master.flags |= HIN_FLAG_QUIT;
 
   } else if (basic_args_cmp (name, "-o", "--output", NULL)) {
     const char * path = basic_args_get (args);
@@ -301,7 +301,7 @@ int main (int argc, const char * argv[], const char * envp[]) {
     return -1;
   }
 
-  if (master.flags & HIN_QUIT) {
+  if (master.flags & HIN_FLAG_QUIT) {
   } else if (master.num_listen <= 0) {
     printf ("WARNING! no listen sockets\n");
     return -1;

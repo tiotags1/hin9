@@ -14,9 +14,10 @@
 #include <fcntl.h>
 
 #include "hin.h"
-#include "vhost.h"
 
 #ifdef HIN_USE_OPENSSL
+
+#include "vhost.h"
 
 // Global SSL context
 SSL_CTX * default_ctx = NULL;

@@ -17,12 +17,12 @@
 static hin_buffer_t * console_buffer = NULL;
 static hin_buffer_t * timeout_buffer = NULL;
 
-void hin_stop ();
+void hin_stop1 ();
 
 int console_execute (string_t * source) {
   if (matchi_string_equal (source, "q\n") > 0) {
     printf ("do quit\n");
-    hin_stop ();
+    hin_stop1 ();
   } else if (matchi_string_equal (source, "restart\n") > 0) {
     hin_restart1 ();
   } else if (matchi_string_equal (source, "reload\n") > 0) {
@@ -43,7 +43,7 @@ static int hin_console_read_callback (hin_buffer_t * buf, int ret) {
       printf ("console error %s\n", strerror (-ret));
     }
     if (master.debug & DEBUG_CONFIG) printf ("console EOF\n");
-    hin_stop ();
+    hin_stop1 ();
     return 0;
   }
   string_t temp;

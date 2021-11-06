@@ -8,10 +8,11 @@
 #include <unistd.h>
 
 #include "hin.h"
+#include "listen.h"
 #include "utils.h"
 #include "conf.h"
 
-static int hin_server_handle_client (hin_client_t * client) {
+static int hin_server_do_client_callback (hin_client_t * client) {
   hin_server_t * server = (hin_server_t*)client->parent;
 
   if (server->ssl_ctx) {
@@ -28,7 +29,7 @@ static int hin_server_handle_client (hin_client_t * client) {
   return 0;
 }
 
-static hin_client_t * hin_server_new_client (hin_server_t * server) {
+static hin_client_t * hin_server_create_client (hin_server_t * server) {
   hin_client_t * new = calloc (1, sizeof (hin_client_t) + server->user_data_size);
   new->type = HIN_CLIENT;
   new->magic = HIN_CLIENT_MAGIC;
@@ -36,14 +37,13 @@ static hin_client_t * hin_server_new_client (hin_server_t * server) {
   return new;
 }
 
-int hin_server_accept (hin_buffer_t * buffer, int ret) {
+static int hin_server_accept_callback (hin_buffer_t * buffer, int ret) {
   hin_client_t * client = (hin_client_t*)buffer->parent;
-  hin_client_t * server = (hin_client_t*)client->parent;
-  hin_server_t * bp = (hin_server_t*)server;
+  hin_server_t * server = (hin_server_t*)client->parent;
 
   if (ret < 0) {
-    if (master.num_listen <= 0) return 1;
-    printf ("failed to accept on fd %d '%s'\n", server->sockfd, strerror (-ret));
+    if (server->accept_buffer == NULL) return 1;
+    printf ("error! failed accept %d '%s'\n", server->c.sockfd, strerror (-ret));
     switch (-ret) {
     case EBADF:
     case EINVAL:
@@ -52,9 +52,8 @@ int hin_server_accept (hin_buffer_t * buffer, int ret) {
       return 0;
     default: break;
     }
-    if (hin_request_accept (buffer, bp->accept_flags) < 0) {
-      // TODO this should be handled properly
-      printf ("accept async failed\n");
+    if (hin_request_accept (buffer, server->accept_flags) < 0) {
+      printf ("error! %d\n", 5364567);
       return -1;
     }
     return 0;
@@ -66,45 +65,105 @@ int hin_server_accept (hin_buffer_t * buffer, int ret) {
     hin_client_addr (buf1, sizeof buf1, &client->ai_addr, client->ai_addrlen);
     printf ("socket %d accept '%s' at %lld\n", ret, buf1, (long long)time (NULL));
   }
-  if (hin_server_handle_client (client) < 0) {
-    if (master.num_listen <= 0) return 1;
-    if (hin_request_accept (buffer, bp->accept_flags) < 0) {
-      printf ("accept sync failed\n");
+  if (hin_server_do_client_callback (client) < 0) {
+    if (server->accept_buffer == NULL) return 1;
+    if (hin_request_accept (buffer, server->accept_flags) < 0) {
+      printf ("error! %d\n", 3252543);
       return -1;
     }
     printf ("client rejected ?\n");
     return 0;
   }
 
-  hin_client_list_add (&bp->active_client, client);
+  hin_client_list_add (&server->client_list, client);
 
-  if (master.num_listen <= 0) return 1;
+  if (server->accept_buffer == NULL) return 1;
 
-  hin_client_t * new = hin_server_new_client (client->parent);
+  hin_client_t * new = hin_server_create_client (client->parent);
   buffer->parent = new;
 
-  if (hin_request_accept (buffer, bp->accept_flags) < 0) {
-    printf ("accept sync failed\n");
+  if (hin_request_accept (buffer, server->accept_flags) < 0) {
+    printf ("error! %d\n", 435332);
     return -1;
   }
   return 0;
 }
 
 int hin_server_start_accept (hin_server_t * server) {
-  hin_client_t * client = hin_server_new_client (server);
+  if (server->c.sockfd < 0) {
+    if (server->flags & HIN_FLAG_RETRY) { return 0; }
+    return -1;
+  }
 
   hin_buffer_t * buffer = calloc (1, sizeof *buffer);
   buffer->fd = server->c.sockfd;
-  buffer->parent = client;
-  buffer->callback = hin_server_accept;
+  buffer->parent = hin_server_create_client (server);
+  buffer->callback = hin_server_accept_callback;
   buffer->debug = server->debug;
   server->accept_buffer = buffer;
 
   if (hin_request_accept (buffer, server->accept_flags) < 0) {
-    printf ("conf error\n");
+    printf ("error! %d\n", 43543654);
     return -1;
   }
 
+  hin_client_list_add (&master.server_list, &server->c);
+
+  return 0;
+}
+
+int hin_server_unlink (hin_server_t * server) {
+  hin_server_stop (server);
+  // TODO clean every active client
+  close (server->c.sockfd);
+  hin_client_list_remove (&master.server_list, &server->c);
+  free (server);
+
+  hin_check_alive ();
+
+  return 0;
+}
+
+int hin_server_stop (hin_server_t * server) {
+  hin_buffer_t * buf = server->accept_buffer;
+  if (buf == NULL) return 0;
+  free (buf->parent);			// free empty client
+  hin_buffer_clean (buf);
+  server->accept_buffer = NULL;
+
+  if (server->client_list) return 0;
+
+  hin_server_unlink (server);
+
+  return 0;
+}
+
+int hin_server_do_retry () {
+  hin_client_t * next = NULL;
+  for (hin_client_t * client = master.server_retry; client; client = next) {
+    next = client->next;
+    hin_server_t * server = (hin_server_t*)client;
+    hin_client_list_remove (&master.server_retry, client);
+
+    server->c.sockfd = hin_server_listen (NULL, "8080", NULL, server);
+
+    if (hin_server_start_accept (server) < 0) {
+      printf ("error %d\n", 435346);
+      return -1;
+    }
+  }
+
+  return 0;
+}
+
+static int hin_server_add_retry (hin_server_t * server) {
+  hin_client_list_add ((hin_client_t**)&master.server_retry, &server->c);
+  printf ("socket was busy will try again later\n");
+  server->flags |= HIN_FLAG_RETRY;
+  return 0;
+}
+
+static int hin_server_reuse_socket (hin_server_t * server) {
   return 0;
 }
 
@@ -208,8 +267,6 @@ int hin_socket_request_listen (const char * addr, const char *port, const char *
   server->c.sockfd = -1;
   server->c.type = HIN_SERVER;
   server->c.magic = HIN_SERVER_MAGIC;
-
-  hin_client_list_add (&master.server_list, &server->c);
 
   struct addrinfo hints, *result, *rp;
 

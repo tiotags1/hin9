@@ -10,7 +10,9 @@ hin_master_t master;
 #include "listen.h"
 
 int hin_init () {
+  void hin_linux_set_limits ();
   hin_linux_set_limits ();
+  void hin_init_sharedmem ();
   hin_init_sharedmem ();
   void hin_event_init ();
   hin_event_init ();
@@ -71,6 +73,17 @@ int hin_clean () {
   return 0;
 }
 
+void hin_stop () {
+  master.flags |= HIN_FLAG_QUIT;
+  hin_client_t * next = NULL;
+  for (hin_client_t * cur = master.server_list; cur; cur = next) {
+    if (master.debug & DEBUG_CONFIG)
+      printf ("stopping server %d\n", cur->sockfd);
+    next = cur->next;
+    hin_server_stop ((hin_server_t*)cur);
+  }
+}
+
 int hin_check_alive () {
   if (master.flags & HIN_RESTARTING) {
     if (master.share->done == 0) {
@@ -85,25 +98,15 @@ int hin_check_alive () {
       master.share->done = 0;
     }
   }
-  if (master.num_listen > 0) return 1;
-  if (master.num_client || master.num_connection) {
+  if ((master.flags & HIN_FLAG_QUIT) == 0) return 1;
+  if (master.server_list || master.connection_list) {
     if (master.debug & DEBUG_CONFIG) printf ("hin live client %d conn %d\n", master.num_client, master.num_connection);
     return 1;
   }
-
-  hin_clean ();
-
-  exit (0);
-  return -1;
-}
-
-int hin_cleanup () {
-  int hin_event_clean ();
-  hin_event_clean ();
-  int hin_socket_clean ();
-  //hin_socket_clean ();
+  master.flags |= HIN_FLAG_FINISH;
   return 0;
 }
+
 
 
 

@@ -11,26 +11,28 @@
 #include "hin.h"
 #include "system/child.h"
 
+void hin_stop1 ();
+
 int hin_check_alive_timer () {
   if (master.restart_pid && master.share->done) {
-    hin_stop ();
+    hin_stop1 ();
     master.share->done = 0;
   }
   return 0;
 }
 
-void hin_stop () {
+void hin_stop1 () {
   master.num_listen = 0;
   void httpd_proxy_connection_close_all ();
   httpd_proxy_connection_close_all ();
   void hin_timer_flush ();
   hin_timer_flush ();
-  hin_check_alive ();
+  hin_stop ();
 }
 
 static void hin_restart_do_close () {
   master.flags |= HIN_RESTARTING;
-  hin_stop ();
+  hin_stop1 ();
 }
 
 static void hin_restart_do_exec () {

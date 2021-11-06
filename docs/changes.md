@@ -1,4 +1,8 @@
 
+* fix: should now properly install library and headers
+* simplified listen code, stop server code, etc
+
+commit f244648f8e54586b40c77267547025fbddbb0fc7
 * split code into library part and a server part
 * rewrote parts of the base networking code to make it more generic
 * split hin.h into multiple headers

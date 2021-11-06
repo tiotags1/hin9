@@ -73,7 +73,7 @@ int hin_request_is_overloaded () {
 
 int hin_request_write (hin_buffer_t * buffer) {
   if (buffer->flags & HIN_SSL) {
-    if (buffer->debug & DEBUG_URING) printf (" req%d %s buf %p cb %p fd %d\n", master.id, buffer->flags & HIN_SOCKET ? "sends" : "writs", buffer, buffer->callback, buffer->fd);
+    if (buffer->debug & DEBUG_URING) printf (" req %s buf %p cb %p fd %d\n", buffer->flags & HIN_SOCKET ? "sends" : "writs", buffer, buffer->callback, buffer->fd);
     hin_ssl_request_write (buffer);
     return 0;
   }
@@ -100,13 +100,13 @@ int hin_request_write (hin_buffer_t * buffer) {
   io_uring_sqe_set_data (sqe, buffer);
   io_uring_submit1 (&ring);
 
-  if (buffer->debug & DEBUG_URING) printf (" req%d %s buf %p cb %p fd %d\n", master.id, buffer->flags & HIN_SOCKET ? "send" : "writ", buffer, buffer->callback, buffer->fd);
+  if (buffer->debug & DEBUG_URING) printf (" req %s buf %p cb %p fd %d\n", buffer->flags & HIN_SOCKET ? "send" : "writ", buffer, buffer->callback, buffer->fd);
   return 0;
 }
 
 int hin_request_read (hin_buffer_t * buffer) {
   if (buffer->flags & HIN_SSL) {
-    if (buffer->debug & DEBUG_URING) printf (" req%d %s buf %p cb %p fd %d\n", master.id, buffer->flags & HIN_SOCKET ? "recvs" : "reads", buffer, buffer->callback, buffer->fd);
+    if (buffer->debug & DEBUG_URING) printf (" req %s buf %p cb %p fd %d\n", buffer->flags & HIN_SOCKET ? "recvs" : "reads", buffer, buffer->callback, buffer->fd);
     hin_ssl_request_read (buffer);
     return 0;
   }
@@ -135,7 +135,7 @@ int hin_request_read (hin_buffer_t * buffer) {
   io_uring_sqe_set_data (sqe, buffer);
   io_uring_submit1 (&ring);
 
-  if (buffer->debug & DEBUG_URING) printf (" req%d %s buf %p cb %p fd %d\n", master.id, buffer->flags & HIN_SOCKET ? "recv" : "read", buffer, buffer->callback, buffer->fd);
+  if (buffer->debug & DEBUG_URING) printf (" req %s buf %p cb %p fd %d\n", buffer->flags & HIN_SOCKET ? "recv" : "read", buffer, buffer->callback, buffer->fd);
   return 0;
 }
 
@@ -158,7 +158,7 @@ int hin_request_accept (hin_buffer_t * buffer, int flags) {
   io_uring_sqe_set_data (sqe, buffer);
   io_uring_submit1 (&ring);
 
-  if (buffer->debug & DEBUG_URING) printf (" req%d accept buf %p cb %p\n", master.id, buffer, buffer->callback);
+  if (buffer->debug & DEBUG_URING) printf (" req accept buf %p cb %p\n", buffer, buffer->callback);
   return 0;
 }
 
@@ -177,7 +177,7 @@ int hin_request_connect (hin_buffer_t * buffer, struct sockaddr * ai_addr, int a
   io_uring_sqe_set_data (sqe, buffer);
   io_uring_submit1 (&ring);
 
-  if (buffer->debug & DEBUG_URING) printf (" req%d connect buf %p cb %p\n", master.id, buffer, buffer->callback);
+  if (buffer->debug & DEBUG_URING) printf (" req connect buf %p cb %p\n", buffer, buffer->callback);
   return 0;
 }
 
@@ -192,7 +192,7 @@ int hin_request_close (hin_buffer_t * buffer) {
   io_uring_sqe_set_data (sqe, buffer);
   io_uring_submit1 (&ring);
 
-  if (buffer->debug & DEBUG_URING) printf (" req%d close buf %p cb %p fd %d\n", master.id, buffer, buffer->callback, buffer->fd);
+  if (buffer->debug & DEBUG_URING) printf (" req close buf %p cb %p fd %d\n", buffer, buffer->callback, buffer->fd);
   return 0;
 }
 
@@ -207,7 +207,7 @@ int hin_request_openat (hin_buffer_t * buffer, int dfd, const char * path, int f
   io_uring_sqe_set_data (sqe, buffer);
   io_uring_submit1 (&ring);
 
-  if (buffer->debug & DEBUG_URING) printf (" req%d open buf %p cb %p\n", master.id, buffer, buffer->callback);
+  if (buffer->debug & DEBUG_URING) printf (" req open buf %p cb %p\n", buffer, buffer->callback);
   return 0;
 }
 
@@ -222,7 +222,7 @@ int hin_request_timeout (hin_buffer_t * buffer, struct timespec * ts, int count,
   io_uring_sqe_set_data (sqe, buffer);
   io_uring_submit1 (&ring);
 
-  if (buffer->debug & DEBUG_URING) printf (" req%d time buf %p cb %p\n", master.id, buffer, buffer->callback);
+  if (buffer->debug & DEBUG_URING) printf (" req time buf %p cb %p\n", buffer, buffer->callback);
   return 0;
 }
 
@@ -238,39 +238,7 @@ int hin_request_statx (hin_buffer_t * buffer, int dfd, const char * path, int fl
   io_uring_sqe_set_data (sqe, buffer);
   io_uring_submit1 (&ring);
 
-  if (buffer->debug & DEBUG_URING) printf (" req%d stat buf %p cb %p\n", master.id, buffer, buffer->callback);
-  return 0;
-}
-
-#if HIN_HTTPD_NULL_SERVER
-hin_buffer_t * buf_list = NULL;
-
-static int num = 120;
-struct iovec iov[120];
-#endif
-
-int hin_generate_buffers () {
-#if HIN_HTTPD_NULL_SERVER
-  int sz = 512;
-  //memset (iov, 0, sizeof (iov));
-
-  for (int i=0; i<num; i++) {
-    hin_buffer_t * buf = malloc (sizeof *buf + sz);
-    memset (buf, 0, sizeof (*buf));
-    buf->count = buf->sz = sz;
-    buf->ptr = buf->buffer;
-    buf->buf_index = i;
-    iov[i].iov_base = buf->ptr;
-    iov[i].iov_len = buf->sz;
-    hin_buffer_list_add (&buf_list, buf);
-  }
-
-  int ret = io_uring_register_buffers (&ring, iov, num);
-  if (ret) {
-    fprintf (stderr, "Error registering buffers: %s\n", strerror (-ret));
-    return -1;
-  }
-#endif
+  if (buffer->debug & DEBUG_URING) printf (" req stat buf %p cb %p\n", buffer, buffer->callback);
   return 0;
 }
 
@@ -293,10 +261,6 @@ int hin_event_init () {
     printf ("io_uring_ring_dontfork failed %s\n", strerror (-err));
     exit (1);
   }
-  #endif
-
-  #if HIN_HTTPD_NULL_SERVER
-  hin_generate_buffers ();
   #endif
 
   hin_process_sqe_queue ();
@@ -325,7 +289,7 @@ int hin_event_loop () {
 
   hin_check_alive ();
 
-  while (1) {
+  while ((master.flags & HIN_FLAG_FINISH) == 0) {
     if (queue) {
       hin_process_sqe_queue ();
     }
@@ -339,11 +303,11 @@ int hin_event_loop () {
 
     hin_buffer_t * buffer = (hin_buffer_t *)cqe->user_data;
     uint32_t debug = buffer->debug;
-    if (debug & DEBUG_URING) printf ("req%d begin buf %p cb %p %d\n", master.id, buffer, buffer->callback, cqe->res);
+    if (debug & DEBUG_URING) printf ("req begin buf %p cb %p %d\n", buffer, buffer->callback, cqe->res);
 
     io_uring_cqe_seen (&ring, cqe);
     err = buffer->callback (buffer, cqe->res);
-    if (debug & DEBUG_URING) printf ("req%d done. buf %p %d\n", master.id, buffer, err);
+    if (debug & DEBUG_URING) printf ("req done. buf %p %d\n", buffer, err);
     if (err) {
       hin_buffer_clean (buffer);
     }

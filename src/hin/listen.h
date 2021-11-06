@@ -19,9 +19,15 @@ typedef struct hin_server_struct {
   uint32_t debug;
   intptr_t ai_family, ai_protocol, ai_socktype;
   hin_buffer_t * accept_buffer;
-  hin_client_t * active_client;
+  hin_client_t * client_list;
   void * rp_base, * rp;
 } hin_server_t;
+
+
+int hin_server_listen (const char * addr, const char * port, const char * sock_type, hin_server_t * ptr);
+
+int hin_server_stop (hin_server_t * server);
+int hin_server_unlink (hin_server_t * server);
 
 #endif
 

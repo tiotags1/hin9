@@ -56,7 +56,6 @@ int hin_cleanup ();
 
 int hin_connect (const char * host, const char * port, hin_callback_t callback, void * parent, struct sockaddr * ai_addr, socklen_t * ai_addrlen);
 int hin_unix_sock (const char * path, hin_callback_t callback, void * parent);
-int hin_server_listen (const char * address, const char * port, const char * sock_type, hin_server_t * client);
 
 int hin_socket_request_listen (const char * addr, const char *port, const char * sock_type, hin_server_t * client);
 int hin_socket_do_listen ();
