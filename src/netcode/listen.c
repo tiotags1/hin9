@@ -263,7 +263,7 @@ int hin_server_listen (const char * address, const char * port, const char * soc
   return sockfd;
 }
 
-int hin_socket_request_listen (const char * addr, const char *port, const char * sock_type, hin_server_t * server) {
+int hin_listen_request (const char * addr, const char *port, const char * sock_type, hin_server_t * server) {
   server->c.sockfd = -1;
   server->c.type = HIN_SERVER;
   server->c.magic = HIN_SERVER_MAGIC;
@@ -321,7 +321,7 @@ static hin_master_socket_t * hin_socket_search_prev (struct sockaddr * ai_addr, 
   return NULL;
 }
 
-int hin_socket_do_listen () {
+int hin_listen_do () {
   for (hin_master_socket1_t * sock = master.socket; sock; sock = sock->next) {
     if (sock->server == NULL) continue;
     hin_server_t * server = sock->server;

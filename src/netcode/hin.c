@@ -10,66 +10,16 @@ hin_master_t master;
 #include "listen.h"
 
 int hin_init () {
-  void hin_linux_set_limits ();
-  hin_linux_set_limits ();
-  void hin_init_sharedmem ();
-  hin_init_sharedmem ();
   void hin_event_init ();
   hin_event_init ();
-  void hin_console_init ();
-  hin_console_init ();
   void hin_timer_init ();
   hin_timer_init ();
-  int hin_signal_install ();
-  hin_signal_install ();
   return 0;
 }
 
 int hin_clean () {
-  int hin_log_flush ();
-  hin_log_flush ();
-  void hin_lua_clean ();
-  hin_lua_clean ();
-  hin_client_t * next;
-  for (hin_client_t * elem = master.server_list; elem; elem = next) {
-    next = elem->next;
-    void hin_server_clean (hin_client_t * server);
-    hin_server_clean (elem);
-  }
-  void hin_console_clean ();
-  hin_console_clean ();
   int hin_event_clean ();
   hin_event_clean ();
-  void hin_sharedmem_clean ();
-  hin_sharedmem_clean ();
-  void hin_cache_clean ();
-  hin_cache_clean ();
-  int hin_signal_clean ();
-  hin_signal_clean ();
-  int hin_vfs_clean ();
-  hin_vfs_clean ();
-  int hin_socket_clean ();
-  hin_socket_clean ();
-  void hin_vhost_clean ();
-  hin_vhost_clean ();
-  #ifdef HIN_USE_FCGI
-  void hin_fcgi_clean ();
-  hin_fcgi_clean ();
-  #endif
-  // shouldn't clean pidfile it can incur a race condition
-  free ((void*)master.exe_path);
-  free ((void*)master.logdir_path);
-  free ((void*)master.workdir_path);
-  free ((void*)master.tmpdir_path);
-
-  //close (0); close (1); close (2);
-
-  if (master.debug & DEBUG_BASIC)
-    printf ("hin close ...\n");
-  #ifdef BASIC_USE_MALLOC_DEBUG
-  printf ("num fds open %d\n", print_fds ());
-  print_unfree ();
-  #endif
   return 0;
 }
 

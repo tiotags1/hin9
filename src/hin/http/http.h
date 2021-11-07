@@ -169,6 +169,8 @@ int hin_http_state (http_client_t * http, int state, uintptr_t data);
 int http_connection_allocate (http_client_t * http);
 int http_connection_release (http_client_t * http);
 
+int hin_find_line (string_t * source, string_t * line);
+
 #include "utils.h"
 
 #endif

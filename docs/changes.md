@@ -1,4 +1,7 @@
 
+* fixes to library compilation, removed redundant functions that made library fail to link
+
+commit 2b2c6c48559bba9bb19611c375014747336ca70d
 * fix: should now properly install library and headers
 * simplified listen code, stop server code, etc
 

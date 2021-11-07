@@ -242,7 +242,7 @@ hin_server_t * httpd_create (const char * addr, const char * port, const char * 
   if (master.debug & (DEBUG_BASIC|DEBUG_SOCKET))
     printf ("http%sd listening on '%s':'%s'\n", ssl_ctx ? "s" : "", addr ? addr : "all", port);
 
-  int err = hin_socket_request_listen (addr, port, sock_type, server);
+  int err = hin_listen_request (addr, port, sock_type, server);
   if (err < 0) {
     printf ("error requesting socket\n");
     // free socket

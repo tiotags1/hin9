@@ -94,8 +94,8 @@ static void hin_sig_pipe_handler (int signo, siginfo_t * info, void * ucontext) 
 
 static void hin_sig_int_handler (int signo, siginfo_t * info, void * ucontext) {
   printf("^C pressed. Shutting down.\n");
-  void hin_clean ();
-  hin_clean ();
+  void hin_clean1 ();
+  hin_clean1 ();
   exit (0);
 }
 

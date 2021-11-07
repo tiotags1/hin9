@@ -8,7 +8,9 @@
 #include <sys/socket.h>
 #include <sys/uio.h>
 
+#if 0
 #include <basic_banned.h>
+#endif
 
 #include "define.h"
 #include "listen.h"
@@ -52,13 +54,13 @@ struct hin_pipe_struct {
 };
 
 int hin_init ();
-int hin_cleanup ();
+int hin_clean ();
 
 int hin_connect (const char * host, const char * port, hin_callback_t callback, void * parent, struct sockaddr * ai_addr, socklen_t * ai_addrlen);
 int hin_unix_sock (const char * path, hin_callback_t callback, void * parent);
 
-int hin_socket_request_listen (const char * addr, const char *port, const char * sock_type, hin_server_t * client);
-int hin_socket_do_listen ();
+int hin_listen_request (const char * addr, const char *port, const char * sock_type, hin_server_t * client);
+int hin_listen_do ();
 
 int hin_server_start_accept (hin_server_t * server);
 
