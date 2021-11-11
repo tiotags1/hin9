@@ -118,6 +118,7 @@ int hin_server_unlink (hin_server_t * server) {
   close (server->c.sockfd);
   hin_client_list_remove (&master.server_list, &server->c);
   free (server);
+  master.num_listen--;
 
   hin_check_alive ();
 
@@ -164,6 +165,28 @@ static int hin_server_add_retry (hin_server_t * server) {
 }
 
 static int hin_server_reuse_socket (hin_server_t * server) {
+  struct sockaddr ai_addr;
+  socklen_t ai_addrlen;
+  for (int i=0; i<1024; i++) {
+    ai_addrlen = sizeof (ai_addr);
+    int ret = getsockname (i, &ai_addr, &ai_addrlen);
+    if (ret) {
+      continue;
+    }
+    if (ai_addrlen != server->c.ai_addrlen) continue;
+    if (memcmp (&ai_addr, &server->c.ai_addr, ai_addrlen) != 0) continue;
+
+    char buf1[256];
+    int hin_client_addr (char * str, int len, struct sockaddr * ai_addr, socklen_t ai_addrlen);
+    hin_client_addr (buf1, sizeof buf1, &ai_addr, sizeof (ai_addr));
+    if (server->debug & DEBUG_CONFIG)
+      printf ("fd %d reuse socket '%s'\n", i, buf1);
+
+    server->c.sockfd = i;
+
+    return 1;
+  }
+
   return 0;
 }
 
@@ -185,90 +208,10 @@ static int hin_socket_type (const char * sock_type) {
   return ai_family;
 }
 
-static int create_and_bind (const char * addr, const char *port, const char * sock_type, hin_client_t * client) {
+int hin_server_listen (const char * addr, const char * port, const char * sock_type, hin_server_t * ptr) {
   struct addrinfo hints;
   struct addrinfo *result, *rp;
   int s, sockfd;
-
-  while (1) {
-
-    memset (&hints, 0, sizeof (struct addrinfo));
-    hints.ai_family = hin_socket_type (sock_type);
-    hints.ai_socktype = SOCK_STREAM;	// We want a TCP socket
-    hints.ai_flags = AI_PASSIVE;	// All interfaces
-
-    int err = getaddrinfo (addr, port, &hints, &result);
-    if (err) {
-      fprintf (stderr, "getaddrinfo: %s\n", gai_strerror (err));
-      return -1;
-    }
-
-    for (rp = result; rp != NULL; rp = rp->ai_next) {
-      sockfd = socket (rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-      if (sockfd == -1)
-        continue;
-
-      #if HIN_SOCKET_REUSEADDR
-      int enable = 1;
-      if (setsockopt (sockfd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof (int)) < 0)
-        perror ("setsockopt (SO_REUSEADDR) failed");
-      #endif
-
-      s = bind (sockfd, rp->ai_addr, rp->ai_addrlen);
-      if (s == 0) {
-        // We managed to bind successfully!
-        if (client) {
-          client->ai_addr = *rp->ai_addr;
-          client->ai_addrlen = rp->ai_addrlen;
-        }
-        break;
-      }
-
-      close (sockfd);
-    }
-
-    if (rp == NULL) {
-      static int retry_nr = 0;
-      if (errno == EADDRINUSE) { printf ("address in use retrying retry %d\n", retry_nr++); sleep (1); continue; }
-      freeaddrinfo (result);
-      fprintf (stderr, "Could not bind\n");
-      return -1;
-    }
-
-    freeaddrinfo (result);
-    break;
-  }
-
-  hin_master_socket_t * sock = &master.share->sockets[master.share->nsocket++];
-  sock->sockfd = sockfd;
-  sock->ai_addr = *rp->ai_addr;
-  sock->ai_addrlen = rp->ai_addrlen;
-
-  return sockfd;
-}
-
-int hin_server_listen (const char * address, const char * port, const char * sock_type, hin_server_t * client) {
-  int sockfd = create_and_bind (address, port, sock_type, client);
-  if (sockfd == -1) {
-    perror ("create and bind");
-    return -1;
-  }
-
-  int err = listen (sockfd, SOMAXCONN);
-  if (err == -1) {
-    perror ("listen");
-    return -1;
-  }
-
-  return sockfd;
-}
-
-int hin_listen_request (const char * addr, const char *port, const char * sock_type, hin_server_t * server) {
-  server->c.sockfd = -1;
-  server->c.type = HIN_SERVER;
-  server->c.magic = HIN_SERVER_MAGIC;
-
-  struct addrinfo hints, *result, *rp;
 
   memset (&hints, 0, sizeof (struct addrinfo));
   hints.ai_family	= hin_socket_type (sock_type);
@@ -282,67 +225,9 @@ int hin_listen_request (const char * addr, const char *port, const char * sock_t
   }
 
   for (rp = result; rp != NULL; rp = rp->ai_next) {
-    if (master.debug & DEBUG_SOCKET) {
-      char buf1[256];
-      hin_client_addr (buf1, sizeof buf1, rp->ai_addr, rp->ai_addrlen);
-      printf ("socket request '%s'\n", buf1);
-    }
-
-    hin_master_socket1_t * socket = calloc (1, sizeof (hin_master_socket1_t));
-    socket->sockfd = -1;
-    socket->ai_addr = *rp->ai_addr;
-    socket->ai_addrlen = rp->ai_addrlen;
-    socket->ai_family = rp->ai_family;
-    socket->ai_protocol = rp->ai_protocol;
-    socket->ai_socktype = rp->ai_socktype;
-    socket->server = server;
-    if (master.last_socket) {
-      master.last_socket->next = socket;
-    }
-    master.last_socket = socket;
-    if (master.socket == NULL) {
-      master.socket = socket;
-    }
-  }
-
-  freeaddrinfo (result);
-
-  return 0;
-}
-
-static hin_master_socket_t * hin_socket_search_prev (struct sockaddr * ai_addr, socklen_t ai_addrlen) {
-  for (int i = 0; i < master.share->nsocket; i++) {
-    hin_master_socket_t * prev = &master.share->sockets[i];
-    int len = ai_addrlen > prev->ai_addrlen ? ai_addrlen : prev->ai_addrlen;
-    if (memcmp (ai_addr, &prev->ai_addr, len) == 0) {
-      return prev;
-    }
-  }
-  return NULL;
-}
-
-int hin_listen_do () {
-  for (hin_master_socket1_t * sock = master.socket; sock; sock = sock->next) {
-    if (sock->server == NULL) continue;
-    hin_server_t * server = sock->server;
-    if (sock->sockfd >= 0) continue;
-    if (server->c.sockfd >= 0) continue;
-
-    char buf1[256];
-
-    // search in share for the socket
-    hin_master_socket_t * new = hin_socket_search_prev (&sock->ai_addr, sock->ai_addrlen);
-    if (master.debug & DEBUG_SOCKET) {
-      hin_client_addr (buf1, sizeof buf1, &sock->ai_addr, sock->ai_addrlen);
-    }
-    if (new) {
-      if (master.debug & DEBUG_SOCKET) printf ("socket listen '%s' reuse %d\n", buf1, new->sockfd);
-      goto just_use;
-    }
-    if (master.debug & DEBUG_SOCKET) printf ("socket listen '%s'\n", buf1);
-
-    int sockfd = socket (sock->ai_family, sock->ai_socktype, sock->ai_protocol);
-    if (sockfd == -1) { perror ("socket"); continue; }
+    sockfd = socket (rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+    if (sockfd == -1)
+      continue;
 
     #if HIN_SOCKET_REUSEADDR
     int enable = 1;
@@ -350,53 +235,67 @@ int hin_listen_do () {
       perror ("setsockopt (SO_REUSEADDR) failed");
     #endif
 
-    int err = bind (sockfd, &sock->ai_addr, sock->ai_addrlen);
-    if (err == -1) {
-      perror ("bind");
-      close (sockfd);
-      continue;
+    s = bind (sockfd, rp->ai_addr, rp->ai_addrlen);
+    if (s == 0) {
+      // We managed to bind successfully!
+      if (ptr) {
+        ptr->c.ai_addr = *rp->ai_addr;
+        ptr->c.ai_addrlen = rp->ai_addrlen;
+      }
+      break;
+    } else if (errno == EADDRINUSE) {
+      if (ptr) {
+        ptr->c.sockfd = sockfd;
+        ptr->c.ai_addr = *rp->ai_addr;
+        ptr->c.ai_addrlen = rp->ai_addrlen;
+        freeaddrinfo (result);
+        if (hin_server_reuse_socket (ptr)) {
+          close (sockfd);
+          return ptr->c.sockfd;
+        }
+        hin_server_add_retry (ptr);
+        return -1;
+      }
     }
 
-    err = listen (sockfd, SOMAXCONN);
-    if (err == -1) {
-      perror ("listen");
-      close (sockfd);
-      continue;
-    }
-
-    sock->sockfd = sockfd;
-
-    new = &master.share->sockets[master.share->nsocket++];
-    new->ai_addr = sock->ai_addr;
-    new->ai_addrlen = sock->ai_addrlen;
-    new->sockfd = sockfd;
-
-just_use:
-    server->c.ai_addr = sock->ai_addr;
-    server->c.ai_addrlen = sock->ai_addrlen;
-    server->c.sockfd = new->sockfd;
-
-    if (hin_server_start_accept (server) < 0) {
-      printf ("conf error\n");
-      return -1;
-    }
-    master.num_listen++;
+    close (sockfd);
   }
 
-  int err = 0;
-  for (hin_master_socket1_t * sock = master.socket; sock; sock = sock->next) {
-    if (sock->server == NULL) continue;
-    hin_server_t * server = sock->server;
-    if (sock->sockfd >= 0) continue;
-    if (server->c.sockfd >= 0) continue;
-
-    char buf1[256];
-    hin_client_addr (buf1, sizeof buf1, &sock->ai_addr, sock->ai_addrlen);
-    printf ("socket couldn't listen to '%s'\n", buf1);
-    err = -1;
+  if (ptr) {
+    ptr->flags &= ~HIN_FLAG_RETRY;
   }
 
-  return err;
+  if (rp == NULL) {
+    freeaddrinfo (result);
+    fprintf (stderr, "Could not bind\n");
+    return -1;
+  }
+
+  freeaddrinfo (result);
+
+  err = listen (sockfd, SOMAXCONN);
+  if (err == -1) {
+    perror ("listen");
+    return -1;
+  }
+
+  return sockfd;
+}
+
+int hin_listen_request (const char * addr, const char * port, const char * sock_type, hin_server_t * server) {
+  server->c.sockfd = hin_server_listen (addr, port, sock_type, server);
+
+  if (hin_server_start_accept (server) < 0) {
+    printf ("error! %d\n", 2345325);
+    return -1;
+  }
+  master.num_listen++;
+
+  return 0;
+}
+
+int hin_listen_do () {
+  return 0;
 }
 
 int hin_socket_clean () {

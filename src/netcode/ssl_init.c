@@ -114,6 +114,7 @@ static int hin_ssl_sni_callback (SSL *ssl, int *ad, void *arg) {
       printf ("ssl can't find vhost '%s'\n", servername);
     return SSL_TLSEXT_ERR_OK;
   }
+
   SSL_CTX * r = SSL_set_SSL_CTX (ssl, vhost->ssl_ctx);
   if (r != vhost->ssl_ctx) {
     printf ("ssl can't set new ctx\n");

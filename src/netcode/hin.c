@@ -10,9 +10,9 @@ hin_master_t master;
 #include "listen.h"
 
 int hin_init () {
-  void hin_event_init ();
+  int hin_event_init ();
   hin_event_init ();
-  void hin_timer_init ();
+  int hin_timer_init ();
   hin_timer_init ();
   return 0;
 }

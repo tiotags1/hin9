@@ -1,4 +1,8 @@
 
+* simplified socket listen code
+* graceful restart no longer requires a properly formatted shared memory region (but introduced a 1024 fd limit)
+
+commit 4ac99fbe1dd10436fa39f68c7e064362d5057741
 * fixes to library compilation, removed redundant functions that made library fail to link
 
 commit 2b2c6c48559bba9bb19611c375014747336ca70d

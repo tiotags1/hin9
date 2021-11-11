@@ -22,7 +22,6 @@ int hin_check_alive_timer () {
 }
 
 void hin_stop1 () {
-  master.num_listen = 0;
   void httpd_proxy_connection_close_all ();
   httpd_proxy_connection_close_all ();
   void hin_timer_flush ();
@@ -103,6 +102,7 @@ int hin_restart1 () {
 static int hin_use_sharedmem (int sharefd) {
   hin_master_share_t * share = mmap (NULL, 4096, PROT_READ|PROT_WRITE, MAP_SHARED, sharefd, 0);
   master.share = share;
+
   return 0;
 }
 
