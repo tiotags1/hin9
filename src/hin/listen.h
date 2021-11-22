@@ -9,6 +9,7 @@ enum {HIN_FLAG_RETRY=0x1};
 typedef struct hin_server_struct {
   hin_client_t c;
   int (*accept_callback) (hin_client_t * client);
+  void * (*sni_callback) (hin_client_t * client, const char * name, int name_len);
   int (*close_callback) (hin_client_t * client);
   int (*error_callback) (hin_client_t * client);
   int user_data_size;

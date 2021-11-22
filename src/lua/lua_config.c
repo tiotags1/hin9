@@ -246,7 +246,7 @@ static int l_hin_redirect_log (lua_State *L) {
     if (ptr <= mask) {
       printf ("can't parse debug mask\n");
     }
-    hin_vhost_set_debug (nr);
+    httpd_vhost_set_debug (nr);
   } else if (type != LUA_TNONE && type != LUA_TNIL) {
     printf ("redirect log debug mask needs to be a string\n");
   }

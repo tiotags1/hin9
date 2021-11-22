@@ -14,6 +14,8 @@ void hin_client_unlink (hin_client_t * client) {
   if (master.debug & DEBUG_SOCKET) printf ("socket %d unlink\n", client->sockfd);
   hin_server_t * server = (hin_server_t*)client->parent;
 
+  if (client->flags & HIN_SSL)
+    hin_client_ssl_cleanup (client);
   hin_client_list_remove (&server->client_list, client);
   free (client);
   master.num_client--;

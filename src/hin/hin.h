@@ -81,6 +81,9 @@ void hin_client_unlink (hin_client_t * client);
 void hin_client_shutdown (hin_client_t * client);
 void hin_client_close (hin_client_t * client);
 
+int hin_client_ssl_init (hin_client_t * client);
+void hin_client_ssl_cleanup (hin_client_t * client);
+
 void hin_client_list_remove (hin_client_t ** list, hin_client_t * new);
 void hin_client_list_add (hin_client_t ** list, hin_client_t * new);
 

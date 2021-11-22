@@ -56,7 +56,7 @@ int httpd_client_start_request (httpd_client_t * http) {
   http->state = HIN_REQ_HEADERS | (http->state & HIN_REQ_ENDING);
 
   hin_server_t * server = (hin_server_t*)http->c.parent;
-  hin_vhost_t * vhost = (hin_vhost_t*)server->c.parent;
+  httpd_vhost_t * vhost = (httpd_vhost_t*)server->c.parent;
   httpd_vhost_switch (http, vhost);
 
   if (http->debug & DEBUG_HTTP) {
@@ -230,10 +230,22 @@ int httpd_client_accept (hin_client_t * client) {
 #endif
 }
 
+void * httpd_client_sni_callback (hin_client_t * client, const char * name, int len) {
+  httpd_client_t * http = (httpd_client_t*)client;
+  httpd_vhost_t * vhost = httpd_vhost_get (name, len);
+  if (vhost == NULL || vhost->ssl_ctx == NULL) {
+    if (http->debug & (DEBUG_SSL|DEBUG_INFO))
+      printf ("ssl can't find vhost '%s'\n", name);
+    return NULL;
+  }
+  return vhost->ssl_ctx;
+}
+
 hin_server_t * httpd_create (const char * addr, const char * port, const char * sock_type, void * ssl_ctx) {
   hin_server_t * server = calloc (1, sizeof (hin_server_t));
 
   server->accept_callback = httpd_client_accept;
+  server->sni_callback = httpd_client_sni_callback;
   server->user_data_size = sizeof (httpd_client_t);
   server->ssl_ctx = ssl_ctx;
   server->accept_flags = SOCK_CLOEXEC;

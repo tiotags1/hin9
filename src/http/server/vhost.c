@@ -6,24 +6,25 @@
 #include <basic_hashtable.h>
 
 #include "hin.h"
+#include "http.h"
 #include "vhost.h"
 
 static basic_ht_t * vhost_ht = NULL;
 
-void hin_vhost_clean () {
+void httpd_vhost_clean () {
   if (vhost_ht)
     basic_ht_free (vhost_ht);
   vhost_ht = NULL;
 }
 
-void hin_vhost_set_debug (uint32_t debug) {
+void httpd_vhost_set_debug (uint32_t debug) {
   master.debug = debug;
   basic_ht_iterator_t iter;
   basic_ht_pair_t * pair;
   memset (&iter, 0, sizeof iter);
   if (vhost_ht) {
   while ((pair = basic_ht_iterate_pair (vhost_ht, &iter)) != NULL) {
-    hin_vhost_t * vhost = (hin_vhost_t*)pair->value2;
+    httpd_vhost_t * vhost = (httpd_vhost_t*)pair->value2;
     vhost->debug = debug;
   }
   }
@@ -33,12 +34,12 @@ void hin_vhost_set_debug (uint32_t debug) {
     hin_buffer_t * buf = server->accept_buffer;
     if (buf)
       buf->debug = debug;
-    hin_vhost_t * vhost = c->parent;
+    httpd_vhost_t * vhost = c->parent;
     vhost->debug = debug;
   }
 }
 
-int hin_vhost_add (const char * name, int name_len, hin_vhost_t * vhost) {
+int httpd_vhost_add (const char * name, int name_len, httpd_vhost_t * vhost) {
   if (vhost_ht == NULL) {
     vhost_ht = basic_ht_create (1024, 101);
   }
@@ -50,7 +51,7 @@ int hin_vhost_add (const char * name, int name_len, hin_vhost_t * vhost) {
   return 0;
 }
 
-hin_vhost_t * hin_vhost_get (const char * name, int name_len) {
+httpd_vhost_t * httpd_vhost_get (const char * name, int name_len) {
   if (vhost_ht == NULL) return NULL;
 
   basic_ht_hash_t h1 = 0, h2 = 0;
@@ -61,9 +62,7 @@ hin_vhost_t * hin_vhost_get (const char * name, int name_len) {
   return (void*)pair->value2;
 }
 
-#include "http.h"
-
-int httpd_vhost_switch (httpd_client_t * http, hin_vhost_t * vhost) {
+int httpd_vhost_switch (httpd_client_t * http, httpd_vhost_t * vhost) {
   http->vhost = vhost;
   http->debug = vhost->debug;
   http->disable = vhost->disable;
@@ -81,7 +80,7 @@ int httpd_vhost_request (httpd_client_t * http, const char * name, int len) {
 
   http->hostname = strndup (name, len);
 
-  hin_vhost_t * vhost = hin_vhost_get (name, len);
+  httpd_vhost_t * vhost = httpd_vhost_get (name, len);
   if (http->debug & (DEBUG_HTTP|DEBUG_INFO))
     printf ("hostname '%.*s'%s\n", len, name, vhost ? "" : " not found");
 

@@ -76,7 +76,7 @@ static int param_header (hin_buffer_t * buf, const char * name, int name_len, co
 
 static int hin_fcgi_headers (hin_buffer_t * buf, hin_fcgi_worker_t * worker) {
   httpd_client_t * http = worker->http;
-  hin_vhost_t * vhost = (hin_vhost_t*)http->vhost;
+  httpd_vhost_t * vhost = (httpd_vhost_t*)http->vhost;
   int sz = 0;
 
   string_t source, line, method, path, param1;

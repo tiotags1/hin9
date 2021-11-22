@@ -31,7 +31,7 @@ static basic_vfs_node_t * hin_search_dir (basic_vfs_node_t * node, const char * 
 }
 
 static basic_vfs_node_t * get_path_node (httpd_client_t * http, string_t * path, string_t * orig) {
-  hin_vhost_t * vhost = http->vhost;
+  httpd_vhost_t * vhost = http->vhost;
   string_t source = http->headers;
 
   if (match_string (&source, "%a+ ("HIN_HTTP_PATH_ACCEPT")", path) <= 0) {}
@@ -92,7 +92,7 @@ int l_hin_set_path (lua_State *L) {
     return luaL_error (L, "requires a valid client");
   }
   httpd_client_t * http = (httpd_client_t*)client;
-  hin_vhost_t * vhost = http->vhost;
+  httpd_vhost_t * vhost = http->vhost;
 
   int is_dir = 0;
   string_t path, orig;
@@ -203,7 +203,7 @@ int l_hin_list_dir (lua_State *L) {
     return 0;
   }
 
-  hin_vhost_t * vhost = http->vhost;
+  httpd_vhost_t * vhost = http->vhost;
   if ((node->flags & BASIC_VFS_FORBIDDEN) || !(vhost->vhost_flags & HIN_DIRECTORY_LISTING)) {
     httpd_error (http, 403, "EPERM");
     return 0;
@@ -280,7 +280,7 @@ int hin_vfs_clean () {
   return 0;
 }
 
-int hin_server_set_work_dir (hin_vhost_t * server, const char * rel_path) {
+int httpd_vhost_set_work_dir (httpd_vhost_t * server, const char * rel_path) {
   char * abs_path = realpath (rel_path, NULL);
   if (abs_path == NULL) {
     fprintf (stderr, "cwd realpath '%s' %s\n", rel_path, strerror (errno));

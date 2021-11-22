@@ -1,4 +1,9 @@
 
+* library component is no longer dependent on httpd\_vhost\_t for ssl sni negotiation, library is now stand alone (?)
+* fix: ssl object memleak, ssl was not freed inside server client cleanup
+* code: renamed hin\_vhost\_t to httpd\_vhost\_t and the functions that used it
+
+commit bcba1d4ff5b5219016d2c95388d0cefb70575082
 * simplified socket listen code
 * graceful restart no longer requires a properly formatted shared memory region (but introduced a 1024 fd limit)
 

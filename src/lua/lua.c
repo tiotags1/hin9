@@ -12,11 +12,11 @@
 #include "vhost.h"
 #include "system/hin_lua.h"
 
-int hin_vhost_map_callback (httpd_client_t * http, int type);
+int httpd_vhost_map_callback (httpd_client_t * http, int type);
 
 int hin_server_callback (hin_client_t * client) {
   httpd_client_t * http = (httpd_client_t*)client;
-  hin_vhost_t * vhost = http->vhost;
+  httpd_vhost_t * vhost = http->vhost;
 
   hin_server_t * socket = client->parent;
   if (vhost->hsts &&
@@ -26,7 +26,7 @@ int hin_server_callback (hin_client_t * client) {
     return 0;
   }
 
-  int ret = hin_vhost_map_callback (http, HIN_VHOST_MAP_START);
+  int ret = httpd_vhost_map_callback (http, HIN_VHOST_MAP_START);
   if (ret <= 0) {
     return ret;
   }
@@ -57,7 +57,7 @@ int hin_server_callback (hin_client_t * client) {
 
 int hin_server_error_callback (hin_client_t * client, int error_code, const char * msg) {
   httpd_client_t * http = (httpd_client_t*)client;
-  hin_vhost_t * vhost = http->vhost;
+  httpd_vhost_t * vhost = http->vhost;
   for (; vhost; vhost = vhost->parent) {
     if (vhost->error_callback) { break; }
     if (vhost->parent == NULL) break;
@@ -86,9 +86,9 @@ int hin_server_error_callback (hin_client_t * client, int error_code, const char
 
 int hin_server_finish_callback (hin_client_t * client) {
   httpd_client_t * http = (httpd_client_t*)client;
-  hin_vhost_t * vhost = http->vhost;
+  httpd_vhost_t * vhost = http->vhost;
 
-  int ret = hin_vhost_map_callback (http, HIN_VHOST_MAP_FINISH);
+  int ret = httpd_vhost_map_callback (http, HIN_VHOST_MAP_FINISH);
   if (ret <= 0) {
     return ret;
   }
@@ -143,7 +143,7 @@ void hin_ssl_ctx_unref (hin_ssl_ctx_t * box) {
   free (box);
 }
 
-void lua_server_clean (hin_vhost_t * server) {
+void lua_server_clean (httpd_vhost_t * server) {
   lua_State * L = server->L;
   if (server->request_callback)
     luaL_unref (L, LUA_REGISTRYINDEX, server->request_callback);
@@ -156,8 +156,8 @@ void lua_server_clean (hin_vhost_t * server) {
   if (box)
     hin_ssl_ctx_unref (box);
 
-  void hin_vhost_map_clean (hin_vhost_t * vhost);
-  hin_vhost_map_clean (server);
+  void httpd_vhost_map_clean (httpd_vhost_t * vhost);
+  httpd_vhost_map_clean (server);
 
   if (server->hostname) free (server->hostname);
   if (server->cwd_fd && server->cwd_fd != AT_FDCWD) close (server->cwd_fd);
@@ -165,8 +165,8 @@ void lua_server_clean (hin_vhost_t * server) {
 }
 
 void hin_lua_clean () {
-  hin_vhost_t * elem = master.vhosts;
-  hin_vhost_t * next;
+  httpd_vhost_t * elem = master.vhosts;
+  httpd_vhost_t * next;
   for (;elem; elem = next) {
     next = elem->next;
     lua_server_clean (elem);

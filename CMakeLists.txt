@@ -93,6 +93,7 @@ src/http/server/httpd_req.c
 src/http/server/httpd_head.c
 src/http/server/httpd.c
 src/http/server/httpd_file.c
+src/http/server/vhost.c
 src/http/cache/cache.c
 src/system/console.c
 src/system/signal.c
@@ -100,7 +101,6 @@ src/system/daemon.c
 src/system/helper.c
 src/system/restart.c
 src/system/main.c
-src/system/vhost.c
 src/system/timing.c
 src/lua/lua.c
 src/lua/lua_config.c

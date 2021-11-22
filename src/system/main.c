@@ -40,8 +40,8 @@ void hin_clean1 () {
   hin_vfs_clean ();
   int hin_socket_clean ();
   hin_socket_clean ();
-  void hin_vhost_clean ();
-  hin_vhost_clean ();
+  void httpd_vhost_clean ();
+  httpd_vhost_clean ();
   #ifdef HIN_USE_FCGI
   void hin_fcgi_clean ();
   hin_fcgi_clean ();
@@ -125,7 +125,7 @@ int hin_process_argv (basic_args_t * args, const char * name) {
 
   } else if (basic_args_cmp (name, "--pretend", "--check", NULL)) {
     master.flags |= HIN_PRETEND;
-    hin_vhost_set_debug (0);
+    httpd_vhost_set_debug (0);
 
   } else if (basic_args_cmp (name, "--workdir", "--cwd", NULL)) {
     const char * path = basic_args_get (args);
@@ -189,10 +189,10 @@ int hin_process_argv (basic_args_t * args, const char * name) {
     master.sharefd = fd;
 
   } else if (basic_args_cmp (name, "-V", "--verbose", NULL)) {
-    hin_vhost_set_debug (0xffffffff);
+    httpd_vhost_set_debug (0xffffffff);
 
   } else if (basic_args_cmp (name, "-q", "--quiet", NULL)) {
-    hin_vhost_set_debug (0);
+    httpd_vhost_set_debug (0);
 
   } else if (basic_args_cmp (name, "--loglevel", NULL)) {
     const char * path = basic_args_get (args);
@@ -212,7 +212,7 @@ int hin_process_argv (basic_args_t * args, const char * name) {
     case 0: master.debug |= DEBUG_BASIC; break;
     default: printf ("unkown loglevel '%s'\n", path); return -1; break;
     }
-    hin_vhost_set_debug (master.debug);
+    httpd_vhost_set_debug (master.debug);
 
   } else if (basic_args_cmp (name, "--debugmask", NULL)) {
     const char * path = basic_args_get (args);
@@ -221,7 +221,7 @@ int hin_process_argv (basic_args_t * args, const char * name) {
       print_help ();
       return -1;
     }
-    hin_vhost_set_debug (strtol (path, NULL, 16));
+    httpd_vhost_set_debug (strtol (path, NULL, 16));
 
   // download
   } else if (basic_args_cmp (name, "-d", "--download", NULL)) {
@@ -274,8 +274,8 @@ int hin_process_argv (basic_args_t * args, const char * name) {
     if (master.debug & DEBUG_CONFIG)
       printf ("serving folder '%s' on port %s\n", ".", port);
     hin_server_t * sock = httpd_create (NULL, port, NULL, NULL);
-    hin_vhost_t * hin_vhost_get_default ();
-    hin_vhost_t * vhost = hin_vhost_get_default ();
+    httpd_vhost_t * httpd_vhost_get_default ();
+    httpd_vhost_t * vhost = httpd_vhost_get_default ();
     sock->c.parent = vhost;
     master.flags |= HIN_SKIP_CONFIG;
 

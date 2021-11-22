@@ -13,7 +13,7 @@
 
 #include <fcntl.h>
 
-static hin_vhost_t * default_parent = NULL;
+static httpd_vhost_t * default_parent = NULL;
 
 static const char * l_hin_get_str (lua_State *L, int tpos, const char * name) {
   const char * ret = NULL;
@@ -26,7 +26,7 @@ static const char * l_hin_get_str (lua_State *L, int tpos, const char * name) {
   return ret;
 }
 
-static int l_hin_add_socket (lua_State *L, hin_vhost_t * vhost, int tpos) {
+static int l_hin_add_socket (lua_State *L, httpd_vhost_t * vhost, int tpos) {
   if (lua_type (L, tpos) != LUA_TTABLE) {
     return -1;
   }
@@ -63,7 +63,7 @@ static int l_hin_add_socket (lua_State *L, hin_vhost_t * vhost, int tpos) {
   return 0;
 }
 
-static int l_hin_vhost_get_callback (lua_State *L, int tpos, const char * name) {
+static int l_httpd_vhost_get_callback (lua_State *L, int tpos, const char * name) {
   int ret = 0;
   lua_pushstring (L, name);
   lua_gettable (L, tpos);
@@ -80,7 +80,7 @@ static int l_hin_vhost_get_callback (lua_State *L, int tpos, const char * name) 
   return ret;
 }
 
-static void hin_vhost_free (hin_vhost_t * vhost) {
+static void httpd_vhost_free (httpd_vhost_t * vhost) {
   if (vhost == NULL) return;
   free (vhost);
 }
@@ -91,7 +91,7 @@ int l_hin_add_vhost (lua_State *L) {
   }
 
   // TODO check if this is an actual ssl context
-  hin_vhost_t * parent = NULL;
+  httpd_vhost_t * parent = NULL;
   size_t len = 0;
   int nsocket = 0;
   const char * htdocs = NULL;
@@ -103,7 +103,7 @@ int l_hin_add_vhost (lua_State *L) {
   }
   lua_pop (L, 1);
 
-  hin_vhost_t * vhost = calloc (1, sizeof (hin_vhost_t));
+  httpd_vhost_t * vhost = calloc (1, sizeof (httpd_vhost_t));
 
   lua_pushstring (L, "cert");
   lua_gettable (L, 1);
@@ -150,10 +150,10 @@ int l_hin_add_vhost (lua_State *L) {
 
   if (nsocket == 0) {
     if (parent == NULL) {
-      hin_vhost_free (vhost);
+      httpd_vhost_free (vhost);
       return luaL_error (L, "requires parent");
     } else if (parent->magic != HIN_VHOST_MAGIC) {
-      hin_vhost_free (vhost);
+      httpd_vhost_free (vhost);
       return luaL_error (L, "requires valid parent %x!=%x", parent->magic, HIN_VHOST_MAGIC);
     }
   }
@@ -170,10 +170,10 @@ int l_hin_add_vhost (lua_State *L) {
       }
       if (master.debug & DEBUG_HTTP)
         printf ("vhost '%s'\n", name);
-      if (hin_vhost_get (name, len)) {
+      if (httpd_vhost_get (name, len)) {
         return luaL_error (L, "vhost duplicate '%s'", name);
       }
-      int ret = hin_vhost_add (name, len, vhost);
+      int ret = httpd_vhost_add (name, len, vhost);
       if (ret < 0) {
         // TODO cancel the whole host
         return luaL_error (L, "vhost add '%s'\n", name);
@@ -219,9 +219,9 @@ int l_hin_add_vhost (lua_State *L) {
   }
   lua_pop (L, 1);
 
-  vhost->request_callback = l_hin_vhost_get_callback (L, 1, "onRequest");
-  vhost->error_callback = l_hin_vhost_get_callback (L, 1, "onError");
-  vhost->finish_callback = l_hin_vhost_get_callback (L, 1, "onFinish");
+  vhost->request_callback = l_httpd_vhost_get_callback (L, 1, "onRequest");
+  vhost->error_callback = l_httpd_vhost_get_callback (L, 1, "onError");
+  vhost->finish_callback = l_httpd_vhost_get_callback (L, 1, "onFinish");
 
   vhost->L = L;
   vhost->magic = HIN_VHOST_MAGIC;
@@ -235,26 +235,26 @@ int l_hin_add_vhost (lua_State *L) {
   vhost->parent = parent;
   lua_pushlightuserdata (L, vhost);
 
-  hin_server_set_work_dir (vhost, htdocs);
+  httpd_vhost_set_work_dir (vhost, htdocs);
 
-  hin_vhost_t * prev = master.vhosts;
+  httpd_vhost_t * prev = master.vhosts;
   vhost->next = prev;
   master.vhosts = vhost;
 
   return 1;
 }
 
-static hin_vhost_t * default_vhost = NULL;
+static httpd_vhost_t * default_vhost = NULL;
 
-hin_vhost_t * hin_vhost_get_default () {
+httpd_vhost_t * httpd_vhost_get_default () {
   if (default_vhost) return default_vhost;
-  hin_vhost_t * vhost = calloc (1, sizeof (*vhost));
+  httpd_vhost_t * vhost = calloc (1, sizeof (*vhost));
   vhost->magic = HIN_VHOST_MAGIC;
   vhost->timeout = HIN_HTTPD_TIMEOUT;
   vhost->debug = master.debug;
-  hin_server_set_work_dir (vhost, ".");
+  httpd_vhost_set_work_dir (vhost, ".");
 
-  hin_vhost_t * prev = master.vhosts;
+  httpd_vhost_t * prev = master.vhosts;
   vhost->next = prev;
   master.vhosts = vhost;
   default_vhost = vhost;

@@ -8,9 +8,9 @@
 #include "vhost.h"
 #include "system/hin_lua.h"
 
-static int hin_vhost_map_add_to_end_list (hin_vhost_map_t ** list, hin_vhost_map_t * new) {
+static int httpd_vhost_map_add_to_end_list (httpd_vhost_map_t ** list, httpd_vhost_map_t * new) {
   new->next = new->prev = NULL;
-  hin_vhost_map_t * last = *list;
+  httpd_vhost_map_t * last = *list;
   while (last && last->next) {
     last = last->next;
   }
@@ -23,28 +23,28 @@ static int hin_vhost_map_add_to_end_list (hin_vhost_map_t ** list, hin_vhost_map
   return 0;
 }
 
-static int hin_vhost_map_free (hin_vhost_map_t * map) {
+static int httpd_vhost_map_free (httpd_vhost_map_t * map) {
   if (map->pattern) free ((void*)map->pattern);
   free (map);
   return 0;
 }
 
-void hin_vhost_map_clean (hin_vhost_t * vhost) {
-  hin_vhost_map_t * next;
-  for (hin_vhost_map_t * map = vhost->map_start; map; map = next) {
+void httpd_vhost_map_clean (httpd_vhost_t * vhost) {
+  httpd_vhost_map_t * next;
+  for (httpd_vhost_map_t * map = vhost->map_start; map; map = next) {
     next = map->next;
-    hin_vhost_map_free (map);
+    httpd_vhost_map_free (map);
   }
-  for (hin_vhost_map_t * map = vhost->map_finish; map; map = next) {
+  for (httpd_vhost_map_t * map = vhost->map_finish; map; map = next) {
     next = map->next;
-    hin_vhost_map_free (map);
+    httpd_vhost_map_free (map);
   }
   vhost->map_start = NULL;
   vhost->map_finish = NULL;
 }
 
-int hin_vhost_map_callback (httpd_client_t * http, int type) {
-  hin_vhost_t * vhost = http->vhost;
+int httpd_vhost_map_callback (httpd_client_t * http, int type) {
+  httpd_vhost_t * vhost = http->vhost;
   lua_State * L = vhost->L;
 
   string_t source = http->headers;
@@ -53,13 +53,13 @@ int hin_vhost_map_callback (httpd_client_t * http, int type) {
   const char * max = path.ptr + path.len;
 
   while (vhost) {
-    hin_vhost_map_t * map_start;
+    httpd_vhost_map_t * map_start;
     switch (type) {
     case HIN_VHOST_MAP_START: map_start = vhost->map_start; break;
     case HIN_VHOST_MAP_FINISH: map_start = vhost->map_finish; break;
     default: printf ("error! %d", 32534543); map_start = NULL; break;
     }
-    for (hin_vhost_map_t * map = map_start; map; map = map->next) {
+    for (httpd_vhost_map_t * map = map_start; map; map = map->next) {
       const char * pattern = map->pattern;
       int skip = 1;
       for (const char * ptr = path.ptr; 1; ptr++) {
@@ -93,7 +93,7 @@ int hin_vhost_map_callback (httpd_client_t * http, int type) {
 }
 
 int l_hin_map (lua_State *L) {
-  hin_vhost_t * vhost = (hin_vhost_t*)lua_touserdata (L, 1);
+  httpd_vhost_t * vhost = (httpd_vhost_t*)lua_touserdata (L, 1);
   if (vhost == NULL || vhost->magic != HIN_VHOST_MAGIC) {
     return luaL_error (L, "invalid vhost");
   }
@@ -107,7 +107,7 @@ int l_hin_map (lua_State *L) {
   lua_pushvalue (L, 4);
   int callback = luaL_ref (L, LUA_REGISTRYINDEX);
 
-  hin_vhost_map_t * map = calloc (1, sizeof (*map));
+  httpd_vhost_map_t * map = calloc (1, sizeof (*map));
   map->pattern = strdup (path);
   map->state = lua_tonumber (L, 3);
   map->vhost = vhost;
@@ -116,13 +116,13 @@ int l_hin_map (lua_State *L) {
 
   switch (map->state) {
   case 0:
-    hin_vhost_map_add_to_end_list (&vhost->map_start, map);
+    httpd_vhost_map_add_to_end_list (&vhost->map_start, map);
   break;
   case 99:
-    hin_vhost_map_add_to_end_list (&vhost->map_finish, map);
+    httpd_vhost_map_add_to_end_list (&vhost->map_finish, map);
   break;
   default:
-    hin_vhost_map_free (map);
+    httpd_vhost_map_free (map);
     luaL_error (L, "requires a valid state");
   }
 

@@ -44,7 +44,7 @@ int httpd_write_common_headers (httpd_client_t * http, hin_buffer_t * buf) {
   if (http->content_type) {
     header (buf, "Content-Type: %s\r\n", http->content_type);
   }
-  hin_vhost_t * vhost = http->vhost;
+  httpd_vhost_t * vhost = http->vhost;
   if (vhost->hsts && (vhost->vhost_flags & HIN_HSTS_NO_HEADER) == 0) {
     header (buf, "Strict-Transport-Security: max-age=%d", vhost->hsts);
     if (vhost->vhost_flags & HIN_HSTS_SUBDOMAINS)

@@ -17,8 +17,6 @@
 
 #ifdef HIN_USE_OPENSSL
 
-#include "vhost.h"
-
 // Global SSL context
 SSL_CTX * default_ctx = NULL;
 
@@ -56,6 +54,7 @@ int hin_ssl_accept_init (hin_client_t * client) {
 
   SSL_set_accept_state (ssl->ssl); // sets ssl to work in server mode.
   SSL_set_bio (ssl->ssl, ssl->rbio, ssl->wbio);
+  SSL_set_ex_data(ssl->ssl, 0, client);
 
   client->flags |= HIN_SSL;
   if (master.debug & DEBUG_SSL) printf ("ssl init accept sockfd %d\n", client->sockfd);
@@ -76,6 +75,7 @@ int hin_ssl_connect_init (hin_client_t * client) {
 
   SSL_set_connect_state (ssl->ssl); // sets ssl to work in connect mode.
   SSL_set_bio (ssl->ssl, ssl->rbio, ssl->wbio);
+  SSL_set_ex_data(ssl->ssl, 0, client);
 
   client->flags |= HIN_SSL;
   if (master.debug & DEBUG_SSL) printf ("ssl init connect sockfd %d\n", client->sockfd);
@@ -108,17 +108,18 @@ static int hin_ssl_sni_callback (SSL *ssl, int *ad, void *arg) {
   if (debug & (DEBUG_SSL))
     printf ("ssl SNI '%s'\n", servername);
 
-  hin_vhost_t * vhost = hin_vhost_get (servername, strlen (servername));
-  if (vhost == NULL || vhost->ssl_ctx == NULL) {
-    if (debug & (DEBUG_SSL|DEBUG_INFO))
-      printf ("ssl can't find vhost '%s'\n", servername);
-    return SSL_TLSEXT_ERR_OK;
-  }
+  hin_client_t * client = SSL_get_ex_data (ssl, 0);
+  hin_server_t * server = client->parent;
 
-  SSL_CTX * r = SSL_set_SSL_CTX (ssl, vhost->ssl_ctx);
-  if (r != vhost->ssl_ctx) {
-    printf ("ssl can't set new ctx\n");
-    return SSL_TLSEXT_ERR_ALERT_FATAL;
+  if (server->sni_callback) {
+    SSL_CTX * new = server->sni_callback (client, servername, strlen (servername));
+    if (new) {
+      SSL_CTX * r = SSL_set_SSL_CTX (ssl, new);
+      if (r != new) {
+        printf ("ssl can't set new ctx\n");
+        return SSL_TLSEXT_ERR_ALERT_FATAL;
+      }
+    }
   }
 
   return SSL_TLSEXT_ERR_OK;

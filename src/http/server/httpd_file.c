@@ -270,7 +270,7 @@ int httpd_handle_file_request (hin_client_t * client, const char * path, off_t p
   buf->debug = http->debug;
 
   hin_server_t * socket = http->c.parent;
-  hin_vhost_t * vhost = socket->c.parent;
+  httpd_vhost_t * vhost = socket->c.parent;
 
   if (HIN_HTTPD_ASYNC_OPEN) {
     buf->flags |= HIN_SYNC;

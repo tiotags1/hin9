@@ -69,7 +69,7 @@ static uint32_t get_mask (lua_State * L, const char * name) {
 }
 
 static int l_hin_get_server_option (lua_State *L) {
-  hin_vhost_t *client = (hin_vhost_t*)lua_touserdata (L, 1);
+  httpd_vhost_t *client = (httpd_vhost_t*)lua_touserdata (L, 1);
   if (client == NULL || client->magic != HIN_VHOST_MAGIC) {
     return luaL_error (L, "requires valid vhost");
   }
@@ -90,7 +90,7 @@ static int l_hin_get_server_option (lua_State *L) {
 }
 
 static int l_hin_set_server_option (lua_State *L) {
-  hin_vhost_t *client = (hin_vhost_t*)lua_touserdata (L, 1);
+  httpd_vhost_t *client = (httpd_vhost_t*)lua_touserdata (L, 1);
   if (client == NULL || client->magic != HIN_VHOST_MAGIC) {
     return luaL_error (L, "requires valid vhost");
   }
@@ -125,7 +125,7 @@ static int l_hin_set_server_option (lua_State *L) {
     }
     return 0;
   } else if (strcmp (name, "cwd") == 0) {
-    hin_server_set_work_dir (client, lua_tostring (L, 3));
+    httpd_vhost_set_work_dir (client, lua_tostring (L, 3));
     return 0;
 
   } else if (strcmp (name, "directory_listing") == 0) {
@@ -178,7 +178,7 @@ static int l_hin_get_option (lua_State *L) {
     return 1;
 
   } else if (strcmp (name, "vhost") == 0) {
-    hin_vhost_t * vhost = http->vhost;
+    httpd_vhost_t * vhost = http->vhost;
     lua_pushstring (L, vhost->hostname);
     return 1;
 

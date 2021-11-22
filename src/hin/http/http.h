@@ -140,9 +140,6 @@ http_client_t * hin_proxy (httpd_client_t * parent, http_client_t * http, const 
 hin_pipe_t * send_file (hin_client_t * client, int filefd, off_t pos, off_t count, uint32_t flags, int (*extra) (hin_pipe_t *));
 hin_pipe_t * receive_file (hin_client_t * client, int filefd, off_t pos, off_t count, uint32_t flags, int (*extra) (hin_pipe_t *));
 
-int hin_client_ssl_init (hin_client_t * client);
-void hin_client_ssl_cleanup (hin_client_t * client);
-
 int httpd_client_start_request (httpd_client_t * http);
 int httpd_client_finish_request (httpd_client_t * http, hin_pipe_t * pipe);
 int httpd_client_shutdown (httpd_client_t * http);

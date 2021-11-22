@@ -21,16 +21,16 @@ typedef struct hin_ssl_ctx_struct {
   struct hin_ssl_ctx_struct * next;
 } hin_ssl_ctx_t;
 
-typedef struct hin_vhost_map_struct {
+typedef struct httpd_vhost_map_struct {
   int state;
   const char * pattern;
-  struct hin_vhost_struct * vhost;
+  struct httpd_vhost_struct * vhost;
   lua_State * lua;
   int callback;
-  struct hin_vhost_map_struct * next, * prev;
-} hin_vhost_map_t;
+  struct httpd_vhost_map_struct * next, * prev;
+} httpd_vhost_map_t;
 
-typedef struct hin_vhost_struct {
+typedef struct httpd_vhost_struct {
   // callback
   int refcount;
   int request_callback;
@@ -46,21 +46,21 @@ typedef struct hin_vhost_struct {
   void * cwd_dir;
   hin_ssl_ctx_t * ssl;
   void * ssl_ctx;
-  hin_vhost_map_t * map_start, * map_finish;
+  httpd_vhost_map_t * map_start, * map_finish;
   int hsts;
   lua_State *L;
-  struct hin_vhost_struct * parent, * next;
-} hin_vhost_t;
+  struct httpd_vhost_struct * parent, * next;
+} httpd_vhost_t;
 
-int hin_server_set_work_dir (hin_vhost_t * vhost, const char * rel_path);
+int httpd_vhost_set_work_dir (httpd_vhost_t * vhost, const char * rel_path);
 
-hin_vhost_t * hin_vhost_get (const char * name, int name_len);
-int hin_vhost_add (const char * name, int name_len, hin_vhost_t * ptr);
-void hin_vhost_set_debug (uint32_t debug);
+httpd_vhost_t * httpd_vhost_get (const char * name, int name_len);
+int httpd_vhost_add (const char * name, int name_len, httpd_vhost_t * ptr);
+void httpd_vhost_set_debug (uint32_t debug);
 
 #include "http.h"
 
-int httpd_vhost_switch (httpd_client_t * http, hin_vhost_t * vhost);
+int httpd_vhost_switch (httpd_client_t * http, httpd_vhost_t * vhost);
 int httpd_vhost_request (httpd_client_t * http, const char * name, int len);
 
 #endif
