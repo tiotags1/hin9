@@ -14,6 +14,10 @@ static int hin_fcgi_post_done_callback (hin_pipe_t * pipe) {
 
   httpd_client_t * http = (httpd_client_t*)pipe->parent;
 
+  hin_fcgi_worker_t * worker = pipe->parent1;
+  worker->io_state &= ~HIN_REQ_POST;
+  hin_fcgi_worker_reset (worker);
+
   http->state &= ~HIN_REQ_POST;
   if (http->state & HIN_REQ_DATA) return 0;
   return httpd_client_finish_request (http, pipe);
@@ -24,9 +28,15 @@ int hin_fcgi_post_read_callback (hin_pipe_t * pipe, hin_buffer_t * buf, int num,
   hin_fcgi_socket_t * socket = worker->socket;
   httpd_client_t * http = pipe->parent;
 
-  int sz1 = num + 2 * sizeof (FCGI_Header);
+  int rounded = FCGI_ROUND_TO_PAD (num);
+  int sz1 = rounded + sizeof (FCGI_Header);
+  if (flush) {
+    sz1 += sizeof (FCGI_Header);
+  }
+
   hin_buffer_t * buf1 = malloc (sizeof (*buf1) + sz1);
   memset (buf1, 0, sizeof (*buf1));
+  buf1->flags = socket->cflags;
   buf1->fd = socket->fd;
   buf1->count = 0;
   buf1->sz = sz1;
@@ -35,8 +45,9 @@ int hin_fcgi_post_read_callback (hin_pipe_t * pipe, hin_buffer_t * buf, int num,
   buf1->debug = http->debug;
 
   if (num > 0) {
-    hin_fcgi_header (buf1, FCGI_STDIN, worker->req_id, num);
-    char * ptr = header_ptr (buf1, num);
+    FCGI_Header * h = hin_fcgi_header (buf1, FCGI_STDIN, worker->req_id, num);
+    char * ptr = header_ptr (buf1, rounded);
+    h->padding = rounded - num;
     memcpy (ptr, buf->ptr, num);
   }
 
@@ -53,6 +64,7 @@ int hin_fcgi_post_read_callback (hin_pipe_t * pipe, hin_buffer_t * buf, int num,
 
 int hin_fcgi_write_post (hin_buffer_t * buf, hin_fcgi_worker_t * worker) {
   httpd_client_t * http = worker->http;
+  hin_fcgi_socket_t * socket = worker->socket;
 
   if (http->method != HIN_METHOD_POST) {
     hin_fcgi_header (buf, FCGI_STDIN, worker->req_id, 0);
@@ -76,7 +88,7 @@ int hin_fcgi_write_post (hin_buffer_t * buf, hin_fcgi_worker_t * worker) {
   pipe->in.ssl = &http->c.ssl;
   pipe->in.pos = 0;
   pipe->out.fd = buf->fd;
-  pipe->out.flags = 0;
+  pipe->out.flags = socket->cflags;
   pipe->out.pos = 0;
   pipe->parent = http;
   pipe->parent1 = worker;
@@ -88,10 +100,15 @@ int hin_fcgi_write_post (hin_buffer_t * buf, hin_fcgi_worker_t * worker) {
   pipe->left = pipe->sz = http->post_sz - source.len;
 
   if (source.len) {
-    hin_fcgi_header (buf, FCGI_STDIN, worker->req_id, source.len);
-    char * ptr = header_ptr (buf, source.len);
-    memcpy (ptr, source.ptr, source.len);
+    int num = source.len;
+    int rounded = FCGI_ROUND_TO_PAD (num);
+    FCGI_Header * h = hin_fcgi_header (buf, FCGI_STDIN, worker->req_id, num);
+    char * ptr = header_ptr (buf, rounded);
+    h->padding = rounded - num;
+    memcpy (ptr, source.ptr, num);
   }
+
+  worker->io_state |= HIN_REQ_POST;
 
   hin_pipe_start (pipe);
   return 0;

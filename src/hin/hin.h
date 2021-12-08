@@ -23,7 +23,7 @@ DEBUG_URING=0x10, DEBUG_SSL=0x20, DEBUG_SYSCALL=0x40, DEBUG_MEMORY=0x80,
 DEBUG_HTTP=0x100, DEBUG_CGI=0x200, DEBUG_PROXY=0x400, DEBUG_HTTP_FILTER=0x800,
 DEBUG_POST=0x1000, DEBUG_CHILD=0x2000, DEBUG_CACHE=0x4000, DEBUG_TIMEOUT=0x8000,
 DEBUG_RW=0x10000, DEBUG_RW_ERROR=0x20000, DEBUG_PIPE=0x40000, DEBUG_INFO=0x80000,
-DEBUG_PROGRESS=0x100000,
+DEBUG_PROGRESS=0x100000, DEBUG_LAST = 0x200000,
 };
 
 typedef struct {
@@ -52,9 +52,6 @@ struct hin_pipe_struct {
   uint64_t hash;
   void * extra;
 };
-
-int hin_init ();
-int hin_clean ();
 
 int hin_connect (const char * host, const char * port, hin_callback_t callback, void * parent, struct sockaddr * ai_addr, socklen_t * ai_addrlen);
 int hin_unix_sock (const char * path, hin_callback_t callback, void * parent);

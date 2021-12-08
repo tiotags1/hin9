@@ -119,7 +119,7 @@ static int hin_fcgi_headers (hin_buffer_t * buf, hin_fcgi_worker_t * worker) {
     var (&env, "PATH_TRANSLATED=%s%s", cwd_dir->path, ptr);
   }*/
 
-  sz += param (buf, "CONTENT_LENGTH", "%d", http->post_sz);
+  sz += param (buf, "CONTENT_LENGTH", "%ld", http->post_sz);
   sz += param (buf, "QUERY_STRING", "%.*s", uri.query.len, uri.query.ptr);
 
   sz += param (buf, "REQUEST_URI", "%.*s", path.len, path.ptr);
@@ -177,8 +177,9 @@ static int hin_fcgi_headers (hin_buffer_t * buf, hin_fcgi_worker_t * worker) {
       if (memcmp ("Host:", param1.ptr, 5) == 0) {
         hostname = line;
       }
-      if (matchi_string (&param1, "content%-type") > 0) {
+      if (matchi_string (&param1, "content-type") > 0) {
         sz += param (buf, "CONTENT_TYPE", "%.*s", line.len, line.ptr);
+      //} else if (matchi_string (&param1, "content-length") > 0) { // lighttpd keeps this ?
       } else {
         sz += param_header (buf, param1.ptr, param1.len, line.ptr, line.len);
       }
@@ -214,10 +215,10 @@ int hin_fcgi_write_request (hin_fcgi_worker_t * worker) {
   hin_fcgi_socket_t * socket = worker->socket;
   httpd_client_t * http = worker->http;
 
-  int buf_sz = READ_SZ;
+  int buf_sz = READ_SZ * 2;
   hin_buffer_t * buf = malloc (sizeof (hin_buffer_t) + buf_sz);
   memset (buf, 0, sizeof (*buf));
-  buf->flags = HIN_SOCKET;
+  buf->flags = socket->cflags;
   buf->fd = socket->fd;
   buf->sz = buf_sz;
   buf->ptr = buf->buffer;
@@ -231,17 +232,22 @@ int hin_fcgi_write_request (hin_fcgi_worker_t * worker) {
   body = header_ptr (buf, sizeof (*body));
   memset (body, 0, sizeof (*body));
   body->role = endian_swap16 (FCGI_RESPONDER);
-  body->flags = 0;
+  body->flags = HIN_FCGI_SOCKET_REUSE;
 
   head = hin_fcgi_header (buf, FCGI_PARAMS, worker->req_id, 0);
   int sz = hin_fcgi_headers (buf, worker);
   head->length = endian_swap16 (sz);
+
+  int rounded = FCGI_ROUND_TO_PAD (sz);
+  head->padding = rounded - sz;
+  header_ptr (buf, head->padding);
+
   hin_fcgi_header (buf, FCGI_PARAMS, worker->req_id, 0);
   int hin_fcgi_write_post (hin_buffer_t * buf, hin_fcgi_worker_t * worker);
   hin_fcgi_write_post (buf, worker);
 
   if (hin_request_write (buf) < 0) {
-    printf ("uring error!\n");
+    fprintf (stderr, "error! %d\n", 4364565);
     return -1;
   }
 

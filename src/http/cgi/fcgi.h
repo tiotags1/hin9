@@ -27,6 +27,9 @@
 #define FCGI_OVERLOADED       2
 #define FCGI_UNKNOWN_ROLE     3
 
+#define FCGI_PADDING (sizeof (uintptr_t))
+#define FCGI_ROUND_TO_PAD(num) ((((num-1) / FCGI_PADDING) + 1) * FCGI_PADDING)
+
 typedef struct __attribute__((__packed__)) {
   uint8_t version;
   uint8_t type;
@@ -67,6 +70,7 @@ enum { HIN_FCGI_SOCKET_REUSE = 0x1, };
 
 typedef struct {
   int req_id;
+  uint32_t io_state;
   httpd_client_t * http;
 
   hin_buffer_t * header_buf;
@@ -77,7 +81,7 @@ typedef struct {
 
 typedef struct hin_fcgi_socket_struct {
   int fd;
-  uint32_t flags;
+  uint32_t cflags;
 
   struct sockaddr ai_addr;
   socklen_t ai_addrlen;
@@ -86,6 +90,7 @@ typedef struct hin_fcgi_socket_struct {
   int num_worker, max_worker;
 
   hin_fcgi_worker_t * queued;
+  hin_buffer_t * read_buffer;
 
   struct hin_fcgi_group_struct * fcgi;
 } hin_fcgi_socket_t;

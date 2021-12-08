@@ -38,10 +38,14 @@ hin_fcgi_worker_t * hin_fcgi_get_worker (hin_fcgi_group_t * fcgi) {
 
   sock->worker[worker->req_id] = worker;
 
+  worker->io_state |= HIN_REQ_DATA;
+
   return worker;
 }
 
 int hin_fcgi_worker_reset (hin_fcgi_worker_t * worker) {
+  if ((worker->io_state & (HIN_REQ_POST|HIN_REQ_DATA))) return 0;
+
   httpd_client_t * http = worker->http;
   if (http) {
     //httpd_client_finish_request (http);
@@ -50,7 +54,10 @@ int hin_fcgi_worker_reset (hin_fcgi_worker_t * worker) {
   if (worker->socket == NULL) {
     hin_fcgi_worker_free (worker);
     return 0;
+  } else {
+    hin_fcgi_socket_close (worker->socket);
   }
+
   // TODO if not null then add to pool
   return 0;
 }

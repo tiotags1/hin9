@@ -26,6 +26,7 @@ int hin_clean () {
 void hin_stop () {
   master.flags |= HIN_FLAG_QUIT;
   hin_client_t * next = NULL;
+
   for (hin_client_t * cur = master.server_list; cur; cur = next) {
     if (master.debug & DEBUG_CONFIG)
       printf ("stopping server %d\n", cur->sockfd);

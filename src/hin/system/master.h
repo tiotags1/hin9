@@ -63,6 +63,10 @@ typedef struct {
 
 extern hin_master_t master;
 
+int hin_init ();
+int hin_clean ();
+int hin_event_loop ();
+
 void hin_stop ();
 int hin_restart1 ();
 int hin_restart2 ();

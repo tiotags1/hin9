@@ -31,11 +31,8 @@ void httpd_client_clean (httpd_client_t * http) {
   if (http->content_type) free (http->content_type);
   if (http->hostname) free (http->hostname);
 
-  if (http->peer_flags & HIN_HTTP_COMPRESS) {
-    int ret = deflateEnd (&http->z);
-    if (ret != Z_OK) {
-      printf ("deflate end failed\n");
-    }
+  int ret = deflateEnd (&http->z);
+  if (ret != Z_OK) {
   }
 
   http->peer_flags = http->disable = 0;

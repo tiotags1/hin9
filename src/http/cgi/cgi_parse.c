@@ -53,10 +53,10 @@ static int hin_fcgi_pipe_finish_callback (hin_pipe_t * pipe) {
     printf ("fcgi %d worker %d done.\n", socket->fd, worker->req_id);
 
   http->state &= ~HIN_REQ_FCGI;
+
   worker->http = NULL;
+  worker->io_state &= ~HIN_REQ_DATA;
   hin_fcgi_worker_reset (worker);
-  if (worker->socket)
-    hin_fcgi_socket_close (worker->socket);
 
   httpd_client_t * http1 = pipe->parent;
   return httpd_client_finish_request (http1, pipe);
@@ -255,7 +255,7 @@ int hin_cgi_send (httpd_client_t * http, hin_fcgi_worker_t * worker, int fd) {
   lines->eat_callback = hin_cgi_headers_eat_callback;
   lines->close_callback = hin_cgi_headers_close_callback;
   if (hin_request_read (buf) < 0) {
-    httpd_error (http, 503, "error %d", 435776);
+    httpd_error (http, 503, "error! %d", 435776);
     return -1;
   }
   return 0;

@@ -37,7 +37,7 @@ static int hin_children_close_pid (int pid, int status) {
   }
   hin_child_t * child = (hin_child_t*)pair->value2;
   if (child == NULL) {
-    printf ("error %d\n", 34256376);
+    fprintf (stderr, "error! %d\n", 34256376);
     return 0;
   }
   child->callback (child, status);

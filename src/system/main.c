@@ -371,7 +371,6 @@ int main (int argc, const char * argv[], const char * envp[]) {
 
   hin_check_alive ();
 
-  void hin_event_loop ();
   hin_event_loop ();
 
   hin_clean1 ();

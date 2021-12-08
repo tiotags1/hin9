@@ -1,4 +1,10 @@
 
+* fix: fcgi no longer crashes if you POST more than ~4000 bytes
+* fix: fcgi should now be more resilient to unexpected fcgi socket abort
+* fix: library now properly tracks if it was built with openssl or not
+* fix: deflate object memleak, zlib was not being freed when client finished
+
+commit b17d60786a5e724d15fa92e1d023e215a1d97fac
 * library component is no longer dependent on httpd\_vhost\_t for ssl sni negotiation, library is now stand alone (?)
 * fix: ssl object memleak, ssl was not freed inside server client cleanup
 * code: renamed hin\_vhost\_t to httpd\_vhost\_t and the functions that used it

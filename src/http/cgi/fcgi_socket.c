@@ -13,7 +13,7 @@
 
 void hin_fcgi_socket_close (hin_fcgi_socket_t * socket) {
   if (master.debug & DEBUG_CGI)
-    printf ("fcgi %d close\n", socket->fd);
+    printf ("fcgi %d cleanup\n", socket->fd);
 
   for (int i=0; i<socket->max_worker; i++) {
     hin_fcgi_worker_t * worker = socket->worker[i];
@@ -26,9 +26,16 @@ void hin_fcgi_socket_close (hin_fcgi_socket_t * socket) {
   }
   if (socket->worker) free (socket->worker);
   socket->worker = NULL;
-  if (socket->fd > 0)
+
+  if (socket->fd > 0) {
     close (socket->fd);
-  socket->fd = -1;
+    socket->fd = -1;
+  }
+
+  if (socket->read_buffer) {
+    hin_buffer_clean (socket->read_buffer);
+    socket->read_buffer = NULL;
+  }
 
   master.num_connection--;
 
@@ -75,6 +82,7 @@ static int hin_fcgi_connect_callback (hin_buffer_t * buf, int ret) {
   }
 
   hin_buffer_t * buf1 = hin_lines_create_raw (READ_SZ);
+  buf1->flags = socket->cflags;
   buf1->fd = buf->fd;
   buf1->parent = socket;
   buf1->flags = 0;
@@ -83,6 +91,8 @@ static int hin_fcgi_connect_callback (hin_buffer_t * buf, int ret) {
   int hin_fcgi_read_callback (hin_buffer_t * buf, int ret);
   lines->read_callback = hin_fcgi_read_callback;
   lines->eat_callback = hin_fcgi_eat_callback;
+  socket->read_buffer = buf1;
+
   if (hin_request_read (buf1) < 0) {
     hin_fcgi_socket_close (socket);
     return -1;
@@ -97,6 +107,7 @@ hin_fcgi_socket_t * hin_fcgi_get_socket (hin_fcgi_group_t * fcgi) {
   hin_fcgi_socket_t * sock = calloc (1, sizeof (*sock));
   sock->fd = -1;
   sock->fcgi = fcgi;
+  sock->cflags = HIN_SOCKET;
 
   hin_connect (fcgi->host, fcgi->port, hin_fcgi_connect_callback, sock, &sock->ai_addr, &sock->ai_addrlen);
 

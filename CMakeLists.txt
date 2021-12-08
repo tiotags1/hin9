@@ -113,6 +113,8 @@ src/lua/lua_vhost.c
 src/lua/lua_map.c
 )
 
+configure_file(src/hin/system/config_int.h.in config_int.h @ONLY)
+
 add_library (hinsightd ${hin_src} ${external_src})
 
 add_executable (hin9 ${hin_exe} ${other_src})
@@ -124,5 +126,5 @@ install(PROGRAMS $<TARGET_FILE:hin9> DESTINATION sbin RENAME hinsightd)
 install(PROGRAMS $<TARGET_FILE:hin9_pid_helper> DESTINATION bin RENAME hinsightd_pid_helper)
 install(TARGETS hinsightd LIBRARY ARCHIVE INCLUDES)
 install(DIRECTORY src/hin DESTINATION include)
-
+install(FILES ${CMAKE_BINARY_DIR}/config_int.h DESTINATION include/hin/system)
 

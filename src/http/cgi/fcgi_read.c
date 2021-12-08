@@ -87,7 +87,8 @@ int hin_fcgi_read_rec (hin_buffer_t * buf, char * ptr, int left) {
     hin_fcgi_pipe_write (worker, head);
   break;
   case FCGI_STDERR:
-    fprintf (stderr, "fcgi %d error '%.*s'\n", buf->fd, len, head->data);
+    fprintf (stderr, "fcgi %d error %d '%.*s'\n", buf->fd, len, len, head->data);
+    // TODO how do you get separate messages from this ?
   break;
   case FCGI_END_REQUEST:
     hin_fcgi_pipe_end (worker, head);
@@ -107,8 +108,9 @@ int hin_fcgi_read_callback (hin_buffer_t * buf, int ret) {
   }
   if (ret == 0) {
     if (buf->debug & DEBUG_CGI)
-      printf ("fcgi %d close\n", buf->fd);
+      printf ("fcgi %d eof\n", buf->fd);
     hin_fcgi_socket_close (socket);
+    socket->read_buffer = NULL;
     return -1;
   }
 

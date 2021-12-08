@@ -2,6 +2,8 @@
 #ifndef HIN_SSL_H
 #define HIN_SSL_H
 
+#include "config_int.h"
+
 #ifdef HIN_USE_OPENSSL
 
 #include <openssl/bio.h>

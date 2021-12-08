@@ -1,0 +1,13 @@
+
+#ifndef HIN_CONFIG_INT_H
+#define HIN_CONFIG_INT_H
+
+#cmakedefine USE_OPENSSL
+
+#ifdef USE_OPENSSL
+#define HIN_USE_OPENSSL
+#undef USE_OPENSSL
+#endif
+
+#endif
+

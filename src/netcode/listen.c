@@ -149,7 +149,7 @@ int hin_server_do_retry () {
     server->c.sockfd = hin_server_listen (NULL, "8080", NULL, server);
 
     if (hin_server_start_accept (server) < 0) {
-      printf ("error %d\n", 435346);
+      fprintf (stderr, "error! %d\n", 435346);
       return -1;
     }
   }
