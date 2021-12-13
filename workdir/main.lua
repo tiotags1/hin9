@@ -15,8 +15,12 @@ require_dir ("config")
 redirect_log (server_log, debug_level)
 
 fpm_socks = fpm_socks or {}
-for ext, uri in pairs (fpm_apps) do
-  fpm_socks[ext] = create_fcgi (uri)
+for ext, fpm in pairs (fpm_apps) do
+  if (type (fpm) == "table") then
+    fpm_socks[ext] = create_fcgi (fpm.uri, fpm.min, fpm.max)
+  else
+    fpm_socks[ext] = create_fcgi (fpm)
+  end
 end
 
 access = create_log (access_log)

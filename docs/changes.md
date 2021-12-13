@@ -1,4 +1,9 @@
 
+* fcgi connection reuse, fcgi performance doubled (at least one test went from ~3000 to ~6000 reqs/s)
+* fcgi code cleanup
+* fcgi now properly handles queued connections
+
+commit 32d7a8dc5956681da4c102996920e9a18162265b
 * fix: fcgi no longer crashes if you POST more than ~4000 bytes
 * fix: fcgi should now be more resilient to unexpected fcgi socket abort
 * fix: library now properly tracks if it was built with openssl or not

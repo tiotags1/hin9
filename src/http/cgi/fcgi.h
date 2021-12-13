@@ -3,6 +3,8 @@
 
 #include "hin.h"
 
+#include "basic_lists.h"
+
 #define FCGI_VERSION_1           1
 
 #define FCGI_BEGIN_REQUEST       1
@@ -76,20 +78,22 @@ typedef struct {
   hin_buffer_t * header_buf;
   hin_pipe_t * out;
 
+  hin_dlist_t list;
+
   struct hin_fcgi_socket_struct * socket;
 } hin_fcgi_worker_t;
 
 typedef struct hin_fcgi_socket_struct {
-  int fd;
+  int fd, id;
   uint32_t cflags;
 
   struct sockaddr ai_addr;
   socklen_t ai_addrlen;
 
   hin_fcgi_worker_t ** worker;
-  int num_worker, max_worker;
+  int last_worker, num_worker, max_worker;
 
-  hin_fcgi_worker_t * queued;
+  hin_dlist_t que;
   hin_buffer_t * read_buffer;
 
   struct hin_fcgi_group_struct * fcgi;
@@ -100,9 +104,12 @@ typedef struct hin_fcgi_group_struct {
   char * port;
   char * uri;
 
-  hin_fcgi_worker_t * free, * busy;
+  int cur_socket, min_socket, max_socket;
+  hin_fcgi_socket_t ** socket;
 
   uint32_t magic;
+
+  hin_dlist_t idle_worker;
 
   struct hin_fcgi_group_struct * next;
 } hin_fcgi_group_t;

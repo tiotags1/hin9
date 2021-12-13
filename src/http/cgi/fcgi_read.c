@@ -99,19 +99,18 @@ int hin_fcgi_read_rec (hin_buffer_t * buf, char * ptr, int left) {
   return total;
 }
 
-int hin_fcgi_read_callback (hin_buffer_t * buf, int ret) {
+int hin_fcgi_socket_read_callback (hin_buffer_t * buf, int ret) {
   hin_fcgi_socket_t * socket = buf->parent;
   if (ret < 0) {
     printf ("fcgi %d error! '%s'\n", buf->fd, strerror (-ret));
     hin_fcgi_socket_close (socket);
-    return -1;
+    return 0;
   }
   if (ret == 0) {
     if (buf->debug & DEBUG_CGI)
       printf ("fcgi %d eof\n", buf->fd);
     hin_fcgi_socket_close (socket);
-    socket->read_buffer = NULL;
-    return -1;
+    return 0;
   }
 
   if (buf->debug & DEBUG_CGI)

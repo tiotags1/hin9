@@ -290,9 +290,11 @@ static int l_hin_create_cert (lua_State *L) {
 static int l_hin_create_fcgi (lua_State *L) {
   #ifdef HIN_USE_FCGI
   const char * uri = lua_tostring (L, 1);
+  int min = lua_tointeger (L, 2);
+  int max = lua_tointeger (L, 3);
 
-  void * hin_fcgi_start (const char * uri);
-  void * ptr = hin_fcgi_start (uri);
+  void * hin_fcgi_start (const char * uri, int min, int max);
+  void * ptr = hin_fcgi_start (uri, min, max);
 
   if (ptr == NULL) {
     return luaL_error (L, "error! fcgi can't connect '%s'\n", uri);

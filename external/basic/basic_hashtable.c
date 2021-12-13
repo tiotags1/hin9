@@ -99,6 +99,8 @@ basic_ht_hash_t basic_ht_hash_continue (const char * str, size_t size, basic_ht_
 }
 
 basic_ht_pair_t * basic_ht_get_pair (basic_ht_t *hashtable, basic_ht_hash_t key1, basic_ht_hash_t key2) {
+  if (hashtable == NULL) return NULL;
+
   basic_ht_hash_t bin = key1 & hashtable->mask;
   basic_ht_pair_t * pair;
 
@@ -113,6 +115,8 @@ basic_ht_pair_t * basic_ht_get_pair (basic_ht_t *hashtable, basic_ht_hash_t key1
 
 // Insert a key-value pair into a hash table.
 int basic_ht_set_pair (basic_ht_t * hashtable, basic_ht_hash_t key1, basic_ht_hash_t key2, basic_ht_hash_t value1, basic_ht_hash_t value2) {
+  if (hashtable == NULL) return -1;
+
   basic_ht_pair_t * next = NULL, * last = NULL, * newpair;
 
   basic_ht_hash_t bin = key1 & hashtable->mask;
@@ -143,6 +147,8 @@ int basic_ht_set_pair (basic_ht_t * hashtable, basic_ht_hash_t key1, basic_ht_ha
 }
 
 int basic_ht_delete_pair (basic_ht_t *hashtable, basic_ht_hash_t key1, basic_ht_hash_t key2) {
+  if (hashtable == NULL) return -1;
+
   basic_ht_pair_t * next = NULL, * last = NULL;
 
   basic_ht_hash_t bin = key1 & hashtable->mask;
@@ -164,6 +170,8 @@ int basic_ht_delete_pair (basic_ht_t *hashtable, basic_ht_hash_t key1, basic_ht_
 }
 
 basic_ht_pair_t * basic_ht_iterate_pair (basic_ht_t * hashtable, basic_ht_iterator_t * iter) {
+  if (hashtable == NULL) return NULL;
+
   if (iter->pair && iter->pair->next) {
     iter->pair = iter->pair->next;
     return iter->pair;

@@ -13,21 +13,33 @@
 
 static hin_fcgi_group_t * fcgi_group = NULL;
 
+static void hin_fcgi_group_clean (hin_fcgi_group_t * fcgi) {
+  hin_dlist_t * elem = fcgi->idle_worker.next;
+  while (elem) {
+    hin_dlist_t * next = elem->next;
+    hin_fcgi_worker_t * worker = hin_dlist_ptr (elem, offsetof (hin_fcgi_worker_t, list));
+    hin_fcgi_worker_free (worker);
+    elem = next;
+  }
+
+  if (fcgi->socket) free (fcgi->socket);
+  if (fcgi->host) free (fcgi->host);
+  if (fcgi->port) free (fcgi->port);
+  if (fcgi->uri) free (fcgi->uri);
+}
+
 void hin_fcgi_clean () {
   hin_fcgi_group_t * fcgi = fcgi_group;
   while (fcgi) {
     hin_fcgi_group_t * next = fcgi->next;
-
-    if (fcgi->host) free (fcgi->host);
-    if (fcgi->port) free (fcgi->port);
-    if (fcgi->uri) free (fcgi->uri);
+    hin_fcgi_group_clean (fcgi);
     free (fcgi);
     fcgi = next;
   }
   fcgi_group = NULL;
 }
 
-hin_fcgi_group_t * hin_fcgi_start (const char * uri) {
+hin_fcgi_group_t * hin_fcgi_start (const char * uri, int min, int max) {
   string_t source, host, port;
   source.ptr = (char*)uri;
   source.len = strlen (source.ptr);
@@ -50,6 +62,14 @@ hin_fcgi_group_t * hin_fcgi_start (const char * uri) {
   fcgi->port = strndup (port.ptr, port.len);
   fcgi->uri = strdup (uri);
   fcgi->magic = HIN_FCGI_MAGIC;
+  fcgi->min_socket = min;
+  fcgi->max_socket = max;
+  if (max) {
+    fcgi->socket = calloc (1, sizeof (void*) * max);
+  }
+
+  if (master.debug & (DEBUG_CGI|DEBUG_CONFIG))
+    printf ("fcgi group '%s' min %d max %d\n", uri, min, max);
 
   fcgi->next = fcgi_group;
   fcgi_group = fcgi;

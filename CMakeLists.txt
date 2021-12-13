@@ -60,6 +60,7 @@ external/basic/vfs/compat.c
 external/basic/basic_args.c
 external/basic/basic_endianness.c
 external/basic/basic_hashtable.c
+external/basic/basic_lists.c
 external/basic/basic_pattern.c
 external/basic/basic_timer.c
 )

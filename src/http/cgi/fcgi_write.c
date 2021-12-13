@@ -213,6 +213,7 @@ static int hin_fcgi_write_callback (hin_buffer_t * buf, int ret) {
 
 int hin_fcgi_write_request (hin_fcgi_worker_t * worker) {
   hin_fcgi_socket_t * socket = worker->socket;
+  hin_fcgi_group_t * fcgi = socket->fcgi;
   httpd_client_t * http = worker->http;
 
   int buf_sz = READ_SZ * 2;
@@ -232,17 +233,18 @@ int hin_fcgi_write_request (hin_fcgi_worker_t * worker) {
   body = header_ptr (buf, sizeof (*body));
   memset (body, 0, sizeof (*body));
   body->role = endian_swap16 (FCGI_RESPONDER);
-  body->flags = HIN_FCGI_SOCKET_REUSE;
+  if (fcgi->socket) {
+    body->flags = HIN_FCGI_SOCKET_REUSE;
+  }
 
   head = hin_fcgi_header (buf, FCGI_PARAMS, worker->req_id, 0);
   int sz = hin_fcgi_headers (buf, worker);
   head->length = endian_swap16 (sz);
-
   int rounded = FCGI_ROUND_TO_PAD (sz);
   head->padding = rounded - sz;
   header_ptr (buf, head->padding);
-
   hin_fcgi_header (buf, FCGI_PARAMS, worker->req_id, 0);
+
   int hin_fcgi_write_post (hin_buffer_t * buf, hin_fcgi_worker_t * worker);
   hin_fcgi_write_post (buf, worker);
 

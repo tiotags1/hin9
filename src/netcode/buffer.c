@@ -117,12 +117,12 @@ int hin_lines_request (hin_buffer_t * buffer, int min) {
 }
 
 int hin_lines_default_eat (hin_buffer_t * buffer, int num) {
+  hin_lines_t * lines = (hin_lines_t*)&buffer->buffer;
   if (num > 0) {
     hin_buffer_eat (buffer, num);
   } else if (num == 0) {
     hin_lines_request (buffer, 0);
   } else {
-    hin_lines_t * lines = (hin_lines_t*)&buffer->buffer;
     if (lines->close_callback) {
       return lines->close_callback (buffer, num);
     } else {
@@ -135,7 +135,6 @@ int hin_lines_default_eat (hin_buffer_t * buffer, int num) {
 
 static int hin_lines_read_callback (hin_buffer_t * buffer, int ret) {
   hin_lines_t * lines = (hin_lines_t*)&buffer->buffer;
-
   if (ret <= 0) {
     if (lines->close_callback)
       return lines->close_callback (buffer, ret);

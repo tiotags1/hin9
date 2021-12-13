@@ -11,20 +11,31 @@
 #include "fcgi.h"
 
 void hin_fcgi_worker_free (hin_fcgi_worker_t * worker) {
+  hin_fcgi_socket_t * socket = worker->socket;
+  if (socket) {
+    socket->worker[worker->req_id] = NULL;
+
+    socket->num_worker--;
+    if (socket->num_worker <= 0)
+      hin_fcgi_socket_close (socket);
+  }
   free (worker);
 }
 
 hin_fcgi_worker_t * hin_fcgi_get_worker (hin_fcgi_group_t * fcgi) {
-  if (fcgi->free) {
-    //hin_fcgi_worker_t * worker = fcgi->free;
-    // TODO add to busy pool
-    //return worker;
+  if (fcgi->idle_worker.next) {
+    hin_dlist_t * idle = fcgi->idle_worker.next;
+    hin_dlist_remove (&fcgi->idle_worker, idle);
+    hin_fcgi_worker_t * worker = hin_dlist_ptr (idle, offsetof (hin_fcgi_worker_t, list));
+    worker->io_state |= HIN_REQ_DATA;
+    return worker;
   }
 
   hin_fcgi_socket_t * sock = hin_fcgi_get_socket (fcgi);
+  sock->num_worker++;
 
-  int req_id = sock->num_worker++;
-  if (sock->num_worker > sock->max_worker) {
+  int req_id = sock->last_worker++;
+  if (sock->last_worker > sock->max_worker) {
     int new = 5;
     int max = sock->max_worker + new;
     sock->worker = realloc (sock->worker, sizeof (void*) * max);
@@ -48,29 +59,27 @@ int hin_fcgi_worker_reset (hin_fcgi_worker_t * worker) {
 
   httpd_client_t * http = worker->http;
   if (http) {
-    //httpd_client_finish_request (http);
-    //worker->http = NULL;
+    httpd_client_finish_request (http, NULL);
+    worker->http = NULL;
   }
-  if (worker->socket == NULL) {
+  hin_fcgi_socket_t * socket = worker->socket;
+  if (socket == NULL) {
     hin_fcgi_worker_free (worker);
     return 0;
-  } else {
-    hin_fcgi_socket_close (worker->socket);
   }
-
-  // TODO if not null then add to pool
+  hin_fcgi_group_t * fcgi = socket->fcgi;
+  if (fcgi->socket) {
+    hin_dlist_append (&fcgi->idle_worker, &worker->list);
+  } else {
+    hin_fcgi_socket_close (socket);
+  }
   return 0;
 }
 
 void hin_fcgi_worker_run (hin_fcgi_worker_t * worker) {
   hin_fcgi_socket_t * socket = worker->socket;
   if (socket->fd < 0) {
-    if (socket->queued) {
-      // TODO lazy atm, should queue
-      httpd_error (worker->http, 501, "fcgi worker should queue");
-      return ;
-    }
-    socket->queued = worker;
+    hin_dlist_append (&socket->que, &worker->list);
     return ;
   }
 
