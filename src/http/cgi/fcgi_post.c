@@ -58,7 +58,7 @@ int hin_fcgi_post_read_callback (hin_pipe_t * pipe, hin_buffer_t * buf, int num,
   if (num == 0 && flush == 0) {
     printf ("error! fcgi write unexpected\n");
   }
-  hin_pipe_write (pipe, buf1);
+  hin_pipe_append_raw (pipe, buf1);
   return 1;
 }
 

@@ -28,13 +28,16 @@ void httpd_vhost_set_debug (uint32_t debug) {
     vhost->debug = debug;
   }
   }
-  for (hin_client_t * c = master.server_list; c; c = c->next) {
-    hin_server_t * server = (hin_server_t*)c;
+
+  for (basic_dlist_t * elem = master.server_list.next; elem; elem = elem->next) {
+    hin_server_t * server = basic_dlist_ptr (elem, offsetof (hin_client_t, list));
+
     server->debug = debug;
     hin_buffer_t * buf = server->accept_buffer;
     if (buf)
       buf->debug = debug;
-    httpd_vhost_t * vhost = c->parent;
+
+    httpd_vhost_t * vhost = server->c.parent;
     vhost->debug = debug;
   }
 }

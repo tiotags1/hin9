@@ -18,16 +18,11 @@
 #include "system/system.h"
 
 void hin_clean1 () {
+  hin_stop ();
   int hin_log_flush ();
   hin_log_flush ();
   void hin_lua_clean ();
   hin_lua_clean ();
-  hin_client_t * next;
-  for (hin_client_t * elem = master.server_list; elem; elem = next) {
-    next = elem->next;
-    void hin_server_clean (hin_client_t * server);
-    hin_server_clean (elem);
-  }
   void hin_console_clean ();
   hin_console_clean ();
   void hin_sharedmem_clean ();
@@ -42,10 +37,6 @@ void hin_clean1 () {
   hin_socket_clean ();
   void httpd_vhost_clean ();
   httpd_vhost_clean ();
-  #ifdef HIN_USE_FCGI
-  void hin_fcgi_clean ();
-  hin_fcgi_clean ();
-  #endif
   // shouldn't clean pidfile it can incur a race condition
   free ((void*)master.exe_path);
   free ((void*)master.logdir_path);

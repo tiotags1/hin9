@@ -11,6 +11,8 @@
 #include <openssl/pem.h>
 #include <openssl/ssl.h>
 
+#include <basic_lists.h>
+
 enum { HIN_SSL_READ = 0x1, HIN_SSL_WRITE = 0x2 };
 
 typedef struct {
@@ -19,7 +21,7 @@ typedef struct {
   BIO *wbio;	// SSL writes to, we read from
 
   uint32_t flags;
-  void * write, * read;
+  basic_dlist_t read_list, write_list;
 } hin_ssl_t;
 
 #else

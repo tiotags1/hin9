@@ -20,7 +20,7 @@ typedef struct hin_server_struct {
   uint32_t debug;
   intptr_t ai_family, ai_protocol, ai_socktype;
   hin_buffer_t * accept_buffer;
-  hin_client_t * client_list;
+  basic_dlist_t client_list;
   void * rp_base, * rp;
 } hin_server_t;
 

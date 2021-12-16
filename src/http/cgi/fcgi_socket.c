@@ -40,6 +40,7 @@ void hin_fcgi_socket_close (hin_fcgi_socket_t * socket) {
   master.num_connection--;
 
   free (socket);
+  hin_check_alive ();
 }
 
 static int hin_fcgi_socket_close_callback (hin_buffer_t * buf, int num) {
@@ -81,12 +82,12 @@ static int hin_fcgi_connect_callback (hin_buffer_t * buf, int ret) {
   if (buf->debug & DEBUG_CGI)
     printf ("fcgi %d worker connected '%s'\n", socket->fd, fcgi->uri);
 
-  hin_dlist_t * next = socket->que.next;
+  basic_dlist_t * next = socket->que.next;
   while (next) {
-    hin_fcgi_worker_t * worker = hin_dlist_ptr (next, offsetof (hin_fcgi_worker_t, list));
+    hin_fcgi_worker_t * worker = basic_dlist_ptr (next, offsetof (hin_fcgi_worker_t, list));
     next = next->next;
     hin_fcgi_write_request (worker);
-    hin_dlist_remove (&socket->que, &worker->list);
+    basic_dlist_remove (&socket->que, &worker->list);
   }
 
   hin_buffer_t * buf1 = hin_lines_create_raw (READ_SZ);

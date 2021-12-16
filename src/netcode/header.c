@@ -21,14 +21,16 @@ static hin_buffer_t * new_buffer (hin_buffer_t * buffer, int min_sz) {
   buf->ptr = buf->buffer;
   buf->ssl = buffer->ssl;
   buf->count = 0;
-  buffer->next = buf;
-  buf->prev = buffer;
+  basic_dlist_add_after (NULL, &buffer->list, &buf->list);
   buf->debug = buffer->debug;
   return buf;
 }
 
 int vheader (hin_buffer_t * buffer, const char * fmt, va_list ap) {
-  if (buffer->next) return vheader (buffer->next, fmt, ap);
+  if (buffer->list.next) {
+    hin_buffer_t * next = hin_buffer_list_ptr (buffer->list.next);
+    return vheader (next, fmt, ap);
+  }
   int pos = buffer->count;
   int sz = buffer->sz - buffer->count;
   va_list prev;
@@ -59,7 +61,10 @@ int header (hin_buffer_t * buffer, const char * fmt, ...) {
 }
 
 int header_raw (hin_buffer_t * buffer, const char * data, int len) {
-  if (buffer->next) return header_raw (buffer->next, data, len);
+  if (buffer->list.next) {
+    hin_buffer_t * next = hin_buffer_list_ptr (buffer->list.next);
+    return header_raw (next, data, len);
+  }
 
   int pos = buffer->count;
   int sz = buffer->sz - buffer->count;
@@ -78,7 +83,9 @@ int header_raw (hin_buffer_t * buffer, const char * data, int len) {
 }
 
 void * header_ptr (hin_buffer_t * buffer, int len) {
-  if (buffer->next) return header_ptr (buffer->next, len);
+  if (buffer->list.next) {
+    return header_ptr (hin_buffer_list_ptr (buffer->list.next), len);
+  }
 
   int pos = buffer->count;
   int sz = buffer->sz - buffer->count;

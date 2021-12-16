@@ -37,8 +37,7 @@ struct hin_pipe_struct {
   hin_pipe_dir_t in, out;
   off_t count, left, sz;
   void * parent, * parent1;
-  hin_buffer_t * write;
-  int num_write, num_read;
+  basic_dlist_t write_que, writing, reading;
   int (*decode_callback) (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush);
   int (*read_callback) (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush);
   int (*in_callback) (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush);
@@ -81,17 +80,15 @@ void hin_client_close (hin_client_t * client);
 int hin_client_ssl_init (hin_client_t * client);
 void hin_client_ssl_cleanup (hin_client_t * client);
 
-void hin_client_list_remove (hin_client_t ** list, hin_client_t * new);
-void hin_client_list_add (hin_client_t ** list, hin_client_t * new);
-
 hin_buffer_t * hin_pipe_get_buffer (hin_pipe_t * pipe, int sz);
 int hin_pipe_init (hin_pipe_t * pipe);
 int hin_pipe_start (hin_pipe_t * pipe);
 int hin_pipe_advance (hin_pipe_t * pipe);
 int hin_pipe_finish (hin_pipe_t * pipe);
-int hin_pipe_append (hin_pipe_t * pipe, hin_buffer_t * buffer);
-int hin_pipe_write (hin_pipe_t * client, hin_buffer_t * buffer);
-void hin_pipe_write_prepend (hin_pipe_t * pipe, hin_buffer_t * buf);
+
+int hin_pipe_append_raw (hin_pipe_t * pipe, hin_buffer_t * buffer);
+int hin_pipe_prepend_raw (hin_pipe_t * pipe, hin_buffer_t * buf);
+int hin_pipe_write_process (hin_pipe_t * pipe, hin_buffer_t * buffer);
 
 hin_buffer_t * hin_buffer_create_from_data (void * parent, const char * ptr, int sz);
 void hin_buffer_clean (hin_buffer_t * buffer);
@@ -100,8 +97,11 @@ void hin_buffer_list_remove (hin_buffer_t ** list, hin_buffer_t * new);
 void hin_buffer_list_append (hin_buffer_t ** list, hin_buffer_t * new);
 void hin_buffer_list_add (hin_buffer_t ** list, hin_buffer_t * new);
 
+int hin_buffer_continue_write (hin_buffer_t * buf, int ret);
 int hin_buffer_prepare (hin_buffer_t * buffer, int num);
 int hin_buffer_eat (hin_buffer_t * buffer, int num);
+
+#define hin_buffer_list_ptr(elem) (basic_dlist_ptr (elem, offsetof (hin_buffer_t, list)))
 
 int hin_lines_request (hin_buffer_t * buffer, int min);
 int hin_lines_reread (hin_buffer_t * buf);

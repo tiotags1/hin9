@@ -200,12 +200,8 @@ static int hin_fcgi_write_callback (hin_buffer_t * buf, int ret) {
     return -1;
   }
 
-  if (buf->next) {
-    if (hin_request_write (buf->next) < 0) {
-      printf ("uring error!\n");
-      return -1;
-    }
-    return 1;
+  if (hin_buffer_continue_write (buf, ret) > 0) {
+    return 0;
   }
 
   return 1;

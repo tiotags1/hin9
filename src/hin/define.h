@@ -11,6 +11,7 @@ typedef struct hin_client_struct hin_client_t;
 typedef struct hin_pipe_struct hin_pipe_t;
 
 #include "system/ssl.h"
+#include <basic_lists.h>
 
 #define READ_SZ 4096
 // TODO check if 16k is better
@@ -43,7 +44,8 @@ typedef struct hin_buffer_struct {
   off_t pos;
   int count, sz;
   void * parent;
-  struct hin_buffer_struct * prev, * next, * ssl_buffer;
+  struct hin_buffer_struct * ssl_buffer;
+  basic_dlist_t list;
   char * ptr;
   hin_ssl_t * ssl;
   char buffer[];
@@ -58,7 +60,7 @@ typedef struct hin_client_struct {
   struct sockaddr ai_addr;
   socklen_t ai_addrlen;
   hin_ssl_t ssl;
-  struct hin_client_struct * prev, * next;
+  basic_dlist_t list;
 } hin_client_t;
 
 typedef struct {

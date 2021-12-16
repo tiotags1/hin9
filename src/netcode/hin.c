@@ -25,13 +25,15 @@ int hin_clean () {
 
 void hin_stop () {
   master.flags |= HIN_FLAG_QUIT;
-  hin_client_t * next = NULL;
 
-  for (hin_client_t * cur = master.server_list; cur; cur = next) {
+  basic_dlist_t * elem = master.server_list.next;
+  while (elem) {
+    hin_server_t * server = basic_dlist_ptr (elem, offsetof (hin_client_t, list));
+    elem = elem->next;
+
     if (master.debug & DEBUG_CONFIG)
-      printf ("stopping server %d\n", cur->sockfd);
-    next = cur->next;
-    hin_server_stop ((hin_server_t*)cur);
+      printf ("stopping server %d\n", server->c.sockfd);
+    hin_server_stop (server);
   }
 }
 
@@ -50,7 +52,7 @@ int hin_check_alive () {
     }
   }
   if ((master.flags & HIN_FLAG_QUIT) == 0) return 1;
-  if (master.server_list || master.connection_list) {
+  if (master.server_list.next || master.num_connection) {
     if (master.debug & DEBUG_CONFIG) printf ("hin live client %d conn %d\n", master.num_client, master.num_connection);
     return 1;
   }

@@ -78,7 +78,7 @@ typedef struct {
   hin_buffer_t * header_buf;
   hin_pipe_t * out;
 
-  hin_dlist_t list;
+  basic_dlist_t list;
 
   struct hin_fcgi_socket_struct * socket;
 } hin_fcgi_worker_t;
@@ -93,7 +93,7 @@ typedef struct hin_fcgi_socket_struct {
   hin_fcgi_worker_t ** worker;
   int last_worker, num_worker, max_worker;
 
-  hin_dlist_t que;
+  basic_dlist_t que;
   hin_buffer_t * read_buffer;
 
   struct hin_fcgi_group_struct * fcgi;
@@ -109,7 +109,7 @@ typedef struct hin_fcgi_group_struct {
 
   uint32_t magic;
 
-  hin_dlist_t idle_worker;
+  basic_dlist_t idle_worker;
 
   struct hin_fcgi_group_struct * next;
 } hin_fcgi_group_t;

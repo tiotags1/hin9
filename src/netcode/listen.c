@@ -75,7 +75,7 @@ static int hin_server_accept_callback (hin_buffer_t * buffer, int ret) {
     return 0;
   }
 
-  hin_client_list_add (&server->client_list, client);
+  basic_dlist_append (&server->client_list, &client->list);
 
   if (server->accept_buffer == NULL) return 1;
 
@@ -107,7 +107,7 @@ int hin_server_start_accept (hin_server_t * server) {
     return -1;
   }
 
-  hin_client_list_add (&master.server_list, &server->c);
+  basic_dlist_append (&master.server_list, &server->c.list);
 
   return 0;
 }
@@ -116,7 +116,7 @@ int hin_server_unlink (hin_server_t * server) {
   hin_server_stop (server);
   // TODO clean every active client
   close (server->c.sockfd);
-  hin_client_list_remove (&master.server_list, &server->c);
+  basic_dlist_remove (&master.server_list, &server->c.list);
   free (server);
   master.num_listen--;
 
@@ -132,7 +132,7 @@ int hin_server_stop (hin_server_t * server) {
   hin_buffer_clean (buf);
   server->accept_buffer = NULL;
 
-  if (server->client_list) return 0;
+  if (server->client_list.next) return 0;
 
   hin_server_unlink (server);
 
@@ -140,11 +140,12 @@ int hin_server_stop (hin_server_t * server) {
 }
 
 int hin_server_do_retry () {
-  hin_client_t * next = NULL;
-  for (hin_client_t * client = master.server_retry; client; client = next) {
-    next = client->next;
-    hin_server_t * server = (hin_server_t*)client;
-    hin_client_list_remove (&master.server_retry, client);
+  basic_dlist_t * elem = master.server_retry.next;
+  while (elem) {
+    hin_server_t * server = basic_dlist_ptr (elem, offsetof (hin_client_t, list));
+    elem = elem->next;
+
+    basic_dlist_remove (&master.server_retry, elem);
 
     server->c.sockfd = hin_server_listen (NULL, "8080", NULL, server);
 
@@ -158,7 +159,7 @@ int hin_server_do_retry () {
 }
 
 static int hin_server_add_retry (hin_server_t * server) {
-  hin_client_list_add ((hin_client_t**)&master.server_retry, &server->c);
+  basic_dlist_append (&master.server_retry, &server->c.list);
   printf ("socket was busy will try again later\n");
   server->flags |= HIN_FLAG_RETRY;
   return 0;

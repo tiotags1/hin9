@@ -12,72 +12,12 @@
 int hin_pipe_read_callback (hin_buffer_t * buffer, int ret);
 int hin_pipe_write_callback (hin_buffer_t * buffer, int ret);
 int hin_pipe_copy_raw (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush);
+static int hin_pipe_process_buffer (hin_pipe_t * pipe, hin_buffer_t * buffer);
 
 void hin_pipe_close (hin_pipe_t * pipe) {
   if (pipe->finish_callback) pipe->finish_callback (pipe);
   if (pipe->extra) free (pipe->extra);
   free (pipe);
-}
-
-hin_buffer_t * hin_pipe_get_buffer (hin_pipe_t * pipe, int sz) {
-#if USE_LINES
-  hin_buffer_t * buf = hin_lines_create_raw (sz);
-#else
-  hin_buffer_t * buf = malloc (sizeof *buf + sz);
-  memset (buf, 0, sizeof (*buf));
-  buf->flags = 0;
-  buf->ptr = buf->buffer;
-  buf->count = buf->sz = sz;
-#endif
-  buf->parent = (void*)pipe;
-  buf->debug = pipe->debug;
-  return buf;
-}
-
-int hin_pipe_write (hin_pipe_t * pipe, hin_buffer_t * buffer) {
-  hin_buffer_t * next = buffer->next;
-  for (hin_buffer_t * buf = buffer; buf; buf = next) {
-    next = buf->next;
-    buf->parent = pipe;
-    hin_buffer_list_append (&pipe->write, buf);
-    pipe->num_write++;
-  }
-  return 0;
-}
-
-void hin_pipe_write_prepend (hin_pipe_t * pipe, hin_buffer_t * buf) {
-  hin_buffer_t * append = pipe->write;
-  pipe->write = NULL;
-  pipe->num_write = 0;
-
-  hin_pipe_write (pipe, buf);
-  hin_pipe_write (pipe, append);
-}
-
-int hin_pipe_append (hin_pipe_t * pipe, hin_buffer_t * buffer) {
-  buffer->parent = pipe;
-
-  if (pipe->in.flags & HIN_COUNT) {
-    pipe->left -= buffer->count;
-    if (pipe->left <= 0) {
-      pipe->in.flags |= HIN_DONE;
-    }
-  }
-
-  int flush = (pipe->in.flags & HIN_DONE) ? 1 : 0;
-  int ret1 = 0;
-
-  if (pipe->debug & DEBUG_PIPE) printf ("pipe %d>%d append %d bytes %s\n", pipe->in.fd, pipe->out.fd, buffer->count, flush ? "flush" : "cont");
-
-  if (pipe->decode_callback) {
-    ret1 = pipe->decode_callback (pipe, buffer, buffer->count, flush);
-  } else if (pipe->in_callback) {
-    ret1 = pipe->in_callback (pipe, buffer, buffer->count, flush);
-  } else {
-    ret1 = pipe->read_callback (pipe, buffer, buffer->count, flush);
-  }
-  if (ret1) hin_buffer_clean (buffer);
-  return 0;
 }
 
 int hin_pipe_init (hin_pipe_t * pipe) {
@@ -97,21 +37,77 @@ int hin_pipe_start (hin_pipe_t * pipe) {
   return 0;
 }
 
+hin_buffer_t * hin_pipe_get_buffer (hin_pipe_t * pipe, int sz) {
+#if USE_LINES
+  hin_buffer_t * buf = hin_lines_create_raw (sz);
+#else
+  hin_buffer_t * buf = malloc (sizeof *buf + sz);
+  memset (buf, 0, sizeof (*buf));
+  buf->flags = 0;
+  buf->ptr = buf->buffer;
+  buf->count = buf->sz = sz;
+#endif
+  buf->parent = (void*)pipe;
+  buf->debug = pipe->debug;
+  return buf;
+}
+
+int hin_pipe_append_raw (hin_pipe_t * pipe, hin_buffer_t * buffer) {
+  basic_dlist_append (&pipe->write_que, &buffer->list);
+  return 0;
+}
+
+int hin_pipe_prepend_raw (hin_pipe_t * pipe, hin_buffer_t * buf) {
+  basic_dlist_prepend (&pipe->write_que, &buf->list);
+  return 0;
+}
+
+int hin_pipe_write_process (hin_pipe_t * pipe, hin_buffer_t * buffer) {
+  basic_dlist_t * elem = &buffer->list;
+  while (elem) {
+    hin_buffer_t * buf = hin_buffer_list_ptr (elem);
+    elem = elem->next;
+
+    hin_pipe_process_buffer (pipe, buf);
+  }
+  return 0;
+}
+
+static int hin_pipe_process_buffer (hin_pipe_t * pipe, hin_buffer_t * buffer) {
+  if (pipe->in.flags & HIN_OFFSETS) {
+    pipe->in.pos += buffer->count;
+  }
+
+  if (pipe->in.flags & HIN_COUNT) {
+    pipe->left -= buffer->count;
+    if (pipe->left <= 0) {
+      if (pipe->debug & DEBUG_PIPE) printf ("pipe %d>%d read finished\n", pipe->in.fd, pipe->out.fd);
+      pipe->in.flags |= HIN_DONE;
+    }
+  }
+
+  int ret1 = 0, flush = (pipe->in.flags & HIN_DONE) ? 1 : 0;
+
+  if (pipe->debug & DEBUG_PIPE) printf ("pipe %d>%d append %d bytes %s\n", pipe->in.fd, pipe->out.fd, buffer->count, flush ? "flush" : "cont");
+
+  if (pipe->decode_callback) {
+    ret1 = pipe->decode_callback (pipe, buffer, buffer->count, flush);
+  } else if (pipe->in_callback) {
+    ret1 = pipe->in_callback (pipe, buffer, buffer->count, flush);
+  } else {
+    ret1 = pipe->read_callback (pipe, buffer, buffer->count, flush);
+  }
+  if (ret1) hin_buffer_clean (buffer);
+  return 0;
+}
+
 int hin_pipe_finish (hin_pipe_t * pipe) {
   pipe->in.flags |= HIN_DONE;
   hin_buffer_t * buf = hin_buffer_create_from_data (pipe, NULL, 0);
 
-  int ret1, flush = 1;
-  if (pipe->decode_callback) {
-    ret1 = pipe->decode_callback (pipe, buf, buf->count, flush);
-  } else if (pipe->in_callback) {
-    ret1 = pipe->in_callback (pipe, buf, buf->count, flush);
-  } else {
-    ret1 = pipe->read_callback (pipe, buf, buf->count, flush);
-  }
-  if (ret1) hin_buffer_clean (buf);
+  hin_pipe_process_buffer (pipe, buf);
 
-  if (pipe->write == NULL) {
+  if (pipe->writing.next == NULL) {
     pipe->out.flags |= HIN_DONE;
   }
   hin_pipe_advance (pipe);
@@ -119,25 +115,21 @@ int hin_pipe_finish (hin_pipe_t * pipe) {
   return 0;
 }
 
-void hin_pipe_handled_read (hin_pipe_t * pipe) {
-  pipe->num_read++;
-}
-
 int hin_pipe_copy_raw (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush) {
   if (num <= 0) return 1;
   buffer->count = num;
-  hin_pipe_write (pipe, buffer);
+  hin_pipe_append_raw (pipe, buffer);
   //if (flush) return 1; // already cleaned in the write done handler
   return 0;
 }
 
-static int hin_pipe_read_next (hin_buffer_t * buffer) {
-  hin_pipe_t * pipe = (hin_pipe_t*)buffer->parent;
+static int hin_pipe_read_next (hin_pipe_t * pipe, hin_buffer_t * buffer) {
   if (pipe->in.flags & HIN_INACTIVE) return 0;
 
   buffer->fd = pipe->in.fd;
   buffer->ssl = pipe->in.ssl;
   buffer->flags = pipe->in.flags;
+  buffer->parent = pipe;
 
 #if USE_LINES
   hin_lines_t * lines = (hin_lines_t*)&buffer->buffer;
@@ -150,7 +142,8 @@ static int hin_pipe_read_next (hin_buffer_t * buffer) {
   buffer->pos = pipe->in.pos;
   if ((pipe->in.flags & HIN_COUNT) && pipe->left < READ_SZ) buffer->count = pipe->left;
 
-  pipe->num_read++;
+  buffer->list.next = buffer->list.prev = NULL;
+  basic_dlist_append (&pipe->reading, &buffer->list);
 
   if (hin_request_read (buffer) < 0) {
     if (pipe->in_error_callback)
@@ -161,15 +154,17 @@ static int hin_pipe_read_next (hin_buffer_t * buffer) {
   return 0;
 }
 
-static int hin_pipe_write_next (hin_buffer_t * buffer) {
-  hin_pipe_t * pipe = (hin_pipe_t*)buffer->parent;
+static int hin_pipe_write_next (hin_pipe_t * pipe, hin_buffer_t * buffer) {
   buffer->fd = pipe->out.fd;
   buffer->ssl = pipe->out.ssl;
   buffer->flags = pipe->out.flags;
   buffer->callback = hin_pipe_write_callback;
-  buffer->next = buffer->prev = NULL;
+  buffer->parent = pipe;
 
   buffer->pos = pipe->out.pos;
+
+  basic_dlist_remove (&pipe->write_que, &buffer->list);
+  basic_dlist_append (&pipe->writing, &buffer->list);
 
   if (pipe->out.flags & HIN_OFFSETS) {
     pipe->out.pos += buffer->count;
@@ -188,29 +183,26 @@ static int hin_pipe_write_next (hin_buffer_t * buffer) {
 int hin_pipe_advance (hin_pipe_t * pipe) {
   if ((pipe->in.flags & HIN_COUNT) && pipe->left <= 0) pipe->in.flags |= HIN_DONE;
 
-  if (pipe->write == NULL
-  && ((pipe->in.flags & pipe->out.flags) & HIN_DONE)
-  && pipe->num_write == 0) {
+  if (pipe->write_que.next == NULL
+  && pipe->writing.next == NULL
+  && ((pipe->in.flags & pipe->out.flags) & HIN_DONE)) {
     if (pipe->debug & DEBUG_PIPE) printf ("pipe %d>%d close read %d write %d\n", pipe->in.fd, pipe->out.fd, (pipe->in.flags & HIN_DONE), (pipe->out.flags & HIN_DONE));
     hin_pipe_close (pipe);
     return 0;
   }
 
-  if (pipe->debug & DEBUG_PIPE) printf ("pipe %d>%d advance done %d read %d write %d\n", pipe->in.fd, pipe->out.fd, pipe->in.flags & HIN_DONE, pipe->num_read, pipe->num_write);
-
   if ((pipe->in.flags & (HIN_DONE|HIN_INACTIVE)) == 0
-    && pipe->num_read < 1 && pipe->num_write < 1) {
+    && pipe->reading.next == NULL) {
     hin_buffer_t * new = pipe->buffer_callback (pipe, READ_SZ);
-    if (hin_pipe_read_next (new) < 0) {
+    if (hin_pipe_read_next (pipe, new) < 0) {
       hin_buffer_clean (new);
       return -1;
     }
   }
 
-  if (pipe->write && (pipe->out.flags & HIN_DONE)) {
-    hin_buffer_t * buffer = pipe->write;
-    hin_buffer_list_remove (&pipe->write, buffer);
-    if (hin_pipe_write_next (buffer) < 0) return -1;
+  if (pipe->write_que.next && (pipe->out.flags & HIN_DONE)) {
+    hin_buffer_t * buffer = hin_buffer_list_ptr (pipe->write_que.next);
+    if (hin_pipe_write_next (pipe, buffer) < 0) return -1;
   }
   return 0;
 }
@@ -248,11 +240,10 @@ int hin_pipe_write_callback (hin_buffer_t * buffer, int ret) {
     }
     return 0;
   }
-  pipe->num_write--;
-  if (pipe->write) {
-    hin_buffer_t * buffer = pipe->write;
-    hin_buffer_list_remove (&pipe->write, buffer);
-    hin_pipe_write_next (buffer);
+  basic_dlist_remove (&pipe->writing, &buffer->list);
+  if (pipe->write_que.next) {
+    hin_buffer_t * buffer = hin_buffer_list_ptr (pipe->write_que.next);
+    hin_pipe_write_next (pipe, buffer);
   }
   hin_pipe_advance (pipe);
   return 1;
@@ -273,33 +264,15 @@ int hin_pipe_read_callback (hin_buffer_t * buffer, int ret) {
     ret = 0;
   }
 
-  pipe->num_read--;
+  basic_dlist_remove (&pipe->reading, &buffer->list);
 
   if (pipe->debug & DEBUG_PIPE) printf ("pipe %d>%d read  %d/%d pos %lld left %lld %s\n",
     pipe->in.fd, pipe->out.fd, ret, buffer->count, (long long)pipe->in.pos, (long long)pipe->left, pipe->in.flags & HIN_DONE ? "flush" : "cont");
 
-  if (pipe->in.flags & HIN_OFFSETS) {
-    pipe->in.pos += ret;
-  }
-  if (pipe->in.flags & HIN_COUNT) {
-    pipe->left -= ret;
-    if (pipe->left <= 0) {
-      if (pipe->debug & DEBUG_PIPE) printf ("pipe %d>%d read finished\n", pipe->in.fd, pipe->out.fd);
-      pipe->in.flags |= HIN_DONE;
-    }
-  }
+  buffer->count = ret;
+  hin_pipe_process_buffer (pipe, buffer);
 
-  int ret1 = 0, flush = pipe->in.flags & HIN_DONE ? 1 : 0;
-  if (pipe->decode_callback) {
-    ret1 = pipe->decode_callback (pipe, buffer, ret, flush);
-  } else if (pipe->in_callback) {
-    ret1 = pipe->in_callback (pipe, buffer, ret, flush);
-  } else {
-    ret1 = pipe->read_callback (pipe, buffer, ret, flush);
-  }
-  if (ret1) hin_buffer_clean (buffer);
-
-  if (pipe->write == NULL) {
+  if (pipe->write_que.next == NULL) {
     pipe->out.flags |= HIN_DONE;
   }
   hin_pipe_advance (pipe);

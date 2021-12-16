@@ -4,9 +4,11 @@
 
 #cmakedefine USE_OPENSSL
 
+#ifndef HIN_USE_OPENSSL
 #ifdef USE_OPENSSL
 #define HIN_USE_OPENSSL
 #undef USE_OPENSSL
+#endif
 #endif
 
 #endif

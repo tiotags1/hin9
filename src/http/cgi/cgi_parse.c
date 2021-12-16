@@ -153,7 +153,7 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer, int received) {
     } else if (n > 0) {
       if (len > 0) {
         hin_buffer_t * buf1 = hin_buffer_create_from_data (pipe, source->ptr, len);
-        hin_pipe_append (pipe, buf1);
+        hin_pipe_write_process (pipe, buf1);
       }
       hin_pipe_start (pipe);
       return -1;
@@ -210,17 +210,18 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer, int received) {
 
   if (http->debug & DEBUG_RW) {
     printf ("httpd %d cgi response %d '\n%.*s'\n", http->c.sockfd, buf->count, buf->count, buf->ptr);
-    for (hin_buffer_t * elem = buf->next; elem; elem=elem->next) {
-      printf (" cont %d '\n%.*s'\n", elem->count, elem->count, elem->ptr);
+    for (basic_dlist_t * elem = buf->list.next; elem; elem=elem->next) {
+      hin_buffer_t * buf = hin_buffer_list_ptr (elem);
+      printf (" cont %d '\n%.*s'\n", buf->count, buf->count, buf->ptr);
     }
     printf (" left after is %d\n", len);
   }
 
-  hin_pipe_write (pipe, buf);
+  hin_pipe_append_raw (pipe, buf);
 
   if (len > 0) {
     hin_buffer_t * buf1 = hin_buffer_create_from_data (pipe, source->ptr, len);
-    hin_pipe_append (pipe, buf1);
+    hin_pipe_write_process (pipe, buf1);
   }
 
   hin_pipe_start (pipe);

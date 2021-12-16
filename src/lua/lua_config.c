@@ -152,13 +152,14 @@ static int l_hin_log_callback (lua_State *L) {
   }
   header_raw (buf, last, max-last);
 #endif
-  if (buf->next == NULL) { return 0; }
+  hin_buffer_t * next = hin_buffer_list_ptr (buf->list.next);
+  if (next == NULL) { return 0; }
 
-  lua_pushlightuserdata (L, buf->next);
+  lua_pushlightuserdata (L, next);
   lua_replace (L, lua_upvalueindex (1));
 
-  logs = buf->next;
-  buf->next->pos = buf->pos + buf->count;
+  logs = next;
+  next->pos = buf->pos + buf->count;
 
   if (hin_request_write (buf) < 0) {
     buf->flags |= HIN_SYNC;

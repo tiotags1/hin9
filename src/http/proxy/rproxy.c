@@ -176,7 +176,7 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer, int receive
         buf1->fd = pipe->out.fd;
         buf1->flags = pipe->out.flags;
         buf1->ssl = pipe->out.ssl;
-        hin_pipe_append (pipe, buf1);
+        hin_pipe_write_process (pipe, buf1);
       }
       hin_pipe_start (pipe);
       return (uintptr_t)source.ptr - (uintptr_t)orig.ptr;
@@ -205,14 +205,14 @@ static int httpd_proxy_headers_read_callback (hin_buffer_t * buffer, int receive
 
   if (http->debug & DEBUG_RW) printf ("httpd %d proxy response %d '\n%.*s'\n", http->c.sockfd, buf->count, buf->count, buf->ptr);
 
-  hin_pipe_write (pipe, buf);
+  hin_pipe_append_raw (pipe, buf);
 
   if (len > 0) {
     hin_buffer_t * buf1 = hin_buffer_create_from_data (pipe, source.ptr, len);
     buf1->fd = buf->fd;
     buf1->flags = buf->flags;
     buf1->ssl = buf->ssl;
-    hin_pipe_append (pipe, buf1);
+    hin_pipe_write_process (pipe, buf1);
   }
 
   hin_pipe_start (pipe);

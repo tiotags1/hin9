@@ -5,7 +5,7 @@
 
 #include "basic_lists.h"
 
-int hin_dlist_prepend (hin_dlist_t * head, hin_dlist_t * new) {
+int basic_dlist_prepend (basic_dlist_t * head, basic_dlist_t * new) {
   new->next = new->prev = NULL;
   if (head->next == NULL) {
     head->next = head->prev = new;
@@ -17,7 +17,7 @@ int hin_dlist_prepend (hin_dlist_t * head, hin_dlist_t * new) {
   return 0;
 }
 
-int hin_dlist_append (hin_dlist_t * head, hin_dlist_t * new) {
+int basic_dlist_append (basic_dlist_t * head, basic_dlist_t * new) {
   new->next = new->prev = NULL;
   if (head->next == NULL) {
     head->next = head->prev = new;
@@ -29,7 +29,24 @@ int hin_dlist_append (hin_dlist_t * head, hin_dlist_t * new) {
   return 0;
 }
 
-int hin_dlist_remove (hin_dlist_t * head, hin_dlist_t * new) {
+int basic_dlist_add_after (basic_dlist_t * list, basic_dlist_t * elem, basic_dlist_t * new) {
+  basic_dlist_t * last = new;
+  while (last->next) last = last->next;
+
+  last->next = elem->next;
+  if (elem->next) elem->next->prev = last;
+
+  new->prev = elem;
+  elem->next = new;
+
+  if (list) {
+    if (list->prev == elem) list->prev = last;
+  }
+
+  return 0;
+}
+
+int basic_dlist_remove (basic_dlist_t * head, basic_dlist_t * new) {
   if (head->next == new) {
     head->next = new->next;
   }
@@ -46,7 +63,8 @@ int hin_dlist_remove (hin_dlist_t * head, hin_dlist_t * new) {
   return 0;
 }
 
-void * hin_dlist_ptr (hin_dlist_t * new, int off) {
+void * basic_dlist_ptr (basic_dlist_t * new, int off) {
+  if (new == NULL) return NULL;
   uint8_t * data = (uint8_t*)new;
   data -= off;
   return (void*)data;

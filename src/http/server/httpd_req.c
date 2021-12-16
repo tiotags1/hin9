@@ -64,17 +64,9 @@ static int http_raw_response_callback (hin_buffer_t * buffer, int ret) {
 
   if (ret < 0) {
     printf ("httpd sending error %s\n", strerror (-ret));
-  } else if (ret != buffer->count) {
+  } else if (hin_buffer_continue_write (buffer, ret) > 0) {
     http->count += ret;
-    buffer->ptr += ret;
-    buffer->count -= ret;
-    hin_request_write (buffer);
     return 0;
-  } else if (buffer->next) {
-    buffer->next->callback = http_raw_response_callback;
-    buffer->next->parent = buffer->parent;
-    hin_request_write (buffer->next);
-    return 1;
   }
 
   http->count += ret;
@@ -178,7 +170,8 @@ int httpd_respond_buffer (httpd_client_t * http, int status, hin_buffer_t * data
   buf->debug = http->debug;
 
   off_t len = 0;
-  for (hin_buffer_t * buf = data; buf; buf=buf->next) {
+  for (basic_dlist_t * elem = &data->list; elem; elem = elem->next) {
+    hin_buffer_t * buf = hin_buffer_list_ptr (elem);
     len += buf->count;
   }
 
@@ -191,15 +184,15 @@ int httpd_respond_buffer (httpd_client_t * http, int status, hin_buffer_t * data
   if (http->debug & DEBUG_RW) printf ("httpd %d buffer response %d '\n%.*s'\n", http->c.sockfd, buf->count, buf->count, buf->ptr);
 
   if (http->method != HIN_METHOD_HEAD) {
-    hin_buffer_t * last = buf;
-    while (last->next) { last = last->next; }
-    last->next = data;
+    basic_dlist_t * elem = &buf->list;
+    while (elem->next) elem = elem->next;
+    basic_dlist_add_after (NULL, elem, &data->list);
   } else {
-    hin_buffer_t * last = data, * next;
-    while (last) {
-      next = last->next;
-      hin_buffer_clean (last);
-      last = next;
+    basic_dlist_t * elem = &data->list;
+    while (elem) {
+      hin_buffer_t * buf1 = hin_buffer_list_ptr (elem);
+      elem = elem->next;
+      hin_buffer_clean (buf1);
     }
   }
 

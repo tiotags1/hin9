@@ -159,7 +159,7 @@ int httpd_send_file (httpd_client_t * http, hin_cache_item_t * item, hin_buffer_
 
   if (http->debug & DEBUG_RW) printf ("httpd %d file response %d '\n%.*s'\n", http->c.sockfd, buf->count, buf->count, buf->ptr);
 
-  hin_pipe_write (pipe, buf);
+  hin_pipe_append_raw (pipe, buf);
   hin_pipe_start (pipe);
 
   return 0;

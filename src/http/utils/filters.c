@@ -132,7 +132,7 @@ int hin_pipe_copy_deflate (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, in
         new->count -= offset;
       }
       if (http->debug & DEBUG_HTTP_FILTER) printf ("  deflate write %d total %d %s\n", have, new->count, flush ? "flush" : "cont");
-      hin_pipe_write (pipe, new);
+      hin_pipe_append_raw (pipe, new);
     } else {
       hin_buffer_clean (new);
     }
@@ -170,7 +170,7 @@ int hin_pipe_copy_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, in
     header (buf, "0\r\n\r\n");
   }
 
-  hin_pipe_write (pipe, buf);
+  hin_pipe_append_raw (pipe, buf);
 
   return 1;
 }

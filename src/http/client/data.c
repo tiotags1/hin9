@@ -55,7 +55,7 @@ hin_pipe_t * http_client_start_pipe (http_client_t * http, string_t * source) {
 
   if (len > 0) {
     hin_buffer_t * buf1 = hin_buffer_create_from_data (pipe, source->ptr, len);
-    hin_pipe_append (pipe, buf1);
+    hin_pipe_write_process (pipe, buf1);
   }
 
   source->ptr += len;

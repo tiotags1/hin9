@@ -12,7 +12,7 @@ int http_client_headers_read_callback (hin_buffer_t * buffer, int received);
 
 int http_connection_allocate (http_client_t * http) {
   if (http->io_state & HIN_REQ_IDLE)
-    hin_client_list_remove (&master.connection_list, &http->c);
+    basic_dlist_remove (&master.connection_idle, &http->c.list);
   http->io_state &= ~HIN_REQ_IDLE;
   return 0;
 }
@@ -20,7 +20,7 @@ int http_connection_allocate (http_client_t * http) {
 int http_connection_release (http_client_t * http) {
   if (HIN_HTTPD_PROXY_CONNECTION_REUSE) {
     http->io_state |= HIN_REQ_IDLE;
-    hin_client_list_add (&master.connection_list, &http->c);
+    basic_dlist_append (&master.connection_idle, &http->c.list);
   } else {
     http_client_shutdown (http);
   }
@@ -70,7 +70,7 @@ int http_client_shutdown (http_client_t * http) {
   http->io_state |= HIN_REQ_END;
 
   if (http->io_state & HIN_REQ_IDLE)
-    hin_client_list_remove (&master.connection_list, &http->c);
+    basic_dlist_remove (&master.connection_idle, &http->c.list);
 
   if (http->debug & DEBUG_HTTP) printf ("http %d shutdown\n", http->c.sockfd);
   hin_buffer_t * buf = malloc (sizeof *buf);
@@ -110,20 +110,26 @@ int match_string_equal1 (string_t * source, const char * str) {
 }
 
 http_client_t * httpd_proxy_connection_get (string_t * host, string_t * port) {
-  for (http_client_t * elem = (http_client_t*)master.connection_list; elem; elem = (http_client_t*)elem->c.next) {
-    if (match_string_equal1 (host, elem->host) < 0) continue;
-    if (match_string_equal1 (port, elem->port) < 0) continue;
-    hin_client_list_remove (&master.connection_list, &elem->c);
-    return elem;
+  basic_dlist_t * elem = master.connection_idle.next;
+  while (elem) {
+    http_client_t * http = basic_dlist_ptr (elem, offsetof (hin_client_t, list));
+    elem = elem->next;
+
+    if (match_string_equal1 (host, http->host) < 0) continue;
+    if (match_string_equal1 (port, http->port) < 0) continue;
+    basic_dlist_remove (&master.connection_idle, &http->c.list);
+    return http;
   }
   return NULL;
 }
 
 void httpd_proxy_connection_close_all () {
-  http_client_t * next = NULL;
-  for (http_client_t * elem = (http_client_t*)master.connection_list; elem; elem = next) {
-    next = (http_client_t *)elem->c.next;
-    http_client_shutdown (elem);
+  basic_dlist_t * elem = master.connection_idle.next;
+  while (elem) {
+    http_client_t * http = basic_dlist_ptr (elem, offsetof (hin_client_t, list));
+    elem = elem->next;
+
+    http_client_shutdown (http);
   }
 }
 

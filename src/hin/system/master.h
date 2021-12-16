@@ -52,9 +52,9 @@ typedef struct {
   int num_connection;
   int num_listen;
   hin_master_socket1_t * socket, * last_socket;
-  hin_client_t * server_list;
-  hin_client_t * server_retry;
-  hin_client_t * connection_list;
+  basic_dlist_t server_list;
+  basic_dlist_t server_retry;
+  basic_dlist_t connection_idle;
   void * vhosts;
   void * certs;
   int sharefd;

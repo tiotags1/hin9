@@ -16,6 +16,7 @@ void hin_fcgi_worker_free (hin_fcgi_worker_t * worker) {
     socket->worker[worker->req_id] = NULL;
 
     socket->num_worker--;
+
     if (socket->num_worker <= 0)
       hin_fcgi_socket_close (socket);
   }
@@ -24,9 +25,9 @@ void hin_fcgi_worker_free (hin_fcgi_worker_t * worker) {
 
 hin_fcgi_worker_t * hin_fcgi_get_worker (hin_fcgi_group_t * fcgi) {
   if (fcgi->idle_worker.next) {
-    hin_dlist_t * idle = fcgi->idle_worker.next;
-    hin_dlist_remove (&fcgi->idle_worker, idle);
-    hin_fcgi_worker_t * worker = hin_dlist_ptr (idle, offsetof (hin_fcgi_worker_t, list));
+    basic_dlist_t * idle = fcgi->idle_worker.next;
+    basic_dlist_remove (&fcgi->idle_worker, idle);
+    hin_fcgi_worker_t * worker = basic_dlist_ptr (idle, offsetof (hin_fcgi_worker_t, list));
     worker->io_state |= HIN_REQ_DATA;
     return worker;
   }
@@ -69,7 +70,7 @@ int hin_fcgi_worker_reset (hin_fcgi_worker_t * worker) {
   }
   hin_fcgi_group_t * fcgi = socket->fcgi;
   if (fcgi->socket) {
-    hin_dlist_append (&fcgi->idle_worker, &worker->list);
+    basic_dlist_append (&fcgi->idle_worker, &worker->list);
   } else {
     hin_fcgi_socket_close (socket);
   }
@@ -79,7 +80,7 @@ int hin_fcgi_worker_reset (hin_fcgi_worker_t * worker) {
 void hin_fcgi_worker_run (hin_fcgi_worker_t * worker) {
   hin_fcgi_socket_t * socket = worker->socket;
   if (socket->fd < 0) {
-    hin_dlist_append (&socket->que, &worker->list);
+    basic_dlist_append (&socket->que, &worker->list);
     return ;
   }
 

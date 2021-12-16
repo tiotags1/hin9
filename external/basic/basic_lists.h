@@ -3,13 +3,15 @@
 
 #include <stdint.h>
 
-typedef struct hin_dlist_struct {
-  struct hin_dlist_struct * prev, * next;
-} hin_dlist_t;
+typedef struct basic_dlist_struct {
+  struct basic_dlist_struct * prev, * next;
+} basic_dlist_t;
 
-int hin_dlist_prepend (hin_dlist_t * head, hin_dlist_t * new);
-int hin_dlist_append (hin_dlist_t * head, hin_dlist_t * new);
-int hin_dlist_remove (hin_dlist_t * head, hin_dlist_t * new);
-void * hin_dlist_ptr (hin_dlist_t * new, int off);
+int basic_dlist_prepend (basic_dlist_t * head, basic_dlist_t * new);
+int basic_dlist_append (basic_dlist_t * head, basic_dlist_t * new);
+int basic_dlist_remove (basic_dlist_t * head, basic_dlist_t * new);
+void * basic_dlist_ptr (basic_dlist_t * new, int off);
+
+int basic_dlist_add_after (basic_dlist_t * list, basic_dlist_t * elem, basic_dlist_t * new);
 
 #endif

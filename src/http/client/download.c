@@ -83,7 +83,7 @@ static int state_callback (http_client_t * http, uint32_t state, uintptr_t data)
 static int read_callback (hin_pipe_t * pipe, hin_buffer_t * buf, int num, int flush) {
   if (num <= 0) return 1;
   buf->count = num;
-  hin_pipe_write (pipe, buf);
+  hin_pipe_append_raw (pipe, buf);
 
   http_client_t * http = pipe->parent;
   if (num == 0 && flush != 0 && http->sz) {
@@ -158,7 +158,7 @@ static int hin_rproxy_headers (http_client_t * http, hin_pipe_t * pipe) {
 
   if (http->debug & DEBUG_RW) printf ("httpd %d proxy response %d '\n%.*s'\n", parent->c.sockfd, buf->count, buf->count, buf->ptr);
 
-  hin_pipe_write_prepend (pipe, buf);
+  hin_pipe_prepend_raw (pipe, buf);
 
   return 0;
 }
@@ -186,7 +186,7 @@ static int hin_rproxy_state_callback (http_client_t * http, uint32_t state, uint
 static int hin_rproxy_read_callback (hin_pipe_t * pipe, hin_buffer_t * buf, int num, int flush) {
   if (num <= 0) return 1;
   buf->count = num;
-  hin_pipe_write (pipe, buf);
+  hin_pipe_append_raw (pipe, buf);
 
   //if (flush) return 1; // already cleaned in the write done handler
   return 0;

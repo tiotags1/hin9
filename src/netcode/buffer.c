@@ -27,39 +27,24 @@ hin_buffer_t * hin_buffer_create_from_data (void * parent, const char * ptr, int
   return buf;
 }
 
-void hin_buffer_list_remove (hin_buffer_t ** list, hin_buffer_t * new) {
-  if (*list == new) {
-    *list = new->next;
+int hin_buffer_continue_write (hin_buffer_t * buf, int ret) {
+  if (ret <= 0) {
+  } else if (ret != buf->count) {
+    buf->ptr += ret;
+    buf->count -= ret;
+    if (hin_request_write (buf) < 0)
+      printf ("error! %d\n", 3253534);
+  } else if (buf->list.next) {
+    hin_buffer_t * next = hin_buffer_list_ptr (buf->list.next);
+    next->callback = buf->callback;
+    next->parent = buf->parent;
+    if (hin_request_write (next) < 0)
+      printf ("error! %d\n", 3253534);
+    hin_buffer_clean (buf);
   } else {
-    if (new->next)
-      new->next->prev = new->prev;
-    if (new->prev)
-      new->prev->next = new->next;
+    return 0;
   }
-  new->next = new->prev = NULL;
-}
-
-void hin_buffer_list_add (hin_buffer_t ** list, hin_buffer_t * new) {
-  new->next = new->prev = NULL;
-  if (*list == NULL) {
-    *list = new;
-  } else {
-    new->next = *list;
-    (*list)->prev = new;
-    *list = new;
-  }
-}
-
-void hin_buffer_list_append (hin_buffer_t ** list, hin_buffer_t * new) {
-  new->next = new->prev = NULL;
-  if (*list == NULL) {
-    *list = new;
-  } else {
-    hin_buffer_t * last;
-    for (last = *list; last->next; last = last->next) {}
-    last->next = new;
-    new->prev = last;
-  }
+  return ret;
 }
 
 int hin_buffer_prepare (hin_buffer_t * buffer, int num) {

@@ -1,4 +1,8 @@
 
+* switched to a standardized linked list, many new undiscovered bugs added
+* pipe code cleanup
+
+commit 1e53f3a1e6dcfab3ff54aa0c55343620cff44fe3
 * fcgi connection reuse, fcgi performance doubled (at least one test went from ~3000 to ~6000 reqs/s)
 * fcgi code cleanup
 * fcgi now properly handles queued connections

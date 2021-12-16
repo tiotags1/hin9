@@ -33,12 +33,6 @@ void httpd_client_ping (httpd_client_t * http, int timeout) {
     printf ("httpd %d timeout %p at %lld\n", http->c.sockfd, timer->ptr, (long long)timer->time);
 }
 
-void httpd_close_socket () {
-  for (hin_client_t * server = master.server_list; server; server = server->next) {
-    close (server->sockfd);
-  }
-}
-
 int httpd_parse_cache_str (const char * str, size_t len, uint32_t * flags_out, time_t * max_age) {
   string_t source, opt, param1;
   source.ptr = (char *)str;
@@ -88,10 +82,12 @@ int header_cache_control (hin_buffer_t * buf, uint32_t flags, time_t max_age) {
   if (flags & HIN_CACHE_MUST_REVALIDATE) num += header (buf, "must-revalidate, ");
   if (flags & HIN_CACHE_PROXY_REVALIDATE) num += header (buf, "proxy-revalidate, ");
 
-  hin_buffer_t * last = buf;
-  while (last->next) { last = last->next; }
+  basic_dlist_t * elem = &buf->list;
+  while (elem->next) elem = elem->next;
+  hin_buffer_t * last = basic_dlist_ptr (elem, offsetof (hin_buffer_t, list));
   last->count -= 2;
   header (buf, "\r\n");
+
   return num;
 }
 

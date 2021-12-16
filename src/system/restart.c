@@ -26,6 +26,10 @@ void hin_stop1 () {
   httpd_proxy_connection_close_all ();
   void hin_timer_flush ();
   hin_timer_flush ();
+  #ifdef HIN_USE_FCGI
+  void hin_fcgi_clean ();
+  hin_fcgi_clean ();
+  #endif
   hin_stop ();
 }
 
