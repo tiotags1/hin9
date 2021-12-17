@@ -29,15 +29,21 @@ hin_buffer_t * hin_buffer_create_from_data (void * parent, const char * ptr, int
 
 int hin_buffer_continue_write (hin_buffer_t * buf, int ret) {
   if (ret <= 0) {
+
   } else if (ret != buf->count) {
     buf->ptr += ret;
     buf->count -= ret;
+    if (buf->flags & HIN_OFFSETS)
+      buf->pos += ret;
+
     if (hin_request_write (buf) < 0)
       printf ("error! %d\n", 3253534);
+
   } else if (buf->list.next) {
     hin_buffer_t * next = hin_buffer_list_ptr (buf->list.next);
     next->callback = buf->callback;
     next->parent = buf->parent;
+
     if (hin_request_write (next) < 0)
       printf ("error! %d\n", 3253534);
     hin_buffer_clean (buf);

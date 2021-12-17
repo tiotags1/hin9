@@ -52,8 +52,8 @@ hin_buffer_t * hin_pipe_get_buffer (hin_pipe_t * pipe, int sz) {
   return buf;
 }
 
-int hin_pipe_append_raw (hin_pipe_t * pipe, hin_buffer_t * buffer) {
-  basic_dlist_append (&pipe->write_que, &buffer->list);
+int hin_pipe_append_raw (hin_pipe_t * pipe, hin_buffer_t * buf) {
+  basic_dlist_append (&pipe->write_que, &buf->list);
   return 0;
 }
 
@@ -229,14 +229,17 @@ int hin_pipe_write_callback (hin_buffer_t * buffer, int ret) {
   }
   if (ret < buffer->count) {
     if (pipe->debug & DEBUG_PIPE) printf ("pipe %d>%d write incomplete %d/%d\n", pipe->in.fd, pipe->out.fd, ret, buffer->count);
+
     buffer->ptr += ret;
     buffer->count -= ret;
     if (buffer->flags & HIN_OFFSETS)
       buffer->pos += ret;
+
     if (hin_request_write (buffer) < 0) {
       if (pipe->out_error_callback)
         pipe->out_error_callback (pipe);
       hin_pipe_close (pipe);
+      return -1;
     }
     return 0;
   }

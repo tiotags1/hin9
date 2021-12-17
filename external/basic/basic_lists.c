@@ -6,26 +6,35 @@
 #include "basic_lists.h"
 
 int basic_dlist_prepend (basic_dlist_t * head, basic_dlist_t * new) {
-  new->next = new->prev = NULL;
+  basic_dlist_t * last = new;
+  while (last->next) last = last->next;
+
   if (head->next == NULL) {
-    head->next = head->prev = new;
-  } else {
-    new->next = head->next;
-    head->next->prev = new;
     head->next = new;
+    head->prev = last;
+    return 0;
   }
+
+  new->next = head->next;
+  head->next->prev = last;
+  head->next = new;
   return 0;
 }
 
 int basic_dlist_append (basic_dlist_t * head, basic_dlist_t * new) {
-  new->next = new->prev = NULL;
+  basic_dlist_t * last = new;
+  while (last->next) last = last->next;
+
   if (head->next == NULL) {
-    head->next = head->prev = new;
-  } else {
-    new->prev = head->prev;
-    head->prev->next = new;
-    head->prev = new;
+    head->next = new;
+    head->prev = last;
+    return 0;
   }
+
+  new->prev = head->prev;
+  head->prev->next = new;
+  head->prev = last;
+
   return 0;
 }
 

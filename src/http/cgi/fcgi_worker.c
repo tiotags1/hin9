@@ -29,6 +29,7 @@ hin_fcgi_worker_t * hin_fcgi_get_worker (hin_fcgi_group_t * fcgi) {
     basic_dlist_remove (&fcgi->idle_worker, idle);
     hin_fcgi_worker_t * worker = basic_dlist_ptr (idle, offsetof (hin_fcgi_worker_t, list));
     worker->io_state |= HIN_REQ_DATA;
+    worker->io_state &= ~HIN_REQ_END;
     return worker;
   }
 
@@ -56,18 +57,21 @@ hin_fcgi_worker_t * hin_fcgi_get_worker (hin_fcgi_group_t * fcgi) {
 }
 
 int hin_fcgi_worker_reset (hin_fcgi_worker_t * worker) {
-  if ((worker->io_state & (HIN_REQ_POST|HIN_REQ_DATA))) return 0;
+  if ((worker->io_state & (HIN_REQ_POST|HIN_REQ_DATA|HIN_REQ_END))) return 0;
+  worker->io_state |= HIN_REQ_END;
 
   httpd_client_t * http = worker->http;
   if (http) {
     httpd_client_finish_request (http, NULL);
     worker->http = NULL;
   }
+
   hin_fcgi_socket_t * socket = worker->socket;
   if (socket == NULL) {
     hin_fcgi_worker_free (worker);
     return 0;
   }
+
   hin_fcgi_group_t * fcgi = socket->fcgi;
   if (fcgi->socket) {
     basic_dlist_append (&fcgi->idle_worker, &worker->list);

@@ -111,19 +111,19 @@ int l_hin_set_path (lua_State *L) {
           basic_vfs_node_t * new = hin_search_dir (node, name, name_len);
           if (new) {
             node = new;
-            is_dir = 0;
+            is_dir = 2;
             break;
           }
           lua_pop (L, 1);
         }
-        if (is_dir == 0) break;
+        if (is_dir == 2) break;
       } else if (lua_isstring (L, i)) {
         size_t name_len = 0;
         const char * name = lua_tolstring (L, i, &name_len);
         basic_vfs_node_t * new = hin_search_dir (node, name, name_len);
         if (new) {
           node = new;
-          is_dir = 0;
+          is_dir = 2;
           break;
         }
       }

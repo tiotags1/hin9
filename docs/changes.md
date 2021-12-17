@@ -1,4 +1,9 @@
 
+* fix: not redirecting to folder when an index file is found/served
+* fix: fcgi total fail when headers were larger than READ\_SIZE
+* dlist append and prepend now accept multiple buffers (like it was designed to)
+
+commit 3de03e0aea8142a29d39d3a80b73c3e6ce3a5d4a
 * switched to a standardized linked list, many new undiscovered bugs added
 * pipe code cleanup
 
