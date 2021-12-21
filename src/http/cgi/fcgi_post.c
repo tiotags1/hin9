@@ -109,6 +109,7 @@ int hin_fcgi_write_post (hin_buffer_t * buf, hin_fcgi_worker_t * worker) {
   }
 
   worker->io_state |= HIN_REQ_POST;
+  http->state |= HIN_REQ_POST;
 
   hin_pipe_start (pipe);
   return 0;

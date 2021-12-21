@@ -67,8 +67,7 @@ int hin_timer_check () {
     if (master.debug & DEBUG_TIMEOUT)
       printf ("timeout %p\n", timer->ptr);
     next = timer->next;
-    timer->callback (timer, tm);
-    if (timer->time < tm) {
+    if (timer->callback (timer, tm) == 0 && timer->time < tm) {
       hin_timer_remove (timer);
       // free ?
     }

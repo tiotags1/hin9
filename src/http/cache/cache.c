@@ -168,7 +168,7 @@ int hin_cache_timeout_callback (hin_timer_t * timer, time_t time) {
   if (master.debug & (DEBUG_CACHE|DEBUG_TIMEOUT))
     printf ("cache %zx_%zx timeout for %p\n", item->cache_key1, item->cache_key2, item);
   hin_cache_remove (store, item);
-  return 0;
+  return 1;
 }
 
 int hin_cache_save (void * store1, hin_pipe_t * pipe) {

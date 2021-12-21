@@ -39,6 +39,7 @@ static hin_client_t * hin_server_create_client (hin_server_t * server) {
 
 static int hin_server_accept_callback (hin_buffer_t * buffer, int ret) {
   hin_client_t * client = (hin_client_t*)buffer->parent;
+  if (client == NULL) { printf ("error %d\n", 224230987); return 1; }
   hin_server_t * server = (hin_server_t*)client->parent;
 
   if (ret < 0) {
@@ -129,6 +130,7 @@ int hin_server_stop (hin_server_t * server) {
   hin_buffer_t * buf = server->accept_buffer;
   if (buf == NULL) return 0;
   free (buf->parent);			// free empty client
+  buf->parent = NULL;
   hin_buffer_clean (buf);
   server->accept_buffer = NULL;
 

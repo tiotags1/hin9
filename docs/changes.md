@@ -1,4 +1,8 @@
 
+* fix: fcgi post stalling forever
+* fix: use after free when freeing the cache
+
+commit 2f780d491cc501b00ccb45573acc7f3eb94af596
 * fix: not redirecting to folder when an index file is found/served
 * fix: fcgi total fail when headers were larger than READ\_SIZE
 * dlist append and prepend now accept multiple buffers (like it was designed to)

@@ -40,6 +40,9 @@ static int httpd_client_start_post (httpd_client_t * http, string_t * source) {
     http->post_fd = openat (AT_FDCWD, HIN_HTTPD_POST_DIRECTORY, O_RDWR | O_TMPFILE, 0600);
     if (http->post_fd < 0) { printf ("openat tmpfile failed %s\n", strerror (errno)); return -1; }
   }
+  if (http->state & HIN_REQ_FCGI) {
+    return 0;
+  }
   http->state |= HIN_REQ_POST;
   return 0;
 }
