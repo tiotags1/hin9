@@ -28,7 +28,6 @@ hin_fcgi_worker_t * hin_fcgi_get_worker (hin_fcgi_group_t * fcgi) {
     basic_dlist_t * idle = fcgi->idle_worker.next;
     basic_dlist_remove (&fcgi->idle_worker, idle);
     hin_fcgi_worker_t * worker = basic_dlist_ptr (idle, offsetof (hin_fcgi_worker_t, list));
-    worker->io_state |= HIN_REQ_DATA;
     worker->io_state &= ~HIN_REQ_END;
     return worker;
   }
@@ -50,8 +49,6 @@ hin_fcgi_worker_t * hin_fcgi_get_worker (hin_fcgi_group_t * fcgi) {
   worker->socket = sock;
 
   sock->worker[worker->req_id] = worker;
-
-  worker->io_state |= HIN_REQ_DATA;
 
   return worker;
 }

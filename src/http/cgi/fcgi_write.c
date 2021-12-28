@@ -212,6 +212,8 @@ int hin_fcgi_write_request (hin_fcgi_worker_t * worker) {
   hin_fcgi_group_t * fcgi = socket->fcgi;
   httpd_client_t * http = worker->http;
 
+  worker->io_state |= HIN_REQ_DATA;
+
   int buf_sz = READ_SZ * 2;
   hin_buffer_t * buf = malloc (sizeof (hin_buffer_t) + buf_sz);
   memset (buf, 0, sizeof (*buf));

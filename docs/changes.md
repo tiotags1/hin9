@@ -1,4 +1,7 @@
 
+* fix: fcgi proper cleanup when fcgi socket failes to connect
+
+commit ec6a4549875a1c3dc48520eb529f2867fa4599d4
 * fix: fcgi post stalling forever
 * fix: use after free when freeing the cache
 

@@ -15,11 +15,20 @@ void hin_fcgi_socket_close (hin_fcgi_socket_t * socket) {
   if (master.debug & DEBUG_CGI)
     printf ("fcgi %d cleanup\n", socket->fd);
 
+/* not needed, dlist does not alloc memory, change this if that changes
+   basic_dlist_t * next = socket->que.next;
+  while (next) {
+    hin_fcgi_worker_t * worker = basic_dlist_ptr (next, offsetof (hin_fcgi_worker_t, list));
+    next = next->next;
+    basic_dlist_remove (&socket->que, &worker->list);
+  }*/
+
   for (int i=0; i<socket->max_worker; i++) {
     hin_fcgi_worker_t * worker = socket->worker[i];
     if (worker == NULL) continue;
     if (worker->http) {
       httpd_error (worker->http, 500, "fcgi socket closed");
+      worker->http = NULL;
     }
     worker->socket = NULL;
     hin_fcgi_worker_reset (worker);
@@ -38,6 +47,11 @@ void hin_fcgi_socket_close (hin_fcgi_socket_t * socket) {
   }
 
   master.num_connection--;
+
+  hin_fcgi_group_t * fcgi = socket->fcgi;
+  if (fcgi->socket) {
+    fcgi->socket[socket->id] = NULL;
+  }
 
   free (socket);
   hin_check_alive ();
