@@ -1,4 +1,8 @@
 
+* moved timing code to base library
+* fix: segfault when POSTing large files
+
+commit 8987a65169ef2e6be2ba11a9971ebcccd9d43baf
 * fix: fcgi proper cleanup when fcgi socket failes to connect
 
 commit ec6a4549875a1c3dc48520eb529f2867fa4599d4

@@ -17,10 +17,12 @@ static int l_hin_parse_path (lua_State *L) {
   }
   httpd_client_t * http = (httpd_client_t*)client;
 
+  if (http->headers.ptr == NULL) return 0;
+
   string_t temp = http->headers;
   string_t line, method, path, version;
   if (find_line (&temp, &line) == 0 || match_string (&line, "(%a+) ("HIN_HTTP_PATH_ACCEPT") (HTTP/1.%d)", &method, &path, &version) <= 0) {
-    printf ("httpd parsing error 1\n");
+    printf ("error! %d\n", 678768312);
     return 0;
   }
 

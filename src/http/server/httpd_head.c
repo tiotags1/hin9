@@ -168,7 +168,7 @@ int httpd_parse_headers (httpd_client_t * http, string_t * source) {
     httpd_error (http, 411, "post missing size");
     return -1;
   } else if (HIN_HTTPD_MAX_POST_SIZE && http->post_sz >= HIN_HTTPD_MAX_POST_SIZE) {
-    httpd_error (http, 413, "post size %lld >= %ld\n", (long long)http->post_sz, (long)HIN_HTTPD_MAX_POST_SIZE);
+    httpd_error (http, 413, "post size %lld >= %ld", (long long)http->post_sz, (long)HIN_HTTPD_MAX_POST_SIZE);
     return -1;
   }
 

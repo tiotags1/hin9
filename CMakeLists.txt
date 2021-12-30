@@ -77,6 +77,7 @@ src/netcode/client.c
 src/netcode/listen.c
 src/netcode/buffer.c
 src/netcode/pipe.c
+src/netcode/timer.c
 )
 
 set (hin_exe

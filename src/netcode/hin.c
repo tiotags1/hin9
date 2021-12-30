@@ -12,14 +12,17 @@ hin_master_t master;
 int hin_init () {
   int hin_event_init ();
   hin_event_init ();
-  int hin_timer_init ();
-  hin_timer_init ();
+  hin_timer_init (NULL);
   return 0;
 }
 
 int hin_clean () {
   int hin_event_clean ();
   hin_event_clean ();
+  void hin_epoll_clean ();
+  hin_epoll_clean ();
+  void hin_timer_clean ();
+  hin_timer_clean ();
   return 0;
 }
 

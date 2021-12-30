@@ -65,7 +65,19 @@ void hin_console_clean () {
     hin_buffer_clean (timeout_buffer);
 }
 
+int hin_timer_cb (int ms) {
+  int hin_check_alive_timer ();
+  hin_check_alive_timer ();
+  int hin_timeout_callback (float dt);
+  hin_timeout_callback (1);
+  int hin_timer_check ();
+  hin_timer_check ();
+  return 0;
+}
+
 int hin_console_init () {
+  hin_timer_init (hin_timer_cb);
+
   hin_buffer_t * buf = malloc (sizeof (*buf) + READ_SZ);
   memset (buf, 0, sizeof (*buf));
   #ifdef HIN_LINUX_BUG_5_11_3
@@ -82,60 +94,6 @@ int hin_console_init () {
     return -1;
   }
   console_buffer = buf;
-  return 0;
-}
-
-typedef struct {
-  time_t time;
-  struct timespec ts;
-  int pad;
-} hin_timeout_t;
-
-static int hin_timer_callback (hin_buffer_t * buffer, int ret) {
-  if (ret < 0 && ret != -ETIME) {
-    printf ("timer callback error is %s\n", strerror (-ret));
-  }
-  hin_timeout_t * tm = (void*)&buffer->buffer;
-  if (hin_request_timeout (buffer, &tm->ts, 0, 0) < 0) {
-    printf ("timeout callback failed\n");
-    return -1;
-  }
-
-  int hin_check_alive_timer ();
-  hin_check_alive_timer ();
-  int hin_epoll_check ();
-  hin_epoll_check ();
-
-  time_t new = time (NULL);
-  if (tm->time == new) return 0;
-
-  int hin_timeout_callback (float dt);
-  hin_timeout_callback (1);
-  int hin_timer_check ();
-  hin_timer_check ();
-  tm->time = new;
-
-  return 0;
-}
-
-int hin_timer_init () {
-  hin_buffer_t * buf = malloc (sizeof (*buf) + sizeof (hin_timeout_t));
-  memset (buf, 0, sizeof (*buf));
-  buf->flags = 0;
-  buf->fd = 0;
-  buf->callback = hin_timer_callback;
-  buf->count = buf->sz = sizeof (hin_timeout_t);
-  buf->ptr = buf->buffer;
-  timeout_buffer = buf;
-
-  hin_timeout_t * tm = (void*)&buf->buffer;
-  tm->ts.tv_sec = HIN_HTTPD_TIME_DT / 1000;
-  tm->ts.tv_nsec = (HIN_HTTPD_TIME_DT % 1000) * 1000000;
-  if (hin_request_timeout (buf, &tm->ts, 0, 0) < 0) {
-    printf ("timeout callback failed to init\n");
-    return -1;
-  }
-
   return 0;
 }
 

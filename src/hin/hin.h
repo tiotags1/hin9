@@ -122,4 +122,6 @@ typedef struct hin_timer_struct {
 int hin_timer_update (hin_timer_t * timer, time_t new);
 int hin_timer_remove (hin_timer_t * timer);
 
+int hin_timer_init (int (*callback) (int ms));
+
 #endif

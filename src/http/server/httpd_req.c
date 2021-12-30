@@ -85,7 +85,7 @@ int httpd_respond_text (httpd_client_t * http, int status, const char * body) {
 
   if (http->method & HIN_METHOD_POST) {
     http->method = HIN_METHOD_GET;
-    httpd_error (http, 405, "POST on a raw resource\n");
+    httpd_error (http, 405, "POST on a raw resource");
     return 0;
   }
   http->status = status;

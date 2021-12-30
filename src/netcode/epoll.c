@@ -23,6 +23,12 @@ static int hin_init_epoll () {
   return 0;
 }
 
+void hin_epoll_clean () {
+  if (epoll_fd < 0) return ;
+  close (epoll_fd);
+  epoll_fd = -1;
+}
+
 int hin_epoll_request_read (hin_buffer_t * buf) {
   if (hin_init_epoll () < 0) {
     return -1;
