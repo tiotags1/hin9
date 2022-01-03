@@ -55,6 +55,23 @@ int basic_dlist_add_after (basic_dlist_t * list, basic_dlist_t * elem, basic_dli
   return 0;
 }
 
+int basic_dlist_add_before (basic_dlist_t * list, basic_dlist_t * elem, basic_dlist_t * new) {
+  basic_dlist_t * last = new;
+  while (last->next) last = last->next;
+
+  new->prev = elem->prev;
+  if (elem->prev) elem->prev->next = new;
+
+  last->next = elem;
+  elem->prev = last;
+
+  if (list) {
+    if (list->next == elem) list->next = new;
+  }
+
+  return 0;
+}
+
 int basic_dlist_remove (basic_dlist_t * head, basic_dlist_t * new) {
   if (head->next == new) {
     head->next = new->next;

@@ -64,6 +64,7 @@ typedef struct {
 extern hin_master_t master;
 
 int hin_init ();
+int hin_timer_init (int (*callback) (int ms));
 int hin_clean ();
 int hin_event_loop ();
 

@@ -65,7 +65,7 @@ hin_cache_store_t * hin_cache_create () {
   hin_random ((uint8_t*)&seed, sizeof (seed));
   if (master.debug & DEBUG_CONFIG) printf ("cache seed is %zx\n", seed);
   if (basic_ht_init (&store->ht, 1024, seed) < 0) {
-    printf ("error in hashtable init\n");
+    printf ("error! %d\n", 1134557);
   }
   if (default_store == NULL)
     default_store = store;
@@ -77,6 +77,8 @@ hin_cache_store_t * hin_cache_create () {
 void hin_cache_item_clean (hin_cache_item_t * item) {
   if (item->fd > 0) close (item->fd);
   if (master.debug & DEBUG_CACHE) printf ("cache %zx_%zx free\n", item->cache_key1, item->cache_key2);
+
+  hin_timer_remove (&item->timer);
 
   if (HIN_HTTPD_CACHE_CLEAN_ON_EXIT) {
     char buffer[sizeof (HIN_HTTPD_CACHE_DIRECTORY) + 70];

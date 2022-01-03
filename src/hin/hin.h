@@ -116,12 +116,10 @@ typedef struct hin_timer_struct {
   void * ptr;
   hin_timer_callback_t callback;
   time_t time;
-  struct hin_timer_struct * next, * prev;
+  basic_dlist_t list;
 } hin_timer_t;
 
 int hin_timer_update (hin_timer_t * timer, time_t new);
 int hin_timer_remove (hin_timer_t * timer);
-
-int hin_timer_init (int (*callback) (int ms));
 
 #endif

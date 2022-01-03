@@ -1,4 +1,9 @@
 
+* fix: use-after-free in cache code
+* switched timing code to new dlist implementation
+* about a year has passed since I released this and I have to say it's still filled with bugs
+
+commit 94e18291ee82b78d761ce003281900656013ecb5
 * moved timing code to base library
 * fix: segfault when POSTing large files
 

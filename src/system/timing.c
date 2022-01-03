@@ -6,78 +6,71 @@
 
 #include "hin.h"
 
-hin_timer_t * first = NULL, * last = NULL;
+#define hin_timer_list_ptr(elem) (basic_dlist_ptr (elem, offsetof (hin_timer_t, list)))
 
-static int hin_timer_add_int (hin_timer_t * base, hin_timer_t * timer) {
-  if (base == NULL) {
-    timer->next = first;
-    if (first) first->prev = timer;
-    if (last == NULL) last = timer;
-    first = timer;
-    return 0;
-  }
-  timer->prev = base;
-  timer->next = base->next;
-  if (base->next)
-    base->next->prev = timer;
-  base->next = timer;
-  if (timer->next == NULL) last = timer;
-  return 0;
-}
+static basic_dlist_t timers = {NULL, NULL};
 
 int hin_timer_remove (hin_timer_t * timer) {
-  if (timer->next == NULL && timer->prev == NULL && timer != first) {
-    return -1;
-  }
-  if (timer->next) {
-    timer->next->prev = timer->prev;
-  }
-  if (timer->prev) {
-    timer->prev->next = timer->next;
-  }
-  if (timer == first) {
-    first = timer->next;
-  }
-  if (timer->next == NULL) {
-    last = timer->prev;
-  }
-  timer->next = timer->prev = NULL;
+  basic_dlist_remove (&timers, &timer->list);
   timer->time = 0;
   return 0;
 }
 
 int hin_timer_update (hin_timer_t * timer, time_t new) {
   if (timer->time == new) return 0;
-  timer->time = new;
-  hin_timer_t * base = timer;
-  if (timer->next == NULL && timer->prev == NULL) {
-    base = last;
+
+  basic_dlist_t * base = NULL;
+  if (timer->time < new) {
+    for (base = timer->list.next; base; base = base->next) {
+      hin_timer_t * timer1 = hin_timer_list_ptr (base);
+      if (timer1->time >= new) break;
+    }
+    basic_dlist_remove (&timers, &timer->list);
+    if (base) {
+      basic_dlist_add_before (&timers, base, &timer->list);
+    } else {
+      basic_dlist_append (&timers, &timer->list);
+    }
+  } else {
+    for (base = timer->list.prev; base; base = base->prev) {
+      hin_timer_t * timer1 = hin_timer_list_ptr (base);
+      if (timer1->time <= new) break;
+    }
+    basic_dlist_remove (&timers, &timer->list);
+    if (base) {
+      basic_dlist_add_after (&timers, base, &timer->list);
+    } else {
+      basic_dlist_prepend (&timers, &timer->list);
+    }
   }
-  for (;base && base->next && (base->time < new); base=base->next) {}
-  for (;base && (base->time > new); base=base->prev) {}
-  hin_timer_remove (timer);
-  hin_timer_add_int (base, timer);
+  timer->time = new;
+
   return 0;
 }
 
 int hin_timer_check () {
   time_t tm = time (NULL);
-  hin_timer_t * next = NULL;
-  for (hin_timer_t * timer = first; timer && (timer->time < tm);) {
+
+  basic_dlist_t * elem = timers.next;
+  while (elem) {
+    hin_timer_t * timer = hin_timer_list_ptr (elem);
+    elem = elem->next;
+
+    if (timer->time > tm) break;
+
     if (master.debug & DEBUG_TIMEOUT)
       printf ("timeout %p\n", timer->ptr);
-    next = timer->next;
-    if (timer->callback (timer, tm) == 0 && timer->time < tm) {
+    if (timer->callback (timer, tm) == 0 && timer->time <= tm) {
       hin_timer_remove (timer);
-      // free ?
     }
-    timer = next;
   }
+
   return 0;
 }
 
 void hin_timer_flush () {
-  for (hin_timer_t * timer = first; timer; timer=timer->next) {
+  for (basic_dlist_t * elem = timers.next; elem; elem = elem->next) {
+    hin_timer_t * timer = hin_timer_list_ptr (elem);
     timer->time = 0;
   }
   hin_timer_check ();
