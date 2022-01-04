@@ -1,4 +1,8 @@
 
+* pipe code should now handle unexpected aborts slightly better
+* fix: server no longer crashes when fcgi closes the connection before expected
+
+commit 20392374e35d90545b0fa1d42a968bca530b01ea
 * fix: use-after-free in cache code
 * switched timing code to new dlist implementation
 * about a year has passed since I released this and I have to say it's still filled with bugs
