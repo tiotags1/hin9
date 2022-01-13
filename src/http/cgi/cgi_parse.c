@@ -99,6 +99,7 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer, int received) {
       if (http->debug & DEBUG_CGI) printf ("cgi %d status is %d\n", http->c.sockfd, http->status);
     } else if (matchi_string_equal (&line, "Content-Length: (%d+)", &param1) > 0) {
       sz = atoi (param1.ptr);
+      http->count = sz;
     } else if (matchi_string (&line, "Content-Encoding:") > 0) {
       disable |= HIN_HTTP_COMPRESS;
     } else if (matchi_string (&line, "Transfer-Encoding:") > 0) {
@@ -119,13 +120,7 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer, int received) {
   pipe->in.fd = buffer->fd;
   pipe->in.flags = 0;
   pipe->in.pos = 0;
-  pipe->out.fd = http->c.sockfd;
-  pipe->out.flags = HIN_SOCKET | (http->c.flags & HIN_SSL);
-  pipe->out.ssl = &http->c.ssl;
-  pipe->out.pos = 0;
-  pipe->parent = http;
   pipe->parent1 = worker;
-  pipe->debug = http->debug;
 
   if (worker->socket) {
     pipe->in.flags = HIN_INACTIVE;
@@ -153,26 +148,16 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer, int received) {
     } else if (n > 0) {
       if (len > 0) {
         hin_buffer_t * buf1 = hin_buffer_create_from_data (pipe, source->ptr, len);
-        hin_pipe_write_process (pipe, buf1);
+        hin_pipe_write_process (pipe, buf1, HIN_PIPE_ALL);
       }
       hin_pipe_start (pipe);
       return -1;
     }
   }
 
-  int httpd_pipe_set_chunked (httpd_client_t * http, hin_pipe_t * pipe);
-  if (http->method == HIN_METHOD_HEAD) {
-    http->peer_flags &= ~(HIN_HTTP_CHUNKED | HIN_HTTP_COMPRESS);
-  } else {
-    httpd_pipe_set_chunked (http, pipe);
-  }
+  httpd_pipe_set_http11_response_options (http, pipe);
 
-  if ((http->peer_flags & HIN_HTTP_CHUNKED) == 0 && sz > 0) {
-    pipe->in.flags |= HIN_COUNT;
-    pipe->left = pipe->sz = sz;
-  }
-
-  int sz1 = source->len + 512;
+  int sz1 = source->len + READ_SZ;
   hin_buffer_t * buf = malloc (sizeof (*buf) + sz1);
   memset (buf, 0, sizeof (*buf));
   buf->flags = HIN_SOCKET | (http->c.flags & HIN_SSL);
@@ -221,7 +206,7 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer, int received) {
 
   if (len > 0) {
     hin_buffer_t * buf1 = hin_buffer_create_from_data (pipe, source->ptr, len);
-    hin_pipe_write_process (pipe, buf1);
+    hin_pipe_write_process (pipe, buf1, HIN_PIPE_ALL);
   }
 
   hin_pipe_start (pipe);

@@ -94,6 +94,10 @@ int httpd_vhost_map_callback (httpd_client_t * http, int type) {
 
 int l_hin_map (lua_State *L) {
   httpd_vhost_t * vhost = (httpd_vhost_t*)lua_touserdata (L, 1);
+  if (vhost == NULL) {
+    httpd_vhost_t * httpd_vhost_get_default ();
+    vhost = httpd_vhost_get_default ();
+  }
   if (vhost == NULL || vhost->magic != HIN_VHOST_MAGIC) {
     return luaL_error (L, "invalid vhost");
   }

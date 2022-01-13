@@ -9,7 +9,8 @@
 
 static int hin_http_pipe_finish_callback (hin_pipe_t * pipe) {
   http_client_t * http = (http_client_t*)pipe->parent;
-  if (pipe->debug & DEBUG_PIPE) printf ("http %d download file transfer finished infd %d outfd %d\n", http->c.sockfd, pipe->in.fd, pipe->out.fd);
+  if (pipe->debug & DEBUG_PIPE)
+    printf ("http %d download file transfer finished infd %d outfd %d\n", http->c.sockfd, pipe->in.fd, pipe->out.fd);
 
   hin_http_state (http, HIN_HTTP_STATE_FINISH, (uintptr_t)pipe);
 
@@ -53,9 +54,11 @@ hin_pipe_t * http_client_start_pipe (http_client_t * http, string_t * source) {
     pipe->left = pipe->sz = sz;
   }
 
+  hin_http_state (http, HIN_HTTP_STATE_HEADERS, (uintptr_t)pipe);
+
   if (len > 0) {
     hin_buffer_t * buf1 = hin_buffer_create_from_data (pipe, source->ptr, len);
-    hin_pipe_write_process (pipe, buf1);
+    hin_pipe_write_process (pipe, buf1, HIN_PIPE_ALL);
   }
 
   source->ptr += len;

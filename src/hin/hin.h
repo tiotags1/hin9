@@ -27,6 +27,11 @@ DEBUG_PROGRESS=0x100000, DEBUG_LAST = 0x200000,
 };
 
 typedef struct {
+  uint32_t flags;
+  int (*callback) (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush);
+} hin_pipe_filter_t;
+
+typedef struct {
   int fd;
   uint32_t flags;  // flags deal with if recv or read
   hin_ssl_t * ssl;
@@ -40,10 +45,9 @@ struct hin_pipe_struct {
   basic_dlist_t write_que, writing, reading;
   int (*decode_callback) (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush);
   int (*read_callback) (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush);
-  int (*in_callback) (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush);
   int (*finish_callback) (hin_pipe_t * pipe);
-  int (*out_error_callback) (hin_pipe_t * pipe);
-  int (*in_error_callback) (hin_pipe_t * pipe);
+  int (*out_error_callback) (hin_pipe_t * pipe, int err);
+  int (*in_error_callback) (hin_pipe_t * pipe, int err);
   hin_buffer_t * (*buffer_callback) (hin_pipe_t * pipe, int sz);
 
   uint32_t flags;
@@ -86,9 +90,14 @@ int hin_pipe_start (hin_pipe_t * pipe);
 int hin_pipe_advance (hin_pipe_t * pipe);
 int hin_pipe_finish (hin_pipe_t * pipe);
 
+enum {
+HIN_PIPE_DECODE = 0x1,
+HIN_PIPE_ALL = 0xff,
+};
+
 int hin_pipe_append_raw (hin_pipe_t * pipe, hin_buffer_t * buffer);
 int hin_pipe_prepend_raw (hin_pipe_t * pipe, hin_buffer_t * buf);
-int hin_pipe_write_process (hin_pipe_t * pipe, hin_buffer_t * buffer);
+int hin_pipe_write_process (hin_pipe_t * pipe, hin_buffer_t * buffer, uint32_t flags);
 
 hin_buffer_t * hin_buffer_create_from_data (void * parent, const char * ptr, int sz);
 void hin_buffer_clean (hin_buffer_t * buffer);

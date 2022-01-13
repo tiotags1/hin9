@@ -89,37 +89,45 @@ int hin_pipe_decode_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, 
 }
 
 int hin_pipe_copy_deflate (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush) {
-  hin_client_t * client = (hin_client_t*)pipe->parent;
-  httpd_client_t * http = (httpd_client_t*)client;
+  hin_client_t * c = (hin_client_t*)pipe->parent;
+  z_stream * z = NULL;
+  uint32_t peer_flags = 0;
+  httpd_client_t * http = (httpd_client_t*)pipe->parent;
+  if (c->magic == HIN_CONNECT_MAGIC) {
+    http = c->parent;
+  }
+  z = &http->z;
+  peer_flags = http->peer_flags;
 
   int have;
-  http->z.avail_in = num;
-  http->z.next_in = (Bytef *)buffer->ptr;
+  z->avail_in = num;
+  z->next_in = (Bytef *)buffer->ptr;
   buffer->count = num;
 
-  if (http->debug & DEBUG_HTTP_FILTER) printf ("httpd %d deflate num %d flush %d\n", http->c.sockfd, num, flush);
+  if (pipe->debug & DEBUG_HTTP_FILTER)
+    printf ("http(d) %d deflate num %d flush %d\n", c->sockfd, num, flush);
   char numbuf[10]; // size of max nr (7 bytes) + crlf + \0
 
   do {
     hin_buffer_t * new = hin_pipe_get_buffer (pipe, READ_SZ);
     new->count = 0;
-    if (http->peer_flags & HIN_HTTP_CHUNKED) {
+    if (peer_flags & HIN_HTTP_CHUNKED) {
       new->sz -= (sizeof (numbuf) + 8); // crlf + 0+crlfcrlf + \0
       new->count = sizeof (numbuf);
     }
-    http->z.avail_out = new->sz;
-    http->z.next_out = (Bytef *)&new->buffer[new->count];
-    deflate (&http->z, flush ? Z_FINISH : Z_NO_FLUSH);
-    have = new->sz - http->z.avail_out;
+    z->avail_out = new->sz;
+    z->next_out = (Bytef *)&new->buffer[new->count];
+    deflate (z, flush ? Z_FINISH : Z_NO_FLUSH);
+    have = new->sz - z->avail_out;
 
     if (have > 0) {
       new->count += have;
       new->fd = pipe->out.fd;
 
-      if (http->peer_flags & HIN_HTTP_CHUNKED) {
+      if (peer_flags & HIN_HTTP_CHUNKED) {
         new->sz += sizeof (numbuf) + 8;
         header (new, "\r\n");
-        if (flush && (http->z.avail_out != 0)) {
+        if (flush && (z->avail_out != 0)) {
           header (new, "0\r\n\r\n");
         }
 
@@ -131,20 +139,21 @@ int hin_pipe_copy_deflate (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, in
         new->ptr = ptr;
         new->count -= offset;
       }
-      if (http->debug & DEBUG_HTTP_FILTER) printf ("  deflate write %d total %d %s\n", have, new->count, flush ? "flush" : "cont");
+      if (pipe->debug & DEBUG_HTTP_FILTER)
+        printf ("  deflate write %d total %d %s\n", have, new->count, flush ? "flush" : "cont");
       hin_pipe_append_raw (pipe, new);
     } else {
       hin_buffer_clean (new);
     }
-  } while (http->z.avail_out == 0);
+  } while (z->avail_out == 0);
   return 1;
 }
 
 int hin_pipe_copy_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush) {
   hin_client_t * client = (hin_client_t*)pipe->parent;
-  httpd_client_t * http = (httpd_client_t*)client;
 
-  if (http->debug & DEBUG_HTTP_FILTER) printf ("httpd %d chunked num %d flush %d\n", http->c.sockfd, num, flush);
+  if (buffer->debug & DEBUG_HTTP_FILTER)
+    printf ("http(d) %d chunked num %d flush %d\n", client->sockfd, num, flush);
 
   hin_buffer_t * buf = malloc (sizeof *buf + num + 50);
   memset (buf, 0, sizeof (*buf));
@@ -175,7 +184,17 @@ int hin_pipe_copy_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, in
   return 1;
 }
 
-int httpd_request_chunked (httpd_client_t * http);
+int httpd_request_chunked (httpd_client_t * http) {
+  if (http->peer_flags & HIN_HTTP_VER0) {
+    http->peer_flags &= ~(HIN_HTTP_KEEPALIVE | HIN_HTTP_CHUNKED);
+  } else {
+    if (http->peer_flags & HIN_HTTP_KEEPALIVE) {
+      http->peer_flags |= HIN_HTTP_CHUNKED;
+    }
+    return 1;
+  }
+  return 0;
+}
 
 int httpd_pipe_set_chunked (httpd_client_t * http, hin_pipe_t * pipe) {
   if (http->peer_flags & HIN_HTTP_COMPRESS) {
@@ -186,6 +205,33 @@ int httpd_pipe_set_chunked (httpd_client_t * http, hin_pipe_t * pipe) {
       pipe->read_callback = hin_pipe_copy_chunked;
     }
   }
+  return 0;
+}
+
+static int httpd_pipe_error_callback (hin_pipe_t * pipe, int err) {
+  printf ("http %d error!\n", pipe->out.fd);
+  httpd_client_shutdown (pipe->parent);
+  return 0;
+}
+
+int httpd_pipe_set_http11_response_options (httpd_client_t * http, hin_pipe_t * pipe) {
+  pipe->out.fd = http->c.sockfd;
+  pipe->out.flags = HIN_SOCKET | (http->c.flags & HIN_SSL);
+  pipe->out.ssl = &http->c.ssl;
+  pipe->out.pos = 0;
+  pipe->parent = http;
+  pipe->debug = http->debug;
+  pipe->out_error_callback = httpd_pipe_error_callback;
+
+  pipe->left = pipe->sz = http->count;
+
+  if (http->status == 304 || http->method == HIN_METHOD_HEAD) {
+    http->peer_flags &= ~(HIN_HTTP_CHUNKED | HIN_HTTP_COMPRESS);
+    pipe->left = pipe->sz = 0;
+  } else {
+    httpd_pipe_set_chunked (http, pipe);
+  }
+
   return 0;
 }
 

@@ -137,7 +137,7 @@ hin_cache_item_t * hin_cache_get (hin_cache_store_t * store, basic_ht_hash_t key
   return item;
 }
 
-static int hin_cache_pipe_error_callback (hin_pipe_t * pipe) {
+static int hin_cache_pipe_error_callback (hin_pipe_t * pipe, int err) {
   hin_cache_item_t * item = (hin_cache_item_t*)pipe->parent;
   hin_cache_store_t * store = item->parent;
 

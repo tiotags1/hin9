@@ -1,5 +1,5 @@
 
-do_proxy = create_round_robin ("http://localhost:8080/", "http://localhost:8080/", "http://localhost:8080/")
+do_proxy = create_round_robin ("http://localhost:8080", "http://localhost:8080", "http://localhost:8080")
 
 --[[
 -- complicated ?
@@ -16,11 +16,21 @@ host = {"proxy"},
 htdocs = "htdocs",
 }
 
-map (vhost, "*", 0, function (req)
+--local location = "" -- proxy everything from this host
+local location = "/proxy" -- proxy only things inside this folder
+local format = string.format ("^%s(/.*)", location)
+
+map (vhost, location .. "/*", 0, function (req)
   if (do_proxy == nil) then return nil end
 
   local path, query, method, version, host = parse_path (req)
-  return do_proxy (req, string.format ("%s?%s", path or "", query or ""))
-end
+  local sub_path = string.match (path, format)
+  local url = sub_path or "/"
+  if (query) then
+    url = string.format ("%s?%s", url, query)
+  end
+  return do_proxy (req, url)
+end)
+
 
 

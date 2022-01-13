@@ -136,17 +136,7 @@ int hin_parse_uri (const char * url, int len, hin_uri_t * info) {
   return used;
 }
 
-int httpd_request_chunked (httpd_client_t * http) {
-  if (http->peer_flags & HIN_HTTP_VER0) {
-    http->peer_flags &= ~(HIN_HTTP_KEEPALIVE | HIN_HTTP_CHUNKED);
-  } else {
-    if (http->peer_flags & HIN_HTTP_KEEPALIVE) {
-      http->peer_flags |= HIN_HTTP_CHUNKED;
-    }
-    return 1;
-  }
-  return 0;
-}
+int httpd_request_chunked (httpd_client_t * http);
 
 int hin_client_deflate_init (httpd_client_t * http) {
   http->z.zalloc = Z_NULL;

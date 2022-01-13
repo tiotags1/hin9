@@ -97,110 +97,17 @@ static int read_callback (hin_pipe_t * pipe, hin_buffer_t * buf, int num, int fl
   return 0;
 }
 
-http_client_t * http_download_raw (http_client_t * http, const char * url1) {
-  hin_uri_t info;
-  char * url = strdup (url1);
-  if (hin_parse_uri (url, 0, &info) < 0) {
-    fprintf (stderr, "can't parse uri '%s'\n", url1);
-    free (url);
-    return NULL;
-  }
-
-  if (http == NULL) {
-    http = calloc (1, sizeof (*http));
-    http->debug = master.debug;
-  }
-  http->uri = info;
+int hin_http_connect_start (http_client_t * http) {
   http->c.sockfd = -1;
   http->c.magic = HIN_CONNECT_MAGIC;
   http->c.ai_addrlen = sizeof (http->c.ai_addr);
 
-  http->flags |= HIN_HTTP_KEEPALIVE;
-
-  if (http->host) free (http->host);
-  if (http->port) free (http->port);
-  http->host = strndup (info.host.ptr, info.host.len);
-  if (info.port.len > 0) {
-    http->port = strndup (info.port.ptr, info.port.len);
-  } else {
-    http->port = strdup ("80");
-  }
-
-  http->read_callback = read_callback;
-  http->state_callback = state_callback;
-
   hin_connect (http->host, http->port, &connected, http, &http->c.ai_addr, &http->c.ai_addrlen);
   http_connection_allocate (http);
-
-  return http;
-}
-
-static int hin_rproxy_headers (http_client_t * http, hin_pipe_t * pipe) {
-  httpd_client_t * parent = http->c.parent;
-  pipe->out.fd = parent->c.sockfd;
-  pipe->out.flags &= ~(HIN_FILE | HIN_OFFSETS);
-
-  hin_buffer_t * buf = malloc (sizeof (*buf) + READ_SZ);
-  memset (buf, 0, sizeof (*buf));
-  buf->fd = parent->c.sockfd;
-  buf->flags = parent->c.flags;
-  buf->ssl = &parent->c.ssl;
-  buf->sz = READ_SZ;
-  buf->ptr = buf->buffer;
-  buf->parent = pipe;
-  buf->debug = parent->debug;
-
-  header (buf, "HTTP/1.%d %d %s\r\n", parent->peer_flags & HIN_HTTP_VER0 ? 0 : 1, parent->status, http_status_name (parent->status));
-  httpd_write_common_headers (parent, buf);
-  if (http->sz && (parent->peer_flags & HIN_HTTP_CHUNKED) == 0)
-    header (buf, "Content-Length: %ld\r\n", http->sz);
-  header (buf, "\r\n");
-
-  if (http->debug & DEBUG_RW) printf ("httpd %d proxy response %d '\n%.*s'\n", parent->c.sockfd, buf->count, buf->count, buf->ptr);
-
-  hin_pipe_prepend_raw (pipe, buf);
-
   return 0;
 }
 
-static int hin_rproxy_finish (http_client_t * http, hin_pipe_t * pipe) {
-  httpd_client_t * parent = http->c.parent;
-  http->save_fd = 0;
-  parent->state &= ~(HIN_REQ_PROXY | HIN_REQ_DATA);
-  httpd_client_finish_request (parent, NULL);
-  return 0;
-}
-
-static int hin_rproxy_state_callback (http_client_t * http, uint32_t state, uintptr_t data) {
-  switch (state) {
-  case HIN_HTTP_STATE_HEADERS:
-    return hin_rproxy_headers (http, (hin_pipe_t*)data);
-  break;
-  case HIN_HTTP_STATE_FINISH:
-    return hin_rproxy_finish (http, (hin_pipe_t*)data);
-  break;
-  }
-  return 0;
-}
-
-static int hin_rproxy_read_callback (hin_pipe_t * pipe, hin_buffer_t * buf, int num, int flush) {
-  if (num <= 0) return 1;
-  buf->count = num;
-  hin_pipe_append_raw (pipe, buf);
-
-  //if (flush) return 1; // already cleaned in the write done handler
-  return 0;
-}
-
-http_client_t * hin_proxy (httpd_client_t * parent, http_client_t * http, const char * url1) {
-  if (parent->state & HIN_REQ_DATA) return NULL;
-  parent->state |= HIN_REQ_DATA | HIN_REQ_PROXY;
-
-  int hin_cache_check (void * store, httpd_client_t * client);
-  if (hin_cache_check (NULL, parent) > 0) {
-    return 0;
-  }
-
+http_client_t * http_download_raw (http_client_t * http, const char * url1) {
   hin_uri_t info;
   char * url = strdup (url1);
   if (hin_parse_uri (url, 0, &info) < 0) {
@@ -214,11 +121,6 @@ http_client_t * hin_proxy (httpd_client_t * parent, http_client_t * http, const 
     http->debug = master.debug;
   }
   http->uri = info;
-  http->c.parent = parent;
-  http->debug = parent->debug;
-  http->c.sockfd = -1;
-  http->c.magic = HIN_CONNECT_MAGIC;
-  http->c.ai_addrlen = sizeof (http->c.ai_addr);
 
   if (http->host) free (http->host);
   if (http->port) free (http->port);
@@ -229,14 +131,10 @@ http_client_t * hin_proxy (httpd_client_t * parent, http_client_t * http, const 
     http->port = strdup ("80");
   }
 
-  http->flags |= HIN_HTTP_KEEPALIVE;
-  http->save_fd = parent->c.sockfd;
+  http->read_callback = read_callback;
+  http->state_callback = state_callback;
 
-  http->read_callback = hin_rproxy_read_callback;
-  http->state_callback = hin_rproxy_state_callback;
-
-  hin_connect (http->host, http->port, &connected, http, &http->c.ai_addr, &http->c.ai_addrlen);
-  http_connection_allocate (http);
+  hin_http_connect_start (http);
 
   return http;
 }

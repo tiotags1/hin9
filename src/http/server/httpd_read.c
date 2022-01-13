@@ -74,7 +74,7 @@ static int httpd_client_handle_post (httpd_client_t * http, string_t * source) {
   }
   if (consume) {
     hin_buffer_t * buf1 = hin_buffer_create_from_data (pipe, source->ptr, consume);
-    hin_pipe_write_process (pipe, buf1);
+    hin_pipe_write_process (pipe, buf1, HIN_PIPE_ALL);
   }
   hin_pipe_start (pipe);
 

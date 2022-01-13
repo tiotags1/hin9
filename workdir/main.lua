@@ -10,6 +10,8 @@ index_files = {"index.html"}
 fpm_apps = {}
 
 require "lib.lua"
+
+-- files in this directory get loaded in alphabetical order, file starting with '_' are ignored
 require_dir ("config")
 
 redirect_log (server_log, debug_level)

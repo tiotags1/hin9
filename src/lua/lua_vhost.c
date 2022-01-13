@@ -244,10 +244,8 @@ int l_hin_add_vhost (lua_State *L) {
   return 1;
 }
 
-static httpd_vhost_t * default_vhost = NULL;
-
 httpd_vhost_t * httpd_vhost_get_default () {
-  if (default_vhost) return default_vhost;
+  if (default_parent) return default_parent;
   httpd_vhost_t * vhost = calloc (1, sizeof (*vhost));
   vhost->magic = HIN_VHOST_MAGIC;
   vhost->timeout = HIN_HTTPD_TIMEOUT;
@@ -257,7 +255,7 @@ httpd_vhost_t * httpd_vhost_get_default () {
   httpd_vhost_t * prev = master.vhosts;
   vhost->next = prev;
   master.vhosts = vhost;
-  default_vhost = vhost;
+  default_parent = vhost;
   return vhost;
 }
 

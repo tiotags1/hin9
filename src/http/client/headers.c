@@ -49,6 +49,8 @@ static int http_parse_headers (http_client_t * http, string_t * source) {
     return -1;
   }
 
+  http->status = atoi (param1.ptr);
+
   if (http->debug & DEBUG_RW) printf ("http %d headers\n", http->c.sockfd);
   while (find_line (source, &line)) {
     if (http->debug & DEBUG_RW) printf (" %d '%.*s'\n", (int)line.len, (int)line.len, line.ptr);
@@ -61,11 +63,6 @@ static int http_parse_headers (http_client_t * http, string_t * source) {
 
   hin_pipe_t * http_client_start_pipe (http_client_t * http, string_t * source);
   hin_pipe_t * pipe = http_client_start_pipe (http, source);
-
-  int used = hin_http_state (http, HIN_HTTP_STATE_HEADERS, (uintptr_t)pipe);
-  if (used > 0) {
-    return used;
-  }
 
   hin_pipe_start (pipe);
 

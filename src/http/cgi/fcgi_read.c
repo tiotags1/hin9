@@ -34,7 +34,7 @@ static int hin_fcgi_pipe_write (hin_fcgi_worker_t * worker, FCGI_Header * head) 
     hin_buffer_t * buf = hin_buffer_create_from_data (worker->out, (char*)head->data, head->length);
     httpd_client_t * http = worker->http;
     buf->debug = http->debug;
-    hin_pipe_write_process (worker->out, buf);
+    hin_pipe_write_process (worker->out, buf, HIN_PIPE_ALL);
     hin_pipe_advance (worker->out);
   }
   return 0;

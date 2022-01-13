@@ -30,12 +30,6 @@ static int httpd_close_filefd (httpd_client_t * http) {
   return 0;
 }
 
-static int httpd_pipe_error_callback (hin_pipe_t * pipe) {
-  printf ("error in client %d\n", pipe->out.fd);
-  httpd_client_shutdown (pipe->parent);
-  return 0;
-}
-
 extern basic_vfs_t * vfs;
 
 static int done_file (hin_pipe_t * pipe) {
@@ -109,32 +103,11 @@ int httpd_send_file (httpd_client_t * http, hin_cache_item_t * item, hin_buffer_
   pipe->in.fd = item->fd;
   pipe->in.flags = HIN_OFFSETS;
   pipe->in.pos = http->pos;
-  pipe->out.fd = http->c.sockfd;
-  pipe->out.flags = HIN_SOCKET | (http->c.flags & HIN_SSL);
-  pipe->out.ssl = &http->c.ssl;
-  pipe->out.pos = 0;
-  pipe->parent = http;
   pipe->finish_callback = done_file;
-  pipe->out_error_callback = httpd_pipe_error_callback;
-  pipe->debug = http->debug;
 
-  buf->parent = pipe;
   if (item->type) { pipe->parent1 = item; }
 
-  int httpd_pipe_set_chunked (httpd_client_t * http, hin_pipe_t * pipe);
-  if (http->status == 304 || http->method == HIN_METHOD_HEAD) {
-    http->peer_flags &= ~(HIN_HTTP_CHUNKED | HIN_HTTP_COMPRESS);
-  } else {
-    httpd_pipe_set_chunked (http, pipe);
-  }
-
-  if ((http->peer_flags & HIN_HTTP_CHUNKED) == 0) {
-    pipe->in.flags |= HIN_COUNT;
-    pipe->left = pipe->sz = http->count;
-    if (http->status == 304 || http->method == HIN_METHOD_HEAD) {
-      pipe->left = 0;
-    }
-  }
+  httpd_pipe_set_http11_response_options (http, pipe);
 
   header (buf, "HTTP/1.%d %d %s\r\n", http->peer_flags & HIN_HTTP_VER0 ? 0 : 1, http->status, http_status_name (http->status));
   httpd_write_common_headers (http, buf);

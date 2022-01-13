@@ -259,6 +259,15 @@ static int l_hin_create_cert (lua_State *L) {
   const char * cert = lua_tostring (L, 1);
   const char * key = lua_tostring (L, 2);
 
+  if (master.debug & DEBUG_CONFIG) {
+    char * new_cert = realpath (cert, NULL);
+    char * new_key = realpath (key, NULL);
+    printf ("ssl cert %s:\t%s\n", cert, new_cert);
+    printf ("ssl key  %s:\t%s\n", key, new_key);
+    free (new_cert);
+    free (new_key);
+  }
+
 #ifdef HIN_USE_OPENSSL
   SSL_CTX * hin_ssl_init (const char * cert, const char * key);
 

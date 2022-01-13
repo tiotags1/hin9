@@ -32,11 +32,13 @@ HIN_HTTP_DATE = 0x1000, HIN_HTTP_POST = 0x2000,
 
 enum {
 HIN_HTTP_STATE_NIL,
-HIN_HTTP_STATE_CONNECTED, HIN_HTTP_STATE_CONNECTION_FAILED,
-HIN_HTTP_STATE_SSL_FAILED,
-HIN_HTTP_STATE_HEADERS, HIN_HTTP_STATE_HEADERS_FAILED,
+HIN_HTTP_STATE_CONNECTED = 0x100,
+HIN_HTTP_STATE_HEADERS,
 HIN_HTTP_STATE_FINISH,
-HIN_HTTP_STATE_ERROR,
+HIN_HTTP_STATE_ERROR = 0x200,
+HIN_HTTP_STATE_CONNECTION_FAILED,
+HIN_HTTP_STATE_SSL_FAILED,
+HIN_HTTP_STATE_HEADERS_FAILED,
 };
 
 typedef struct {
@@ -92,6 +94,7 @@ typedef struct http_client_struct {
   hin_uri_t uri;
   char * host, * port;
 
+  int status;
   int save_fd;
   off_t sz, count;
 
@@ -162,6 +165,9 @@ int hin_cache_check (void * store, httpd_client_t * client);
 
 // internal
 int hin_http_state (http_client_t * http, int state, uintptr_t data);
+
+int hin_http_connect_start (http_client_t * http);
+int httpd_pipe_set_http11_response_options (httpd_client_t * http, hin_pipe_t * pipe);
 
 int http_connection_allocate (http_client_t * http);
 int http_connection_release (http_client_t * http);

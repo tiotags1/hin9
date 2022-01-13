@@ -1,4 +1,14 @@
 
+* fixed proxy code
+* fixed proxy chunked encoding
+* proxy added headers sent from proxyed server
+* proxy still doesn't support POST-ing, connection reuse
+* unified handling of chunking, made code easier to maintain but possible introduced bugs
+* removed old unused reverse proxy code
+* log ssl cert location to make it easier to debug problems with paths
+* rewrote the proxy example, previous one didn't handle query strings properly
+
+commit 8d7f35233498880fcacf47e90cc42d2de7411f6a
 * pipe code should now handle unexpected aborts slightly better
 * fix: server no longer crashes when fcgi closes the connection before expected
 
