@@ -29,7 +29,16 @@ static int http_parse_headers_line (http_client_t * http, string_t * line) {
   return 1;
 }
 
-static int http_parse_headers (http_client_t * http, string_t * source) {
+static int http_client_headers_read_callback (hin_buffer_t * buffer, int received) {
+  http_client_t * http = (http_client_t*)buffer->parent;
+  hin_lines_t * lines = (hin_lines_t*)&buffer->buffer;
+  string_t data, *source;
+  data.ptr = lines->base;
+  data.len = lines->count;
+  source = &data;
+
+  if (http->io_state & HIN_REQ_IDLE) return 0;
+
   string_t line, param1;
   string_t orig = *source;
 
@@ -38,8 +47,6 @@ static int http_parse_headers (http_client_t * http, string_t * source) {
     if (line.len == 0) break;
     if (source->len <= 0) return 0;
   }
-
-  http->io_state &= ~HIN_REQ_HEADERS;
 
   *source = orig;
 
@@ -71,32 +78,26 @@ static int http_parse_headers (http_client_t * http, string_t * source) {
 
 static int http_client_headers_close_callback (hin_buffer_t * buf, int ret) {
   http_client_t * http = buf->parent;
+
   if ((http->io_state & HIN_REQ_HEADERS)) {
     hin_http_state (http, HIN_HTTP_STATE_HEADERS_FAILED, ret);
   }
+
   http_client_shutdown (http);
+
   return 0;
 }
 
-static int http_client_headers_read_callback (hin_buffer_t * buffer, int received) {
-  http_client_t * http = (http_client_t*)buffer->parent;
-  hin_lines_t * lines = (hin_lines_t*)&buffer->buffer;
-  string_t data;
-  data.ptr = lines->base;
-  data.len = lines->count;
-
-  int used = http_parse_headers (http, &data);
-
-  return used;
-}
-
 static int http_client_sent_callback (hin_buffer_t * buf, int ret) {
+  http_client_t * http = buf->parent;
+  http->io_state &= ~HIN_REQ_HEADERS;
+
   if (ret < 0) {
-    http_client_t * http = buf->parent;
-    printf ("http %d header send failed %s\n", buf->fd, strerror (-ret));
+    printf ("http %d send error %s\n", buf->fd, strerror (-ret));
     hin_http_state (http, HIN_HTTP_STATE_HEADERS_FAILED, ret);
     http_client_shutdown (http);
   }
+
   return 1;
 }
 

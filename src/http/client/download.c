@@ -1,5 +1,4 @@
 
-#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -8,71 +7,68 @@
 #include "http.h"
 #include "conf.h"
 
-int http_client_start_headers (http_client_t * http, int ret);
+typedef struct {
+  hin_pipe_t * pipe;
+  time_t last;
+  off_t last_sz;
+} hin_download_tracker_t;
 
-int hin_http_state (http_client_t * http, int state, uintptr_t data) {
-  if (http->debug & DEBUG_HTTP)
-    printf ("http %d state is %d\n", http->c.sockfd, state);
-
-  string_t url = http->uri.all;
-  switch (state) {
-  case HIN_HTTP_STATE_CONNECTED:
-    http_client_start_headers (http, data);
-  break;
-  case HIN_HTTP_STATE_SSL_FAILED: // fall-through
-  case HIN_HTTP_STATE_CONNECTION_FAILED:
-    if (http->debug & DEBUG_HTTP)
-      fprintf (stderr, "%.*s connection failed: %s\n", (int)url.len, url.ptr, strerror (-data));
-  break;
-  case HIN_HTTP_STATE_HEADERS_FAILED:
-    if (http->debug & DEBUG_HTTP)
-      fprintf (stderr, "%.*s failed to download headers\n", (int)url.len, url.ptr);
-  break;
-  case HIN_HTTP_STATE_ERROR:
-    if (http->debug & DEBUG_HTTP)
-      fprintf (stderr, "%.*s generic error\n", (int)url.len, url.ptr);
-  break;
-  }
-  if (http->state_callback) {
-    http->state_callback (http, state, data);
-  }
+static int to_human_bytes (off_t amount, double * out, char ** unit) {
+  *unit = "B";
+  *out = amount;
+  if (amount < 1024) goto end;
+  *unit = "KB";
+  *out = amount / 1024.0;
+  amount /= 1024;
+  if (amount < 1024) goto end;
+  *unit = "MB";
+  *out = amount / 1024.0;
+  amount /= 1024;
+  if (amount < 1024) goto end;
+  *unit = "GB";
+  *out = amount / 1024.0;
+  amount /= 1024;
+  if (amount < 1024) goto end;
+  *unit = "TB";
+end:
   return 0;
 }
 
-void http_client_unlink (http_client_t * http);
-
-static int connected (hin_buffer_t * buffer, int ret) {
-  http_client_t * http = (http_client_t*)buffer->parent;
-
-  http->c.sockfd = ret;
-
-  if (ret < 0) {
-    hin_http_state (http, HIN_HTTP_STATE_CONNECTION_FAILED, ret);
-    http_client_unlink (http);
-    return 0;
+int download_progress (http_client_t * http, hin_pipe_t * pipe, int num, int flush) {
+  hin_download_tracker_t * p = http->progress;
+  if (p == NULL) {
+    p = calloc (1, sizeof (*p));
+    p->pipe = pipe;
+    http->progress = p;
   }
 
-  if (http->uri.https) {
-    if (hin_ssl_connect_init (&http->c) < 0) {
-      hin_http_state (http, HIN_HTTP_STATE_SSL_FAILED, -EPROTO);
-      http_client_unlink (http);
-      return 0;
-    }
+  p->last_sz += num;
+  if ((time (NULL) == p->last) && (flush == 0)) return 0;
+  int single = 0;
+  p->last = time (NULL);
+  if (single) {
+    printf ("\r");
   }
+  char * u1, * u2, * u3;
+  double s1, s2, s3;
+  to_human_bytes (pipe->out.pos + num, &s1, &u1);
+  to_human_bytes (http->sz, &s2, &u2);
+  to_human_bytes (p->last_sz, &s3, &u3);
 
-  hin_buffer_t * buf = hin_lines_create_raw (READ_SZ);
-  buf->flags = HIN_SOCKET | (http->c.flags & HIN_SSL);
-  buf->fd = http->c.sockfd;
-  buf->parent = http;
-  buf->ssl = &http->c.ssl;
-  buf->debug = http->debug;
-
-  http->read_buffer = buf;
-  if (hin_request_read (buf) < 0) {
-    return 0;
+  fprintf (stderr, "%.*s: %.1f%s/%.1f%s \t%.1f %s/sec%s",
+	(int)http->uri.all.len, http->uri.all.ptr,
+	s1, u1,
+	s2, u2,
+	s3, u3,
+	flush ? " finished" : "");
+  p->last_sz = 0;
+  if (!single || flush) {
+    printf ("\n");
   }
-
-  hin_http_state (http, HIN_HTTP_STATE_CONNECTED, (uintptr_t)buf);
+  if (flush) {
+    free (p);
+    http->progress = NULL;
+  }
   return 0;
 }
 
@@ -97,44 +93,20 @@ static int read_callback (hin_pipe_t * pipe, hin_buffer_t * buf, int num, int fl
   return 0;
 }
 
-int hin_http_connect_start (http_client_t * http) {
-  http->c.sockfd = -1;
-  http->c.magic = HIN_CONNECT_MAGIC;
-  http->c.ai_addrlen = sizeof (http->c.ai_addr);
-
-  hin_connect (http->host, http->port, &connected, http, &http->c.ai_addr, &http->c.ai_addrlen);
-  http_connection_allocate (http);
-  return 0;
-}
-
 http_client_t * http_download_raw (http_client_t * http, const char * url1) {
-  hin_uri_t info;
-  char * url = strdup (url1);
-  if (hin_parse_uri (url, 0, &info) < 0) {
-    fprintf (stderr, "can't parse uri '%s'\n", url);
-    free (url);
-    return NULL;
-  }
-
   if (http == NULL) {
-    http = calloc (1, sizeof (*http));
-    http->debug = master.debug;
+    http = http_connection_get (url1);
   }
-  http->uri = info;
+  if (HIN_HTTPD_PROXY_CONNECTION_REUSE) {
+    http->flags |= HIN_HTTP_KEEPALIVE;
+  }
 
-  if (http->host) free (http->host);
-  if (http->port) free (http->port);
-  http->host = strndup (info.host.ptr, info.host.len);
-  if (info.port.len > 0) {
-    http->port = strndup (info.port.ptr, info.port.len);
-  } else {
-    http->port = strdup ("80");
-  }
+  http->debug = master.debug;
 
   http->read_callback = read_callback;
   http->state_callback = state_callback;
 
-  hin_http_connect_start (http);
+  http_connection_start (http);
 
   return http;
 }

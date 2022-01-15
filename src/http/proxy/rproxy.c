@@ -5,6 +5,7 @@
 
 #include "hin.h"
 #include "http.h"
+#include "conf.h"
 
 static int httpd_pipe_error_callback (hin_pipe_t * pipe, int err) {
   printf ("http %d error!\n", pipe->out.fd);
@@ -110,36 +111,19 @@ http_client_t * hin_proxy (httpd_client_t * parent, http_client_t * http, const 
     return 0;
   }
 
-  hin_uri_t info;
-  char * url = strdup (url1);
-  if (hin_parse_uri (url, 0, &info) < 0) {
-    fprintf (stderr, "can't parse uri '%s'\n", url);
-    free (url);
-    return NULL;
+  if (http == NULL) {
+    http = http_connection_get (url1);
+  }
+  if (HIN_HTTPD_PROXY_CONNECTION_REUSE) {
+    http->flags |= HIN_HTTP_KEEPALIVE;
   }
 
-  if (http == NULL) {
-    http = calloc (1, sizeof (*http));
-    http->debug = master.debug;
-  }
-  http->uri = info;
   http->c.parent = parent;
   http->debug = parent->debug;
 
-  if (http->host) free (http->host);
-  if (http->port) free (http->port);
-  http->host = strndup (info.host.ptr, info.host.len);
-  if (info.port.len > 0) {
-    http->port = strndup (info.port.ptr, info.port.len);
-  } else {
-    http->port = strdup ("80");
-  }
-
-  http->save_fd = parent->c.sockfd;
-
   http->state_callback = hin_rproxy_state_callback;
 
-  hin_http_connect_start (http);
+  http_connection_start (http);
 
   return http;
 }

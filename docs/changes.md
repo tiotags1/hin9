@@ -1,4 +1,9 @@
 
+* fixed proxy connection reuse
+* other fixes due to improved code quality
+* removed old http client code
+
+commit c83db77b2819e3b10225dda01a5ea07daf732628
 * fixed proxy code
 * fixed proxy chunked encoding
 * proxy added headers sent from proxyed server
@@ -12,7 +17,7 @@ commit 8d7f35233498880fcacf47e90cc42d2de7411f6a
 * pipe code should now handle unexpected aborts slightly better
 * fix: server no longer crashes when fcgi closes the connection before expected
 
-commit 20392374e35d90545b0fa1d42a968bca530b01ea
+commit 20392374e35d90545b0fa1d42a968bca530b01ea v0.9.13
 * fix: use-after-free in cache code
 * switched timing code to new dlist implementation
 * about a year has passed since I released this and I have to say it's still filled with bugs

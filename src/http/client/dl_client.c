@@ -1,44 +1,52 @@
 
-#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
 #include "hin.h"
 #include "http.h"
-#include "conf.h"
-
-int http_client_headers_read_callback (hin_buffer_t * buffer, int received);
-
-int http_connection_allocate (http_client_t * http) {
-  if (http->io_state & HIN_REQ_IDLE)
-    basic_dlist_remove (&master.connection_idle, &http->c.list);
-  http->io_state &= ~HIN_REQ_IDLE;
-  return 0;
-}
-
-int http_connection_release (http_client_t * http) {
-  if (HIN_HTTPD_PROXY_CONNECTION_REUSE) {
-    http->io_state |= HIN_REQ_IDLE;
-    basic_dlist_append (&master.connection_idle, &http->c.list);
-  } else {
-    http_client_shutdown (http);
-  }
-  return 0;
-}
 
 void http_client_clean (http_client_t * http) {
   if (http->debug & DEBUG_MEMORY) printf ("http %d clean\n", http->c.sockfd);
-  if (http->uri.all.ptr) free ((void*)http->uri.all.ptr);
-  if (http->host) free (http->host);
-  if (http->port) free (http->port);
-  http->host = http->port = NULL;
+  if (http->uri.all.ptr) {
+    free ((void*)http->uri.all.ptr);
+    http->uri.all.ptr = NULL;
+  }
   if (http->save_fd) { // TODO should it clean save_fd ?
     if (http->debug & DEBUG_SYSCALL) printf ("  close save_fd %d\n", http->save_fd);
     close (http->save_fd);
     http->save_fd = 0;
   }
-  http->io_state &= (~HIN_REQ_END);
+  http->c.parent = NULL;
+}
+
+int http_connection_allocate (http_client_t * http) {
+  if (http->io_state & HIN_REQ_IDLE)
+    basic_dlist_remove (&master.connection_idle, &http->c.list);
+  http->io_state &= ~HIN_REQ_IDLE;
+
+  return 0;
+}
+
+int http_connection_release (http_client_t * http) {
+  if ((http->flags & HIN_HTTP_KEEPALIVE) == 0) {
+    http_client_shutdown (http);
+    return 0;
+  }
+
+  if (http->debug & DEBUG_HTTP)
+    printf ("http %d idled\n", http->c.sockfd);
+
+  http->io_state |= HIN_REQ_IDLE;
+  basic_dlist_append (&master.connection_idle, &http->c.list);
+  http_client_clean (http);
+
+  if (hin_lines_request (http->read_buffer, 0)) {
+    printf ("error! %d\n", 943547909);
+    return 0;
+  }
+
+  return 0;
 }
 
 void http_client_unlink (http_client_t * http) {
@@ -47,9 +55,16 @@ void http_client_unlink (http_client_t * http) {
   master.num_connection--;
 
   http_client_clean (http);
+  if (http->host) free (http->host);
+  if (http->port) free (http->port);
+  http->host = http->port = NULL;
+  http->io_state &= (~HIN_REQ_END);
+
   if (http->read_buffer) {
     hin_buffer_clean (http->read_buffer);
+    http->read_buffer = NULL;
   }
+
   free (http);
   hin_check_alive ();
 }
@@ -90,40 +105,7 @@ int http_client_shutdown (http_client_t * http) {
   return 0;
 }
 
-int http_client_buffer_close (hin_buffer_t * buf, int ret) {
-  http_client_shutdown (buf->parent);
-  return 0;
-}
-
-int match_string_equal1 (string_t * source, const char * str) {
-  const char * ptr = source->ptr;
-  const char * max = ptr + source->len;
-  while (1) {
-    if (ptr >= max && *str == '\0') return 1;
-    if (ptr >= max) return -1;
-    if (*str == '\0') return -1;
-    if (*ptr != *str) return -1;
-    ptr++;
-    str++;
-  }
-  return -1;
-}
-
-http_client_t * httpd_proxy_connection_get (string_t * host, string_t * port) {
-  basic_dlist_t * elem = master.connection_idle.next;
-  while (elem) {
-    http_client_t * http = basic_dlist_ptr (elem, offsetof (hin_client_t, list));
-    elem = elem->next;
-
-    if (match_string_equal1 (host, http->host) < 0) continue;
-    if (match_string_equal1 (port, http->port) < 0) continue;
-    basic_dlist_remove (&master.connection_idle, &http->c.list);
-    return http;
-  }
-  return NULL;
-}
-
-void httpd_proxy_connection_close_all () {
+void http_connection_close_idle () {
   basic_dlist_t * elem = master.connection_idle.next;
   while (elem) {
     http_client_t * http = basic_dlist_ptr (elem, offsetof (hin_client_t, list));
@@ -138,88 +120,57 @@ int http_client_finish_request (http_client_t * http) {
 
   http_connection_release (http);
 
-  if ((http->flags & HIN_HTTP_KEEPALIVE) == 0) {
-    http_client_shutdown (http);
-    return 0;
-  }
-  http->c.parent = NULL;
-  if (hin_request_read (http->read_buffer) < 0) {
-    http_client_shutdown (http);
-  }
   return 0;
 }
 
-static int connected (hin_buffer_t * buffer, int ret) {
-  http_client_t * http = (http_client_t*)buffer->parent;
+static int str_equal (const char * a, string_t * b) {
+  const char * ptr = b->ptr;
+  const char * max = b->ptr + b->len;
+  while (1) {
+    if (ptr >= max) break;
+    if (*a != *ptr) return 0;
+    a++; ptr++;
+  }
+  if (*a == '\0') return 1;
+  return 0;
+}
 
-  int (*finish_callback) (http_client_t * http, int ret) = (void*)http->read_buffer;
-  http->read_buffer = NULL;
+http_client_t * http_connection_get (const char * url1) {
+  http_client_t * http = NULL;
 
-  http->c.sockfd = ret;
-
-  if (ret < 0) {
-    finish_callback (http, ret);
-    http_client_unlink (http);
-    return 0;
+  hin_uri_t info;
+  char * url = strdup (url1);
+  if (hin_parse_uri (url, 0, &info) < 0) {
+    fprintf (stderr, "can't parse uri '%s'\n", url);
+    free (url);
+    return NULL;
   }
 
-  if (http->uri.https) {
-    if (hin_ssl_connect_init (&http->c) < 0) {
-      printf ("http %d couldn't initialize ssl connection\n", http->c.sockfd);
-      finish_callback (http, -EPROTO);
-      http_client_unlink (http);
-      return 0;
+  basic_dlist_t * elem = master.connection_idle.next;
+  while (elem) {
+    http_client_t * http1 = basic_dlist_ptr (elem, offsetof (hin_client_t, list));
+    elem = elem->next;
+
+    if (str_equal (http1->host, &info.host) == 0) continue;
+    if (str_equal (http1->port, &info.port) == 0) continue;
+    http = http1;
+    break;
+  }
+
+  if (http == NULL) {
+    http = calloc (1, sizeof (*http));
+    http->host = strndup (info.host.ptr, info.host.len);
+    if (info.port.len > 0) {
+      http->port = strndup (info.port.ptr, info.port.len);
+    } else {
+      http->port = strdup ("80");
     }
+    http->c.sockfd = -1;
+
+  } else {
+    http_connection_allocate (http);
   }
-
-  hin_buffer_t * buf = hin_lines_create_raw (READ_SZ);
-  buf->flags = HIN_SOCKET | (http->c.flags & HIN_SSL);
-  buf->fd = http->c.sockfd;
-  buf->parent = http;
-  buf->ssl = &http->c.ssl;
-  buf->debug = http->debug;
-
-  http->read_buffer = buf;
-  if (hin_request_read (buf) < 0) {
-    finish_callback (http, -EPROTO);
-    http_client_unlink (http);
-    return 0;
-  }
-
-  finish_callback (http, http->c.sockfd);
-  return 0;
-}
-
-http_client_t * hin_http_connect (http_client_t * prev, string_t * host, string_t * port, int (*finish_callback) (http_client_t * http, int ret)) {
-  http_client_t * http = httpd_proxy_connection_get (host, port);
-  if (http) {
-    if (prev->debug & DEBUG_PROXY) printf ("http %d reusing\n", http->c.sockfd);
-    http_client_clean (http);
-    void * rd = http->read_buffer;
-    hin_client_t c = http->c;
-    *http = *prev;
-    http->read_buffer = rd;
-    http->c = c;
-    http->c.parent = prev->c.parent;
-    http->debug = prev->debug;
-    finish_callback (http, 0);
-    free (prev);
-    return http;
-  }
-
-  http = prev;
-
-  if (http->read_buffer) printf ("http %d shouldn't be using read buffer\n", http->c.sockfd);
-  http->read_buffer = (hin_buffer_t*)finish_callback;
-
-  http->c.sockfd = -1;
-  http->c.magic = HIN_CONNECT_MAGIC;
-  http->c.ai_addrlen = sizeof (http->c.ai_addr);
-
-  int ret = hin_connect (http->host, http->port, &connected, http, &http->c.ai_addr, &http->c.ai_addrlen);
-  if (ret < 0) { printf ("http %d can't create connection\n", http->c.sockfd); return NULL; }
-
+  http->uri = info;
   return http;
 }
-
 

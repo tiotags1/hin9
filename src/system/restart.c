@@ -22,8 +22,8 @@ int hin_check_alive_timer () {
 }
 
 void hin_stop1 () {
-  void httpd_proxy_connection_close_all ();
-  httpd_proxy_connection_close_all ();
+  void http_connection_close_idle ();
+  http_connection_close_idle ();
   void hin_timer_flush ();
   hin_timer_flush ();
   #ifdef HIN_USE_FCGI

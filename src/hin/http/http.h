@@ -166,9 +166,10 @@ int hin_cache_check (void * store, httpd_client_t * client);
 // internal
 int hin_http_state (http_client_t * http, int state, uintptr_t data);
 
-int hin_http_connect_start (http_client_t * http);
 int httpd_pipe_set_http11_response_options (httpd_client_t * http, hin_pipe_t * pipe);
 
+int http_connection_start (http_client_t * http);
+http_client_t * http_connection_get (const char * url1);
 int http_connection_allocate (http_client_t * http);
 int http_connection_release (http_client_t * http);
 
