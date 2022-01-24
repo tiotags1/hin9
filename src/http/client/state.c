@@ -19,15 +19,15 @@ int hin_http_state (http_client_t * http, int state, uintptr_t data) {
   break;
   case HIN_HTTP_STATE_SSL_FAILED: // fall-through
   case HIN_HTTP_STATE_CONNECTION_FAILED:
-    if (http->debug & DEBUG_HTTP)
+    if (http->debug & (DEBUG_HTTP|DEBUG_RW_ERROR))
       fprintf (stderr, "%.*s connection failed: %s\n", (int)url.len, url.ptr, strerror (-data));
   break;
   case HIN_HTTP_STATE_HEADERS_FAILED:
-    if (http->debug & DEBUG_HTTP)
+    if (http->debug & (DEBUG_HTTP|DEBUG_RW_ERROR))
       fprintf (stderr, "%.*s failed to download headers\n", (int)url.len, url.ptr);
   break;
   case HIN_HTTP_STATE_ERROR:
-    if (http->debug & DEBUG_HTTP)
+    if (http->debug & (DEBUG_HTTP|DEBUG_RW_ERROR))
       fprintf (stderr, "%.*s generic error\n", (int)url.len, url.ptr);
   break;
   }

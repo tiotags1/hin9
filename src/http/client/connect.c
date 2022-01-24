@@ -18,6 +18,8 @@ void http_client_clean (http_client_t * http) {
     http->save_fd = 0;
   }
   http->c.parent = NULL;
+
+  http->io_state &= HIN_REQ_HEADERS;
 }
 
 int http_connection_allocate (http_client_t * http) {
@@ -37,9 +39,9 @@ int http_connection_release (http_client_t * http) {
   if (http->debug & DEBUG_HTTP)
     printf ("http %d idled\n", http->c.sockfd);
 
-  http->io_state |= HIN_REQ_IDLE;
   basic_dlist_append (&master.connection_idle, &http->c.list);
   http_client_clean (http);
+  http->io_state |= HIN_REQ_IDLE;
 
   if (hin_lines_request (http->read_buffer, 0)) {
     printf ("error! %d\n", 943547909);
@@ -49,16 +51,20 @@ int http_connection_release (http_client_t * http) {
   return 0;
 }
 
-void http_client_unlink (http_client_t * http) {
-  if (http->debug & DEBUG_HTTP) printf ("http %d unlink\n", http->c.sockfd);
+int http_client_unlink (http_client_t * http) {
+  if ((http->io_state & HIN_REQ_END) == 0) { return 0; }
+  if ((http->io_state & HIN_REQ_HEADERS)) { return 0; }
+  if ((http->read_buffer->flags & HIN_ACTIVE)) { return 0; }
 
-  master.num_connection--;
+  if (http->debug & DEBUG_HTTP)
+    printf ("http %d unlink\n", http->c.sockfd);
+
+  hin_connect_release (http->c.sockfd);
 
   http_client_clean (http);
   if (http->host) free (http->host);
   if (http->port) free (http->port);
   http->host = http->port = NULL;
-  http->io_state &= (~HIN_REQ_END);
 
   if (http->read_buffer) {
     hin_buffer_clean (http->read_buffer);
@@ -67,6 +73,8 @@ void http_client_unlink (http_client_t * http) {
 
   free (http);
   hin_check_alive ();
+
+  return 1;
 }
 
 static int http_client_close_callback (hin_buffer_t * buffer, int ret) {
@@ -76,18 +84,22 @@ static int http_client_close_callback (hin_buffer_t * buffer, int ret) {
     return -1;
   }
   hin_buffer_clean (buffer);
+  http->io_state |= HIN_REQ_END;
   http_client_unlink (http);
   return 0;
 }
 
 int http_client_shutdown (http_client_t * http) {
-  if (http->io_state & HIN_REQ_END) return 0;
-  http->io_state |= HIN_REQ_END;
+  if (http_client_unlink (http)) return 0;
+
+  if (http->io_state & HIN_REQ_STOPPING) return 0;
+  http->io_state |= HIN_REQ_STOPPING;
 
   if (http->io_state & HIN_REQ_IDLE)
     basic_dlist_remove (&master.connection_idle, &http->c.list);
 
   if (http->debug & DEBUG_HTTP) printf ("http %d shutdown\n", http->c.sockfd);
+
   hin_buffer_t * buf = malloc (sizeof *buf);
   memset (buf, 0, sizeof (*buf));
   buf->flags = HIN_SOCKET | (http->c.flags & HIN_SSL);
@@ -151,6 +163,7 @@ http_client_t * http_connection_get (const char * url1) {
     http_client_t * http1 = basic_dlist_ptr (elem, offsetof (hin_client_t, list));
     elem = elem->next;
 
+    if (http1->io_state & HIN_REQ_HEADERS) continue;
     if (str_equal (http1->host, &info.host) == 0) continue;
     if (str_equal (http1->port, &info.port) == 0) continue;
     http = http1;
@@ -170,7 +183,9 @@ http_client_t * http_connection_get (const char * url1) {
   } else {
     http_connection_allocate (http);
   }
+
   http->uri = info;
+
   return http;
 }
 

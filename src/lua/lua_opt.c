@@ -16,7 +16,11 @@
 
 #include <basic_hashtable.h>
 
-static int hin_lua_mask_from_str (lua_State * L, int pos, uint32_t * ptr1) {
+int hin_lua_mask_from_str (lua_State * L, int pos, uint32_t * ptr1) {
+  if (lua_isnumber (L, pos)) {
+    *ptr1 = lua_tonumber (L, pos);
+    return 1;
+  }
   const char * mask = lua_tostring (L, pos);
   if (mask) {
     char * ptr = NULL;
@@ -26,8 +30,8 @@ static int hin_lua_mask_from_str (lua_State * L, int pos, uint32_t * ptr1) {
     }
     *ptr1 = nr;
     return 1;
-  } else if (!lua_isnil (L, 3)) {
-    return luaL_error (L, "mask needs to be a string");
+  } else {
+    return luaL_error (L, "mask needs to be a string or number");
   }
   return -1;
 }
@@ -274,12 +278,62 @@ static int l_hin_set_global_option (lua_State *L) {
   return 0;
 }
 
+static uint32_t get_debug_mask (const char * str) {
+  uint32_t mask = 0;
+  if (strcmp (str, "http") == 0) {
+    mask |= DEBUG_HTTP;
+  } else if (strcmp (str, "uring") == 0) {
+    mask |= DEBUG_URING;
+  }
+  return mask;
+}
+
+static int l_hin_enable_debug (lua_State *L) {
+  uint32_t debug = 0, mask = 0;
+
+  if (hin_lua_mask_from_str (L, 1, &debug) < 0) {
+    return 0;
+  }
+
+  for (int i=2; i <= lua_gettop (L); i++) {
+    const char * str = lua_tostring (L, i);
+    mask |= get_debug_mask (str);
+  }
+
+  debug |= mask;
+
+  lua_pushnumber (L, debug);
+
+  return 1;
+}
+
+static int l_hin_disable_debug (lua_State *L) {
+  uint32_t debug = 0, mask = 0;
+
+  if (hin_lua_mask_from_str (L, 1, &debug) < 0) {
+    return 0;
+  }
+
+  for (int i=2; i <= lua_gettop (L); i++) {
+    const char * str = lua_tostring (L, i);
+    mask |= get_debug_mask (str);
+  }
+
+  debug &= ~mask;
+
+  lua_pushnumber (L, debug);
+
+  return 1;
+}
+
 static lua_function_t functs [] = {
 {"set_server_option",	l_hin_set_server_option },
 {"get_server_option",	l_hin_get_server_option },
 {"set_option",		l_hin_set_option },
 {"get_option",		l_hin_get_option },
 {"set_global_option",	l_hin_set_global_option },
+{"enable_debug",	l_hin_enable_debug },
+{"disable_debug",	l_hin_disable_debug },
 {NULL, NULL},
 };
 

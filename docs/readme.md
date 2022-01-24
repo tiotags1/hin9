@@ -1,9 +1,9 @@
 hin9
 ====
 
-hinsightd is a HTTP/1.1 webserver designed to be light on used resources but not light on features. It uses the new linux async API io\_uring for network and file access.
+hinsightd is a HTTP/1.1 webserver designed to be light on resources but not light on features. It uses the new linux async API io\_uring for network and file access.
 
-It has most of the features you'd expect out of more mature server: HTTP/1.1 pipelining, ssl, reverse proxy, cgi and fastcgi, local caching for cgi and proxy content, dynamic deflate, per request debug information, graceful restart. And some exotic features like a http downloader.
+It has most of the features you'd expect out of more mature server: HTTP/1.1, ssl, reverse proxy, fastcgi and cgi, local caching for dynamic content, deflate compression, graceful restart. And some exotic features like being a simple command line http downloader.
 
 The server core is written in C but the main decisions related to what each request does is handled by scripts interpreted by Lua. This offers a flexible way to write 'plug-ins', examples include: custom logging formats, per vhost logging, different load balancing strategies, http authentication, rewrites, timed callback actions, and other fun exercises.
 
@@ -23,7 +23,7 @@ requirements
 * liburing
 * lua (5.1-5.4)
 * libz
-* optional: openssl/libressl
+* optional: openssl/libressl, ffcall
 * cmake build system for compilation
 
 

@@ -14,7 +14,7 @@ static hin_buffer_t * timeout_buffer = NULL;
 
 void hin_timer_clean () {
   if (timeout_buffer)
-    hin_buffer_clean (timeout_buffer);
+    hin_buffer_stop_clean (timeout_buffer);
 }
 
 typedef struct {

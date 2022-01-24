@@ -31,11 +31,6 @@ int hin_server_callback (hin_client_t * client) {
     return ret;
   }
 
-  for (; vhost; vhost = vhost->parent) {
-    if (vhost->request_callback) { break; }
-    if (vhost->parent == NULL) break;
-  }
-
   lua_State * L = vhost->L;
   if (L == NULL) {
     int hin_send_raw_path (httpd_client_t * http);
@@ -44,72 +39,28 @@ int hin_server_callback (hin_client_t * client) {
     }
     return 0;
   }
-  lua_rawgeti (L, LUA_REGISTRYINDEX, vhost->request_callback);
-  lua_pushlightuserdata (L, client);
-
-  if (lua_pcall (L, 1, 0, 0) != 0) {
-    printf ("error! request callback '%s' '%s'\n", vhost->hostname, lua_tostring (L, -1));
-    lua_pop (L, 1);
-    return -1;
-  }
   return 0;
 }
 
 int hin_server_error_callback (hin_client_t * client, int error_code, const char * msg) {
   httpd_client_t * http = (httpd_client_t*)client;
-  httpd_vhost_t * vhost = http->vhost;
-  for (; vhost; vhost = vhost->parent) {
-    if (vhost->error_callback) { break; }
-    if (vhost->parent == NULL) break;
-  }
-  if (vhost->error_callback == 0) return 0;
-
-  lua_State * L = vhost->L;
 
   if (http->state & HIN_REQ_ERROR_HANDLED) return 0;
   http->state |= HIN_REQ_ERROR_HANDLED;
   http->state &= ~(HIN_REQ_DATA | HIN_REQ_ERROR);
 
-  lua_rawgeti (L, LUA_REGISTRYINDEX, vhost->error_callback);
-  lua_pushlightuserdata (L, client);
-  lua_pushnumber (L, error_code);
-  lua_pushstring (L, msg);
-
-  if (lua_pcall (L, 3, 0, 0) != 0) {
-    printf ("error! error callback '%s' '%s'\n", vhost->hostname, lua_tostring (L, -1));
-    lua_pop (L, 1);
-    return -1;
-  }
   if (http->state & HIN_REQ_DATA) return 1;
   return 0;
 }
 
 int hin_server_finish_callback (hin_client_t * client) {
   httpd_client_t * http = (httpd_client_t*)client;
-  httpd_vhost_t * vhost = http->vhost;
 
   int ret = httpd_vhost_map_callback (http, HIN_VHOST_MAP_FINISH);
   if (ret <= 0) {
     return ret;
   }
 
-  for (; vhost; vhost = vhost->parent) {
-    if (vhost->error_callback) { break; }
-    if (vhost->parent == NULL) break;
-  }
-
-  if (vhost->finish_callback == 0) return 0;
-
-  lua_State * L = vhost->L;
-  if (vhost->finish_callback == 0) return 0;
-  lua_rawgeti (L, LUA_REGISTRYINDEX, vhost->finish_callback);
-  lua_pushlightuserdata (L, client);
-
-  if (lua_pcall (L, 1, 0, 0) != 0) {
-    printf ("error! finish callback '%s' '%s'\n", vhost->hostname, lua_tostring (L, -1));
-    lua_pop (L, 1);
-    return -1;
-  }
   return 0;
 }
 
@@ -144,14 +95,6 @@ void hin_ssl_ctx_unref (hin_ssl_ctx_t * box) {
 }
 
 void lua_server_clean (httpd_vhost_t * server) {
-  lua_State * L = server->L;
-  if (server->request_callback)
-    luaL_unref (L, LUA_REGISTRYINDEX, server->request_callback);
-  if (server->finish_callback)
-    luaL_unref (L, LUA_REGISTRYINDEX, server->finish_callback);
-  if (server->error_callback)
-    luaL_unref (L, LUA_REGISTRYINDEX, server->error_callback);
-
   hin_ssl_ctx_t * box = server->ssl;
   if (box)
     hin_ssl_ctx_unref (box);

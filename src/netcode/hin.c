@@ -23,6 +23,8 @@ int hin_clean () {
   hin_epoll_clean ();
   void hin_timer_clean ();
   hin_timer_clean ();
+  int hin_socket_clean ();
+  hin_socket_clean ();
   return 0;
 }
 

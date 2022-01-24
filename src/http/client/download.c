@@ -97,6 +97,7 @@ http_client_t * http_download_raw (http_client_t * http, const char * url1) {
   if (http == NULL) {
     http = http_connection_get (url1);
   }
+
   if (HIN_HTTPD_PROXY_CONNECTION_REUSE) {
     http->flags |= HIN_HTTP_KEEPALIVE;
   }

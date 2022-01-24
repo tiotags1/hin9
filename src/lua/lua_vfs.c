@@ -276,7 +276,7 @@ int hin_vfs_clean () {
     free (vfs);
     vfs = NULL;
   }
-  if (inotify_buffer) hin_buffer_clean (inotify_buffer);
+  if (inotify_buffer) hin_buffer_stop_clean (inotify_buffer);
   return 0;
 }
 

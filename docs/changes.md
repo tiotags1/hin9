@@ -1,4 +1,11 @@
 
+* fixed crash if proxy tries to reuse an already closed connection (example proxied server closes idle keepalive connection but the proxying server does not know that yet and tries to reuse an invalid connection)
+* fixed use-after-free when timed out if the close request is sync
+* removed deprecated callback system from vhost (replaced by the more flexible mappings)
+* added an active flag to all active buffers (this note is mostly useful mostly for bug tracking)
+* lua added debug mask toggling functions so you can enable/disable specific debug functions through lua
+
+commit 2d2ba43b479cf45eb11996de2f9821ad32420b69
 * fixed proxy connection reuse
 * other fixes due to improved code quality
 * removed old http client code

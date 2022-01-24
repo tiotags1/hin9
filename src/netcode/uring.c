@@ -43,6 +43,15 @@ static inline int hin_request_callback (hin_buffer_t * buf, int ret) {
   return 0;
 }
 
+static int hin_request_active (hin_buffer_t * buf) {
+  if (buf->flags & HIN_ACTIVE) {
+    printf ("buf %p already active\n", buf);
+    return -1;
+  }
+  buf->flags |= HIN_ACTIVE;
+  return 0;
+}
+
 static inline struct io_uring_sqe * hin_request_sqe () {
   struct io_uring_sqe *sqe = NULL;
   if (ring.ring_fd > 0)
@@ -72,14 +81,16 @@ int hin_request_is_overloaded () {
 }
 
 int hin_request_write (hin_buffer_t * buffer) {
+  if (hin_request_active (buffer)) return -1;
+
   if (buffer->flags & HIN_SSL) {
-    if (buffer->debug & DEBUG_URING) printf (" req %s buf %p cb %p fd %d\n", buffer->flags & HIN_SOCKET ? "sends" : "writs", buffer, buffer->callback, buffer->fd);
+    if (buffer->debug & DEBUG_URING) printf (" req %s buf %p cb %p fd %d\n", buffer->flags & HIN_SOCKET ? "send" : "writ", buffer, buffer->callback, buffer->fd);
     hin_ssl_request_write (buffer);
     return 0;
   }
 
   if (buffer->flags & HIN_EPOLL) {
-    if (buffer->flags & HIN_OFFSETS) {
+    if (buffer->flags & (HIN_FILE|HIN_OFFSETS)) {
       buffer->flags |= HIN_SYNC;
     } else {
       if (hin_epoll_request_write (buffer) < 0) return -1;
@@ -105,14 +116,16 @@ int hin_request_write (hin_buffer_t * buffer) {
 }
 
 int hin_request_read (hin_buffer_t * buffer) {
+  if (hin_request_active (buffer)) return -1;
+
   if (buffer->flags & HIN_SSL) {
-    if (buffer->debug & DEBUG_URING) printf (" req %s buf %p cb %p fd %d\n", buffer->flags & HIN_SOCKET ? "recvs" : "reads", buffer, buffer->callback, buffer->fd);
+    if (buffer->debug & DEBUG_URING) printf (" req %s buf %p cb %p fd %d\n", buffer->flags & HIN_SOCKET ? "recv" : "read", buffer, buffer->callback, buffer->fd);
     hin_ssl_request_read (buffer);
     return 0;
   }
 
   if (buffer->flags & HIN_EPOLL) {
-    if (buffer->flags & HIN_OFFSETS) {
+    if (buffer->flags & (HIN_FILE|HIN_OFFSETS)) {
       buffer->flags |= HIN_SYNC;
     } else {
       if (hin_epoll_request_read (buffer) < 0) return -1;
@@ -140,6 +153,8 @@ int hin_request_read (hin_buffer_t * buffer) {
 }
 
 int hin_request_accept (hin_buffer_t * buffer, int flags) {
+  if (hin_request_active (buffer)) return -1;
+
   hin_client_t * client = (hin_client_t*)buffer->parent;
   hin_client_t * server = (hin_client_t*)client->parent;
   client->ai_addrlen = sizeof (client->ai_addr);
@@ -158,7 +173,7 @@ int hin_request_accept (hin_buffer_t * buffer, int flags) {
   io_uring_sqe_set_data (sqe, buffer);
   io_uring_submit1 (&ring);
 
-  if (buffer->debug & DEBUG_URING) printf (" req accept buf %p cb %p\n", buffer, buffer->callback);
+  if (buffer->debug & DEBUG_URING) printf (" req acpt buf %p cb %p\n", buffer, buffer->callback);
   return 0;
 }
 
@@ -172,12 +187,14 @@ int hin_request_connect (hin_buffer_t * buffer, struct sockaddr * ai_addr, int a
     return hin_request_callback (buffer, ret);
   }
 
+  if (hin_request_active (buffer)) return -1;
+
   struct io_uring_sqe *sqe = hin_request_sqe ();
   io_uring_prep_connect (sqe, buffer->fd, ai_addr, ai_addrlen);
   io_uring_sqe_set_data (sqe, buffer);
   io_uring_submit1 (&ring);
 
-  if (buffer->debug & DEBUG_URING) printf (" req connect buf %p cb %p\n", buffer, buffer->callback);
+  if (buffer->debug & DEBUG_URING) printf (" req conn buf %p cb %p\n", buffer, buffer->callback);
   return 0;
 }
 
@@ -187,16 +204,20 @@ int hin_request_close (hin_buffer_t * buffer) {
     return hin_request_callback (buffer, ret);
   }
 
+  if (hin_request_active (buffer)) return -1;
+
   struct io_uring_sqe *sqe = hin_request_sqe ();
   io_uring_prep_close (sqe, buffer->fd);
   io_uring_sqe_set_data (sqe, buffer);
   io_uring_submit1 (&ring);
 
-  if (buffer->debug & DEBUG_URING) printf (" req close buf %p cb %p fd %d\n", buffer, buffer->callback, buffer->fd);
+  if (buffer->debug & DEBUG_URING) printf (" req clos buf %p cb %p fd %d\n", buffer, buffer->callback, buffer->fd);
   return 0;
 }
 
 int hin_request_openat (hin_buffer_t * buffer, int dfd, const char * path, int flags, int mode) {
+  if (hin_request_active (buffer)) return -1;
+
   if (buffer->flags & (HIN_SYNC | HIN_EPOLL)) {
     int ret = openat (dfd, path, flags, mode);
     return hin_request_callback (buffer, ret);
@@ -212,8 +233,10 @@ int hin_request_openat (hin_buffer_t * buffer, int dfd, const char * path, int f
 }
 
 int hin_request_timeout (hin_buffer_t * buffer, struct timespec * ts, int count, int flags) {
+  if (hin_request_active (buffer)) return -1;
+
   if (buffer->flags & (HIN_SYNC | HIN_EPOLL)) {
-    printf ("error timeout can't be sync ?\n");
+    printf ("error! timeout can't be sync/epoll\n");
     return -1;
   }
 
@@ -227,13 +250,15 @@ int hin_request_timeout (hin_buffer_t * buffer, struct timespec * ts, int count,
 }
 
 int hin_request_statx (hin_buffer_t * buffer, int dfd, const char * path, int flags, int mask) {
+  if (hin_request_active (buffer)) return -1;
+
   if (buffer->flags & (HIN_SYNC | HIN_EPOLL)) {
     int ret = statx (dfd, path, flags, mask, (struct statx *)buffer->ptr);
     return hin_request_callback (buffer, ret);
   }
 
   struct io_uring_sqe *sqe = hin_request_sqe ();
-  if (buffer->count < (int)sizeof (struct statx)) { printf ("need larger buffer for statx\n"); return -1; }
+  if (buffer->count < (int)sizeof (struct statx)) { printf ("error! statx insufficient buf\n"); return -1; }
   io_uring_prep_statx (sqe, dfd, path, flags, mask, (struct statx *)buffer->ptr);
   io_uring_sqe_set_data (sqe, buffer);
   io_uring_submit1 (&ring);
@@ -252,13 +277,13 @@ int hin_event_init () {
   memset (&ring, 0, sizeof (ring));
   int err = io_uring_queue_init_params (HIN_URING_QUEUE_DEPTH, &ring, &params);
   if (err < 0) {
-    fprintf (stderr, "io_uring_queue_init failed %s\n", strerror (-err));
+    fprintf (stderr, "error! io_uring_queue_init %s\n", strerror (-err));
     exit (1);
   }
   #if HIN_URING_DONT_FORK
   err = io_uring_ring_dontfork (&ring);
   if (err < 0) {
-    printf ("io_uring_ring_dontfork failed %s\n", strerror (-err));
+    printf ("error! io_uring_ring_dontfork %s\n", strerror (-err));
     exit (1);
   }
   #endif
@@ -296,7 +321,7 @@ int hin_event_loop () {
     io_uring_submit (&ring);
     if ((err = io_uring_wait_cqe (&ring, &cqe)) < 0) {
       if (err == -EINTR) continue;
-      printf ("error: io_uring_wait_cqe: %s\n", strerror (errno));
+      printf ("error! io_uring_wait_cqe: %s\n", strerror (errno));
       io_uring_cqe_seen (&ring, cqe);
       continue;
     }
@@ -306,6 +331,7 @@ int hin_event_loop () {
     if (debug & DEBUG_URING) printf ("req begin buf %p cb %p %d\n", buffer, buffer->callback, cqe->res);
 
     io_uring_cqe_seen (&ring, cqe);
+    buffer->flags &= ~HIN_ACTIVE;
     err = buffer->callback (buffer, cqe->res);
     if (debug & DEBUG_URING) printf ("req done. buf %p %d\n", buffer, err);
     if (err) {

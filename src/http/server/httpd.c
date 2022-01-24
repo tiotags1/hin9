@@ -50,7 +50,7 @@ void httpd_client_clean (httpd_client_t * http) {
 }
 
 int httpd_client_start_request (httpd_client_t * http) {
-  http->state = HIN_REQ_HEADERS | (http->state & HIN_REQ_ENDING);
+  http->state = HIN_REQ_HEADERS | (http->state & HIN_REQ_STOPPING);
 
   hin_server_t * server = (hin_server_t*)http->c.parent;
   httpd_vhost_t * vhost = (httpd_vhost_t*)server->c.parent;
@@ -76,7 +76,7 @@ int httpd_client_finish_request (httpd_client_t * http, hin_pipe_t * pipe) {
   http->state &= ~HIN_REQ_DATA;
   if (http->state & (HIN_REQ_POST)) return 0;
 
-  int keep = (http->peer_flags & HIN_HTTP_KEEPALIVE) && ((http->state & HIN_REQ_ENDING) == 0);
+  int keep = (http->peer_flags & HIN_HTTP_KEEPALIVE) && ((http->state & HIN_REQ_STOPPING) == 0);
   if (http->debug & DEBUG_HTTP) printf ("httpd %d request done %s\n", http->c.sockfd, keep ? "keep" : "close");
 
   int hin_server_finish_callback (httpd_client_t * client);
@@ -110,7 +110,7 @@ static int httpd_client_close_callback (hin_buffer_t * buffer, int ret) {
   }
   if (http->debug & (DEBUG_HTTP)) printf ("httpd %d close\n", http->c.sockfd);
   if (http->read_buffer && http->read_buffer != buffer) {
-    hin_buffer_clean (http->read_buffer);
+    hin_buffer_stop_clean (http->read_buffer);
     http->read_buffer = NULL;
   }
   httpd_client_clean (http);
@@ -119,8 +119,8 @@ static int httpd_client_close_callback (hin_buffer_t * buffer, int ret) {
 }
 
 int httpd_client_shutdown (httpd_client_t * http) {
-  if (http->state & HIN_REQ_ENDING) return -1;
-  http->state |= HIN_REQ_ENDING;
+  if (http->state & HIN_REQ_STOPPING) return -1;
+  http->state |= HIN_REQ_STOPPING;
   if (http->debug & (DEBUG_HTTP)) printf ("httpd %d shutdown\n", http->c.sockfd);
 
   hin_buffer_t * buf = malloc (sizeof *buf);

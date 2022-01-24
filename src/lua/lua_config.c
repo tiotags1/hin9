@@ -227,6 +227,8 @@ static int l_hin_create_log (lua_State *L) {
   return 1;
 }
 
+int hin_lua_mask_from_str (lua_State * L, int pos, uint32_t * ptr1);
+
 static int l_hin_redirect_log (lua_State *L) {
   int type;
   type = lua_type (L, 1);
@@ -239,17 +241,10 @@ static int l_hin_redirect_log (lua_State *L) {
 
   if (master.flags & HIN_PRETEND) return 0;
 
-  type = lua_type (L, 2);
-  if (type == LUA_TSTRING) {
-    const char * mask = lua_tostring (L, 2);
-    char * ptr = NULL;
-    uint32_t nr = strtol (mask, &ptr, 16);
-    if (ptr <= mask) {
-      printf ("can't parse debug mask\n");
-    }
-    httpd_vhost_set_debug (nr);
-  } else if (type != LUA_TNONE && type != LUA_TNIL) {
-    printf ("redirect log debug mask needs to be a string\n");
+  if (!lua_isnil (L, 2)) {
+    uint32_t mask = 0;
+    hin_lua_mask_from_str (L, 2, &mask);
+    httpd_vhost_set_debug (mask);
   }
 
   return 0;

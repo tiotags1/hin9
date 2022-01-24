@@ -6,6 +6,10 @@
 #include "hin.h"
 
 void hin_buffer_clean (hin_buffer_t * buffer) {
+  if (buffer->flags & HIN_ACTIVE) {
+    printf ("error! buf still active %p\n", buffer);
+  }
+
   if (buffer->debug & DEBUG_MEMORY) printf ("cleanup buffer %p\n", buffer);
   if (buffer->ssl_buffer) {
     hin_buffer_clean (buffer->ssl_buffer);
@@ -15,6 +19,14 @@ void hin_buffer_clean (hin_buffer_t * buffer) {
     if (lines->base) free (lines->base);
   }
   free (buffer);
+}
+
+void hin_buffer_stop_clean (hin_buffer_t * buf) {
+  if (buf->flags & HIN_ACTIVE) {
+    //printf ("error! buf still active %p\n", buf);
+  }
+  buf->flags &= ~HIN_ACTIVE;
+  hin_buffer_clean (buf);
 }
 
 hin_buffer_t * hin_buffer_create_from_data (void * parent, const char * ptr, int sz) {
@@ -87,6 +99,10 @@ int hin_lines_request (hin_buffer_t * buffer, int min) {
   hin_lines_t * lines = (hin_lines_t*)&buffer->buffer;
   int left = buffer->sz - lines->count;
   int new;
+
+  if (buffer->flags & HIN_ACTIVE) {
+    return 0;
+  }
   if (min > 0 && min > left) { new = min - left; }
   else if (left < (buffer->sz / 2)) { new = READ_SZ; }
   else { new = left; }
@@ -100,7 +116,7 @@ int hin_lines_request (hin_buffer_t * buffer, int min) {
   buffer->callback = hin_lines_read_callback;
   if (buffer->fd >= 0) {
   if (hin_request_read (buffer) < 0) {
-    printf ("lines request failed\n");
+    printf ("error! %d\n", 3464354);
     return -1;
   }
   }

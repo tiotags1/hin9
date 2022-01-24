@@ -76,11 +76,43 @@ static int http_client_headers_read_callback (hin_buffer_t * buffer, int receive
   return (uintptr_t)source->ptr - (uintptr_t)orig.ptr;
 }
 
+static int http_client_restart (http_client_t * old, httpd_client_t * parent) {
+  if (parent == NULL) return 0;
+
+  http_client_t * http = http_connection_get (old->uri.all.ptr);
+
+  if (HIN_HTTPD_PROXY_CONNECTION_REUSE) {
+    http->flags |= HIN_HTTP_KEEPALIVE;
+  }
+
+  http->c.parent = parent;
+  http->debug = parent->debug;
+
+  http->read_callback = old->read_callback;
+  http->state_callback = old->state_callback;
+
+  http_connection_start (http);
+
+  old->c.parent = NULL;
+  old->read_callback = NULL;
+  old->state_callback = NULL;
+
+  return 0;
+}
+
 static int http_client_headers_close_callback (hin_buffer_t * buf, int ret) {
   http_client_t * http = buf->parent;
+  httpd_client_t * parent = http->c.parent;
 
-  if ((http->io_state & HIN_REQ_HEADERS)) {
-    hin_http_state (http, HIN_HTTP_STATE_HEADERS_FAILED, ret);
+  if (ret != 0)
+    printf ("headers closed %d bc %d %s\n", buf->fd, ret, strerror (-ret));
+
+  if (http->io_state & (HIN_REQ_HEADERS|HIN_REQ_DATA)) {
+    //if (ret != 0)
+    //  hin_http_state (http, HIN_HTTP_STATE_HEADERS_FAILED, ret);
+
+    if ((http->io_state & HIN_REQ_IDLE) == 0)
+      http_client_restart (http, parent);
   }
 
   http_client_shutdown (http);
@@ -92,7 +124,14 @@ static int http_client_sent_callback (hin_buffer_t * buf, int ret) {
   http_client_t * http = buf->parent;
   http->io_state &= ~HIN_REQ_HEADERS;
 
-  if (ret < 0) {
+  if (http->io_state & HIN_REQ_STOPPING) {
+    http_client_shutdown (http);
+    return 1;
+  }
+
+  if (ret > 0) {
+    http->io_state |= HIN_REQ_DATA;
+  } else {
     printf ("http %d send error %s\n", buf->fd, strerror (-ret));
     hin_http_state (http, HIN_HTTP_STATE_HEADERS_FAILED, ret);
     http_client_shutdown (http);

@@ -33,7 +33,7 @@ static int httpd_close_filefd (httpd_client_t * http) {
 extern basic_vfs_t * vfs;
 
 static int done_file (hin_pipe_t * pipe) {
-  if (pipe->debug & DEBUG_PIPE) printf ("pipe %d>%d file transfer finished bytes %lld\n", pipe->in.fd, pipe->out.fd, (long long)pipe->count);
+  if (pipe->debug & DEBUG_PIPE) printf ("pipe %d>%d file done %lld\n", pipe->in.fd, pipe->out.fd, (long long)pipe->count);
   httpd_client_t * http = pipe->parent;
   httpd_client_finish_request (http, pipe);
   void hin_cache_unref (void *);
@@ -74,7 +74,7 @@ int httpd_send_file (httpd_client_t * http, hin_cache_item_t * item, hin_buffer_
   }
 
   if (http->debug & DEBUG_PIPE) {
-    printf ("sending file '%s' size %lld sockfd %d filefd %d\n", http->file_path, (long long)sz, http->c.sockfd, item->fd);
+    printf ("pipe %d>%d file '%s' sz %lld\n", item->fd, http->c.sockfd, http->file_path, (long long)sz);
   }
 
   // do you need to check http->status for 200 or can you return a 304 for a 206

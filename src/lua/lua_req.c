@@ -101,7 +101,7 @@ static int l_hin_parse_headers (lua_State *L) {
       lua_pop (L, 1);
     break;
     default:
-      printf ("lua headers parsing error\n");
+      printf ("error! %d\n", 43645645);
       lua_pop (L, 1);
     break;
     }

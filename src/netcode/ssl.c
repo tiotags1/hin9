@@ -39,6 +39,7 @@ static enum sslstatus get_sslstatus (SSL* ssl, int n) {
 static int hin_ssl_handshake (hin_ssl_t * ssl, hin_buffer_t * crypt);
 
 int hin_ssl_callback (hin_buffer_t * plain, int ret) {
+  plain->flags &= ~HIN_ACTIVE;
   if (plain->callback (plain, ret)) {
     hin_buffer_clean (plain);
   }
@@ -248,13 +249,13 @@ static int hin_ssl_check_data (hin_ssl_t * ssl, hin_buffer_t * crypt) {
 
 static int hin_ssl_handshake (hin_ssl_t * ssl, hin_buffer_t * buf) {
   hin_buffer_t * crypt = buf;
-  if (buf->flags & HIN_SSL && buf->ssl_buffer) {
+  if ((buf->flags & HIN_SSL) && buf->ssl_buffer) {
     crypt = buf->ssl_buffer;
   } else if (buf->flags & HIN_SSL) {
     int sz = READ_SZ + 100;
     crypt = malloc (sizeof (hin_buffer_t) + sz);
     memset (crypt, 0, sizeof (hin_buffer_t));
-    crypt->flags = buf->flags & (~HIN_SSL);
+    crypt->flags = buf->flags & (~(HIN_SSL|HIN_ACTIVE));
     crypt->fd = buf->fd;
     crypt->count = crypt->sz = sz;
     crypt->ptr = crypt->buffer;

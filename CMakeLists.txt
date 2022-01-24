@@ -82,7 +82,7 @@ src/netcode/timer.c
 
 set (hin_exe
 src/http/cgi/cgi_parse.c
-src/http/client/dl_client.c
+src/http/client/connect.c
 src/http/client/download.c
 src/http/client/headers.c
 src/http/client/data.c

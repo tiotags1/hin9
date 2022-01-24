@@ -21,6 +21,10 @@ typedef struct {
   socklen_t * ai_addrlen;
 } hin_connect_t;
 
+int hin_connect_release (int fd) {
+  master.num_connection--;
+}
+
 static int complete (hin_buffer_t * buf, int ret) {
   hin_connect_t * conn = (hin_connect_t*)buf->buffer;
   char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
@@ -35,6 +39,7 @@ static int complete (hin_buffer_t * buf, int ret) {
 
   if (ret >= 0) {
     if (master.debug & DEBUG_SOCKET) printf ("connect %d %s:%s complete\n", ret, hbuf, sbuf);
+    master.num_connection++;
   } else {
     if (master.debug & DEBUG_SOCKET) printf ("connect %s:%s failed! %s\n", hbuf, sbuf, strerror (-ret));
   }
@@ -42,6 +47,7 @@ static int complete (hin_buffer_t * buf, int ret) {
   if (conn->callback (buf, ret)) {
   }
   freeaddrinfo ((struct addrinfo *)conn->base);
+
   return 1;
 }
 
@@ -117,8 +123,6 @@ int hin_connect (const char * host, const char * port, hin_callback_t callback, 
   conn->ai_addr = ai_addr;
   conn->ai_addrlen = ai_addrlen;
   hin_connect_try_next (buf);
-
-  master.num_connection++;
 
   return 0;
 }

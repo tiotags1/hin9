@@ -20,9 +20,10 @@ int httpd_timeout_callback (hin_timer_t * timer, time_t tm) {
     hin_timer_update (timer, time (NULL) + 5);
     return 0;
   }
+  hin_timer_remove (timer);
   shutdown (http->c.sockfd, SHUT_RD);
   httpd_client_shutdown (http);
-  return 0;
+  return 1;
 }
 
 void httpd_client_ping (httpd_client_t * http, int timeout) {

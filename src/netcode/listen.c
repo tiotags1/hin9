@@ -72,7 +72,7 @@ static int hin_server_accept_callback (hin_buffer_t * buffer, int ret) {
       printf ("error! %d\n", 3252543);
       return -1;
     }
-    printf ("client rejected ?\n");
+    printf ("error! %d\n", 432526654);
     return 0;
   }
 
@@ -131,7 +131,7 @@ int hin_server_stop (hin_server_t * server) {
   if (buf == NULL) return 0;
   free (buf->parent);			// free empty client
   buf->parent = NULL;
-  hin_buffer_clean (buf);
+  hin_buffer_stop_clean (buf);
   server->accept_buffer = NULL;
 
   if (server->client_list.next) return 0;
@@ -162,7 +162,7 @@ int hin_server_do_retry () {
 
 static int hin_server_add_retry (hin_server_t * server) {
   basic_dlist_append (&master.server_retry, &server->c.list);
-  printf ("socket was busy will try again later\n");
+  printf ("socket busy\n");
   server->flags |= HIN_FLAG_RETRY;
   return 0;
 }

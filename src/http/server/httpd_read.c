@@ -15,7 +15,7 @@ int httpd_client_read_callback (hin_buffer_t * buffer, int received);
 int httpd_client_reread (httpd_client_t * http) {
   hin_buffer_t * buffer = http->read_buffer;
 
-  if (http->state & HIN_REQ_ENDING) return 0;
+  if (http->state & HIN_REQ_STOPPING) return 0;
 
   hin_lines_reread (buffer);
   return 0;

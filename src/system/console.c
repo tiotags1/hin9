@@ -15,7 +15,6 @@
 #include "system/hin_lua.h"
 
 static hin_buffer_t * console_buffer = NULL;
-static hin_buffer_t * timeout_buffer = NULL;
 
 void hin_stop1 ();
 
@@ -59,10 +58,9 @@ static int hin_console_read_callback (hin_buffer_t * buf, int ret) {
 }
 
 void hin_console_clean () {
-  if (console_buffer)
-    hin_buffer_clean (console_buffer);
-  if (timeout_buffer)
-    hin_buffer_clean (timeout_buffer);
+  if (console_buffer) {
+    hin_buffer_stop_clean (console_buffer);
+  }
 }
 
 int hin_timer_cb (int ms) {

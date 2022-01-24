@@ -44,7 +44,7 @@ static int hin_child_callback (hin_child_t * child1, int status) {
   }
 
   if (lua_pcall (L, num, 0, 0) != 0) {
-    printf ("error running child close callback '%s'\n", lua_tostring (L, -1));
+    printf ("error! child cb '%s'\n", lua_tostring (L, -1));
     lua_pop (L, 1);
     return -1;
   }

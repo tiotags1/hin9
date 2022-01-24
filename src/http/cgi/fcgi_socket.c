@@ -42,7 +42,7 @@ void hin_fcgi_socket_close (hin_fcgi_socket_t * socket) {
   }
 
   if (socket->read_buffer) {
-    hin_buffer_clean (socket->read_buffer);
+    hin_buffer_stop_clean (socket->read_buffer);
     socket->read_buffer = NULL;
   }
 

@@ -18,6 +18,11 @@ static void hin_pipe_close (hin_pipe_t * pipe) {
   pipe->in.flags |= HIN_DONE|HIN_INACTIVE;
   pipe->out.flags |= HIN_DONE|HIN_INACTIVE;
 
+  if (pipe->finish_callback) {
+    pipe->finish_callback (pipe);
+    pipe->finish_callback = NULL;
+  }
+
   pipe->out_error_callback = NULL;
   pipe->in_error_callback = NULL;
   pipe->in.fd = -1;
@@ -32,11 +37,10 @@ static void hin_pipe_close (hin_pipe_t * pipe) {
     hin_buffer_clean (buf);
   }
 
-  if (pipe->finish_callback) pipe->finish_callback (pipe);
-  pipe->finish_callback = NULL;
-
-  if (pipe->extra) free (pipe->extra);
-  pipe->extra = NULL;
+  if (pipe->extra) {
+    free (pipe->extra);
+    pipe->extra = NULL;
+  }
 
   if (pipe->reading.next || pipe->writing.next) return ;
 

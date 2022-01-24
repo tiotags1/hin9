@@ -33,10 +33,12 @@ void hin_clean1 () {
   hin_signal_clean ();
   int hin_vfs_clean ();
   hin_vfs_clean ();
-  int hin_socket_clean ();
-  hin_socket_clean ();
   void httpd_vhost_clean ();
   httpd_vhost_clean ();
+  #ifdef HIN_USE_FCGI
+  void hin_fcgi_clean ();
+  hin_fcgi_clean ();
+  #endif
   // shouldn't clean pidfile it can incur a race condition
   free ((void*)master.exe_path);
   free ((void*)master.logdir_path);

@@ -98,6 +98,12 @@ static int hin_rproxy_state_callback (http_client_t * http, uint32_t state, uint
   case HIN_HTTP_STATE_FINISH:
     return hin_rproxy_finish (http, (hin_pipe_t*)data);
   break;
+  case HIN_HTTP_STATE_CONNECTED:
+  break;
+  default:
+    printf ("http %d rproxy unhandled state %x\n", http->c.sockfd, state);
+    return hin_rproxy_finish (http, NULL);
+  break;
   }
   return 0;
 }
@@ -114,6 +120,7 @@ http_client_t * hin_proxy (httpd_client_t * parent, http_client_t * http, const 
   if (http == NULL) {
     http = http_connection_get (url1);
   }
+
   if (HIN_HTTPD_PROXY_CONNECTION_REUSE) {
     http->flags |= HIN_HTTP_KEEPALIVE;
   }

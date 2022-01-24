@@ -93,6 +93,7 @@ int hin_epoll_check () {
       ret = write (buf->fd, buf->ptr, buf->count);
     }
     if (ret < 0) ret = -errno;
+    buf->flags &= ~HIN_ACTIVE;
 
     int err = buf->callback (buf, ret);
     if (err) {

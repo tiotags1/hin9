@@ -63,23 +63,6 @@ static int l_hin_add_socket (lua_State *L, httpd_vhost_t * vhost, int tpos) {
   return 0;
 }
 
-static int l_httpd_vhost_get_callback (lua_State *L, int tpos, const char * name) {
-  int ret = 0;
-  lua_pushstring (L, name);
-  lua_gettable (L, tpos);
-  if (lua_type (L, -1) == LUA_TNIL) {
-    char buffer[60];
-    snprintf (buffer, sizeof buffer, "default_%s_handler", name);
-    lua_getglobal (L, buffer);
-  }
-  if (lua_type (L, -1) != LUA_TFUNCTION) {
-    lua_pop (L, 1);
-  } else {
-    ret = luaL_ref (L, LUA_REGISTRYINDEX);
-  }
-  return ret;
-}
-
 static void httpd_vhost_free (httpd_vhost_t * vhost) {
   if (vhost == NULL) return;
   free (vhost);
@@ -218,10 +201,6 @@ int l_hin_add_vhost (lua_State *L) {
     }
   }
   lua_pop (L, 1);
-
-  vhost->request_callback = l_httpd_vhost_get_callback (L, 1, "onRequest");
-  vhost->error_callback = l_httpd_vhost_get_callback (L, 1, "onError");
-  vhost->finish_callback = l_httpd_vhost_get_callback (L, 1, "onFinish");
 
   vhost->L = L;
   vhost->magic = HIN_VHOST_MAGIC;
