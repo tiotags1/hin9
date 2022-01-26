@@ -21,7 +21,7 @@ typedef struct {
   socklen_t * ai_addrlen;
 } hin_connect_t;
 
-int hin_connect_release (int fd) {
+void hin_connect_release (int fd) {
   master.num_connection--;
 }
 

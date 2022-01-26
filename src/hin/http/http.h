@@ -32,10 +32,11 @@ HIN_HTTP_DATE = 0x1000, HIN_HTTP_POST = 0x2000,
 
 enum {
 HIN_HTTP_STATE_NIL,
-HIN_HTTP_STATE_CONNECTED = 0x100,
+HIN_HTTP_STATE_CONNECTED = 0x1,
+HIN_HTTP_STATE_SEND,
 HIN_HTTP_STATE_HEADERS,
 HIN_HTTP_STATE_FINISH,
-HIN_HTTP_STATE_ERROR = 0x200,
+HIN_HTTP_STATE_ERROR = 0x10,
 HIN_HTTP_STATE_CONNECTION_FAILED,
 HIN_HTTP_STATE_SSL_FAILED,
 HIN_HTTP_STATE_HEADERS_FAILED,
@@ -93,6 +94,7 @@ typedef struct http_client_struct {
   uint32_t io_state;
   hin_uri_t uri;
   char * host, * port;
+  int method;
 
   int status;
   int save_fd;

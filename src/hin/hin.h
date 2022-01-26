@@ -58,7 +58,7 @@ struct hin_pipe_struct {
 
 int hin_connect (const char * host, const char * port, hin_callback_t callback, void * parent, struct sockaddr * ai_addr, socklen_t * ai_addrlen);
 int hin_unix_sock (const char * path, hin_callback_t callback, void * parent);
-int hin_connect_release (int fd);
+void hin_connect_release (int fd);
 
 int hin_listen_request (const char * addr, const char *port, const char * sock_type, hin_server_t * client);
 int hin_listen_do ();
@@ -132,5 +132,8 @@ typedef struct hin_timer_struct {
 
 int hin_timer_update (hin_timer_t * timer, time_t new);
 int hin_timer_remove (hin_timer_t * timer);
+
+
+#define weird_error(err) printf ("error! %s\n", err);
 
 #endif

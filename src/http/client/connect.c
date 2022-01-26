@@ -42,6 +42,7 @@ int http_connection_release (http_client_t * http) {
   basic_dlist_append (&master.connection_idle, &http->c.list);
   http_client_clean (http);
   http->io_state |= HIN_REQ_IDLE;
+  http->c.parent = NULL;
 
   if (hin_lines_request (http->read_buffer, 0)) {
     printf ("error! %d\n", 943547909);
@@ -53,7 +54,7 @@ int http_connection_release (http_client_t * http) {
 
 int http_client_unlink (http_client_t * http) {
   if ((http->io_state & HIN_REQ_END) == 0) { return 0; }
-  if ((http->io_state & HIN_REQ_HEADERS)) { return 0; }
+  if ((http->io_state & (HIN_REQ_HEADERS|HIN_REQ_POST))) { return 0; }
   if ((http->read_buffer->flags & HIN_ACTIVE)) { return 0; }
 
   if (http->debug & DEBUG_HTTP)
@@ -123,12 +124,17 @@ void http_connection_close_idle () {
     http_client_t * http = basic_dlist_ptr (elem, offsetof (hin_client_t, list));
     elem = elem->next;
 
+    shutdown (http->c.sockfd, SHUT_RD);
     http_client_shutdown (http);
   }
 }
 
 int http_client_finish_request (http_client_t * http) {
+  if (http->io_state & (HIN_REQ_DATA|HIN_REQ_POST)) return 0;
+
   if (http->debug & DEBUG_HTTP) printf ("http %d request done\n", http->c.sockfd);
+
+  hin_http_state (http, HIN_HTTP_STATE_FINISH, 0);
 
   http_connection_release (http);
 

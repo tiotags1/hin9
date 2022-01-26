@@ -1,4 +1,9 @@
 
+* rproxy readded POST method
+* rproxy passing client headers to the proxied server (aka cookies and exotic http bugs)
+* note previous commit introduced bug in command line downloader
+
+commit 825acb05a331602ef2299a1dca6c3587972627d0
 * fixed crash if proxy tries to reuse an already closed connection (example proxied server closes idle keepalive connection but the proxying server does not know that yet and tries to reuse an invalid connection)
 * fixed use-after-free when timed out if the close request is sync
 * removed deprecated callback system from vhost (replaced by the more flexible mappings)

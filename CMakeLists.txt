@@ -42,7 +42,7 @@ ENDIF()
 
 if (USE_RPROXY)
   add_definitions (-DHIN_USE_RPROXY)
-  set (other_src ${other_src} src/http/proxy/rproxy.c)
+  set (other_src ${other_src} src/http/client/rproxy.c)
 ENDIF()
 
 if (USE_FFCALL)

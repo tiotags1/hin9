@@ -129,9 +129,7 @@ static int http_client_sent_callback (hin_buffer_t * buf, int ret) {
     return 1;
   }
 
-  if (ret > 0) {
-    http->io_state |= HIN_REQ_DATA;
-  } else {
+  if (ret <= 0) {
     printf ("http %d send error %s\n", buf->fd, strerror (-ret));
     hin_http_state (http, HIN_HTTP_STATE_HEADERS_FAILED, ret);
     http_client_shutdown (http);
@@ -147,7 +145,7 @@ int http_client_start_headers (http_client_t * http, hin_buffer_t * received) {
   lines->read_callback = http_client_headers_read_callback;
   lines->close_callback = http_client_headers_close_callback;
 
-  http->io_state |= HIN_REQ_HEADERS;
+  http->io_state |= HIN_REQ_HEADERS|HIN_REQ_DATA;;
 
   hin_buffer_t * buf = malloc (sizeof (*buf) + READ_SZ);
   memset (buf, 0, sizeof (*buf));
@@ -167,7 +165,12 @@ int http_client_start_headers (http_client_t * http, hin_buffer_t * received) {
     path_max = http->uri.query.ptr + http->uri.query.len;
   }
 
-  header (buf, "GET %.*s HTTP/1.1\r\n", path_max - path, path);
+  const char * method = "GET";
+  switch (http->method) {
+  case HIN_METHOD_POST: method = "POST"; break;
+  }
+
+  header (buf, "%s %.*s HTTP/1.1\r\n", method, path_max - path, path);
   if (http->uri.port.len > 0) {
     header (buf, "Host: %.*s:%.*s\r\n", http->uri.host.len, http->uri.host.ptr, http->uri.port.len, http->uri.port.ptr);
   } else {
@@ -178,7 +181,9 @@ int http_client_start_headers (http_client_t * http, hin_buffer_t * received) {
   } else {
     header (buf, "Connection: close\r\n");
   }
-  header (buf, "\r\n");
+
+  if (hin_http_state (http, HIN_HTTP_STATE_SEND, (uintptr_t)buf) == 0)
+    header (buf, "\r\n");
 
   if (http->debug & DEBUG_RW) printf ("http %d request '\n%.*s'\n", http->c.sockfd, buf->count, buf->ptr);
 

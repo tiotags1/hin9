@@ -133,7 +133,7 @@ int hin_lines_default_eat (hin_buffer_t * buffer, int num) {
     if (lines->close_callback) {
       return lines->close_callback (buffer, num);
     } else {
-      printf ("lines client error\n");
+      weird_error ("lines close");
     }
     return -1;
   }
