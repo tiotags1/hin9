@@ -39,7 +39,6 @@ static int complete (hin_buffer_t * buf, int ret) {
 
   if (ret >= 0) {
     if (master.debug & DEBUG_SOCKET) printf ("connect %d %s:%s complete\n", ret, hbuf, sbuf);
-    master.num_connection++;
   } else {
     if (master.debug & DEBUG_SOCKET) printf ("connect %s:%s failed! %s\n", hbuf, sbuf, strerror (-ret));
   }
@@ -66,8 +65,8 @@ static int hin_connect_try_next (hin_buffer_t * buf) {
     *conn->ai_addr = *rp->ai_addr;
     *conn->ai_addrlen = rp->ai_addrlen;
     if (hin_request_connect (buf, conn->ai_addr, *conn->ai_addrlen) < 0) {
-      printf ("connect failed\n");
-      return -1;
+      printf ("error! %d\n", 146465465);
+      break;
     }
     return 0;
   }
@@ -123,6 +122,8 @@ int hin_connect (const char * host, const char * port, hin_callback_t callback, 
   conn->ai_addr = ai_addr;
   conn->ai_addrlen = ai_addrlen;
   hin_connect_try_next (buf);
+
+  master.num_connection++;
 
   return 0;
 }

@@ -55,7 +55,7 @@ int http_connection_release (http_client_t * http) {
 int http_client_unlink (http_client_t * http) {
   if ((http->io_state & HIN_REQ_END) == 0) { return 0; }
   if ((http->io_state & (HIN_REQ_HEADERS|HIN_REQ_POST))) { return 0; }
-  if ((http->read_buffer->flags & HIN_ACTIVE)) { return 0; }
+  if (http->read_buffer && (http->read_buffer->flags & HIN_ACTIVE)) { return 0; }
 
   if (http->debug & DEBUG_HTTP)
     printf ("http %d unlink\n", http->c.sockfd);

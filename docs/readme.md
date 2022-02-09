@@ -9,6 +9,8 @@ The server core is written in C but the main decisions related to what each requ
 
 Whenever possible code prioritizes coherency, ease of understanding and algorithm beauty over speed, optimization or features. Spaces for indenting and tabs for aligning. Code comments are rare.
 
+more information [on the github pages site](https://tiotags1.github.io/tiotags1/)
+
 security features
 -----------------
 

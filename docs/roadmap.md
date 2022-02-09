@@ -15,6 +15,5 @@
   * wildcard vhosts
   * better error handling
   * cgi spec compliance
-  * fcgi resuse connection
   * threads
 

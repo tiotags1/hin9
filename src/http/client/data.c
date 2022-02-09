@@ -41,11 +41,6 @@ hin_pipe_t * http_client_start_pipe (http_client_t * http, string_t * source) {
     pipe->read_callback = http->read_callback;
   pipe->debug = http->debug;
 
-  if (http->save_fd) {
-    pipe->out.fd = http->save_fd;
-    pipe->out.flags |= HIN_FILE | HIN_OFFSETS;
-  }
-
   if (http->flags & HIN_HTTP_CHUNKED) {
     int hin_pipe_decode_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush);
     pipe->decode_callback = hin_pipe_decode_chunked;
@@ -55,6 +50,11 @@ hin_pipe_t * http_client_start_pipe (http_client_t * http, string_t * source) {
   }
 
   hin_http_state (http, HIN_HTTP_STATE_HEADERS, (uintptr_t)pipe);
+
+  if (http->save_fd) {
+    pipe->out.fd = http->save_fd;
+    pipe->out.flags |= HIN_FILE | HIN_OFFSETS;
+  }
 
   if (len > 0) {
     hin_buffer_t * buf1 = hin_buffer_create_from_data (pipe, source->ptr, len);

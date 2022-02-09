@@ -1,4 +1,7 @@
 
+* fixed command line downloader
+
+commit 112f72b8c3a5487fe9c672adc45466054bcf3883
 * rproxy readded POST method
 * rproxy passing client headers to the proxied server (aka cookies and exotic http bugs)
 * note previous commit introduced bug in command line downloader

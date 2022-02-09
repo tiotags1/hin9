@@ -62,6 +62,7 @@ static void print_help () {
  -d --download <url>: download file and exit\n\
  -o --output <path>: save download to file\n\
  -p --progress: show download progress\n\
+ -n --name: derive download name from url\n\
     --serve <port>: start server on <port> without loading any config file\n\
     --config <path>: sets config path\n\
     --tmpdir <path>: sets tmp dir path\n\
@@ -245,7 +246,7 @@ int hin_process_argv (basic_args_t * args, const char * name) {
     http_client_t * http = current_download;
     http->save_fd = open (path, O_RDWR | O_CLOEXEC | O_TRUNC | O_CREAT, 0666);
     if (http->save_fd < 0) {
-      perror ("httpd open");
+      printf ("error! can't open %s %s\n", path, strerror (errno));
       return -1;
     }
 
@@ -256,6 +257,14 @@ int hin_process_argv (basic_args_t * args, const char * name) {
     }
     http_client_t * http = current_download;
     http->debug |= DEBUG_PROGRESS;
+
+  } else if (basic_args_cmp (name, "-n", "--name", NULL)) {
+    if (current_download == NULL) {
+      printf ("no current download\n");
+      return -1;
+    }
+    http_client_t * http = current_download;
+    http->flags |= HIN_FLAG_AUTONAME;
 
   } else if (basic_args_cmp (name, "--serve", NULL)) {
     const char * port = basic_args_get (args);

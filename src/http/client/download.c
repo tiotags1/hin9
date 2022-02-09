@@ -72,7 +72,40 @@ int download_progress (http_client_t * http, hin_pipe_t * pipe, int num, int flu
   return 0;
 }
 
+#include <unistd.h>
+#include <fcntl.h>
+
+static int http_autoname (http_client_t * http) {
+  char * path = NULL;
+  if (path == NULL) {
+    char * old_path = strndup (http->uri.path.ptr, http->uri.path.len);
+    char * fn = strrchr (old_path, '/');
+    fn++;
+    if (*fn != '\0') path = strdup (fn);
+    free (old_path);
+  }
+  if (path == NULL) path = strdup ("noname");
+  http->save_fd = open (path, O_RDWR | O_CLOEXEC | O_TRUNC | O_CREAT, 0666);
+  if (http->save_fd < 0) {
+    printf ("error! can't open %s %s\n", path, strerror (errno));
+    free (path);
+    return -1;
+  }
+  printf ("downloading '%s' to '%s'\n", http->uri.all.ptr, path);
+  free (path);
+  return 0;
+}
+
 static int state_callback (http_client_t * http, uint32_t state, uintptr_t data) {
+  const char * error_msg = NULL;
+  if (state == HIN_HTTP_STATE_HEADERS) {
+    if (http->flags & HIN_FLAG_AUTONAME) {
+      http_autoname (http);
+    }
+  }
+  if (error_msg) {
+    printf ("can't download %s: %s\n", http->uri.all.ptr, error_msg);
+  }
   return 0;
 }
 
@@ -99,7 +132,7 @@ http_client_t * http_download_raw (http_client_t * http, const char * url1) {
   }
 
   if (HIN_HTTPD_PROXY_CONNECTION_REUSE) {
-    http->flags |= HIN_HTTP_KEEPALIVE;
+  //  http->flags |= HIN_HTTP_KEEPALIVE; // if you do this the client waits till timeout to exit
   }
 
   http->debug = master.debug;

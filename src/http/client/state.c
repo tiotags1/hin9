@@ -39,6 +39,12 @@ int hin_http_state (http_client_t * http, int state, uintptr_t data) {
 
 void http_client_unlink (http_client_t * http);
 
+static void http_client_unlink_wrap (http_client_t * http) {
+  http->io_state |= HIN_REQ_END;
+  http->flags &= ~HIN_HTTP_KEEPALIVE;
+  http_client_unlink (http);
+}
+
 static int connected (hin_buffer_t * buffer, int ret) {
   http_client_t * http = (http_client_t*)buffer->parent;
 
@@ -46,14 +52,14 @@ static int connected (hin_buffer_t * buffer, int ret) {
 
   if (ret < 0) {
     hin_http_state (http, HIN_HTTP_STATE_CONNECTION_FAILED, ret);
-    http_client_unlink (http);
+    http_client_unlink_wrap (http);
     return 0;
   }
 
   if (http->uri.https) {
     if (hin_ssl_connect_init (&http->c) < 0) {
       hin_http_state (http, HIN_HTTP_STATE_SSL_FAILED, -EPROTO);
-      http_client_unlink (http);
+      http_client_unlink_wrap (http);
       return 0;
     }
   }
