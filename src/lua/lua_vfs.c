@@ -32,9 +32,7 @@ static basic_vfs_node_t * hin_search_dir (basic_vfs_node_t * node, const char * 
 
 static basic_vfs_node_t * get_path_node (httpd_client_t * http, string_t * path, string_t * orig) {
   httpd_vhost_t * vhost = http->vhost;
-  string_t source = http->headers;
 
-  if (match_string (&source, "%a+ ("HIN_HTTP_PATH_ACCEPT")", path) <= 0) {}
   if (orig)
     *orig = *path;
   match_string (path, "/");
@@ -55,6 +53,10 @@ static basic_vfs_node_t * get_path_node (httpd_client_t * http, string_t * path,
 
 int hin_send_raw_path (httpd_client_t * http) {
   string_t path;
+
+  string_t source = http->headers;
+  if (hin_http_parse_header_line (&source, NULL, &path, NULL) < 0) {}
+
   basic_vfs_node_t * node = get_path_node (http, &path, NULL);
   if (node == NULL) return -1;
 
@@ -96,6 +98,8 @@ int l_hin_set_path (lua_State *L) {
 
   int is_dir = 0;
   string_t path, orig;
+  path.ptr = (char*)lua_tolstring (L, 2, &path.len);
+
   basic_vfs_node_t * node = get_path_node (http, &path, &orig);
   if (node == NULL) return 0;
 

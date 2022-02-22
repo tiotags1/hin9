@@ -49,7 +49,7 @@ basic_vfs_inode_t * basic_vfs_stat (basic_vfs_t * vfs, basic_vfs_node_t * node, 
   struct statx stat;
 
   if (statx (AT_FDCWD, path, 0, STATX_MTIME | STATX_SIZE | STATX_TYPE, &stat) < 0) {
-    perror ("statx");
+    fprintf (stderr, "statx %s: %s\n", path, strerror (errno));
     return NULL;
   }
 

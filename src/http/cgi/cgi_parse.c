@@ -24,7 +24,6 @@
 
 static int hin_pipe_cgi_server_finish_callback (hin_pipe_t * pipe) {
   hin_fcgi_worker_t * worker = (hin_fcgi_worker_t *)pipe->parent1;
-  httpd_client_t * http = (httpd_client_t*)pipe->parent;
   if (pipe->debug & (DEBUG_CGI|DEBUG_PIPE))
     printf ("pipe %d>%d cgi transfer finished bytes %lld\n", pipe->in.fd, pipe->out.fd, (long long)pipe->count);
 
@@ -38,7 +37,7 @@ static int hin_pipe_cgi_server_finish_callback (hin_pipe_t * pipe) {
   free (worker);
   #endif
 
-  return httpd_client_finish_request (pipe->parent);
+  return httpd_client_finish_request (pipe->parent, pipe);
 }
 
 #endif
@@ -92,7 +91,7 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer, int received) {
   off_t sz = 0;
   uint32_t disable = 0;
   while (1) {
-    if (find_line (source, &line) == 0) { return 0; }
+    if (hin_find_line (source, &line) == 0) { return 0; }
     if (line.len == 0) break;
     if (matchi_string (&line, "Status: (%d+)", &param1) > 0) {
       http->status = atoi (param1.ptr);
@@ -177,7 +176,7 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer, int received) {
   if (http->debug & (DEBUG_CGI|DEBUG_RW))
     fprintf (stderr, "cgi %d headers\n", http->c.sockfd);
   while (1) {
-    if (find_line (source, &line) == 0) { hin_buffer_clean (buf); return 0; }
+    if (hin_find_line (source, &line) == 0) { hin_buffer_clean (buf); return 0; }
     if (line.len == 0) break;
     if (http->debug & (DEBUG_CGI|DEBUG_RW))
       fprintf (stderr, " %zd '%.*s'\n", line.len, (int)line.len, line.ptr);

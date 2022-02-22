@@ -20,8 +20,9 @@ static int l_hin_parse_path (lua_State *L) {
   if (http->headers.ptr == NULL) return 0;
 
   string_t temp = http->headers;
-  string_t line, method, path, version;
-  if (find_line (&temp, &line) == 0 || match_string (&line, "(%a+) ("HIN_HTTP_PATH_ACCEPT") (HTTP/1.%d)", &method, &path, &version) <= 0) {
+  string_t line, path;
+  int method, version;
+  if (hin_find_line (&temp, &line) == 0 || hin_http_parse_header_line (&line, &method, &path, &version) < 0) {
     printf ("error! %d\n", 678768312);
     return 0;
   }
@@ -29,15 +30,20 @@ static int l_hin_parse_path (lua_State *L) {
   hin_uri_t uri;
   memset (&uri, 0, sizeof uri);
   if (hin_parse_uri (path.ptr, path.len, &uri) < 0) {
-    printf ("error parsing uri\n");
+    printf ("error! parsing uri\n");
     return 0;
   }
 
-  lua_pushlstring (L, uri.path.ptr, uri.path.len);
+  line = uri.path;
+  char * parsed = hin_parse_url_encoding (&line, 0);
+
+  lua_pushstring (L, parsed);
   lua_pushlstring (L, uri.query.ptr, uri.query.len);
-  lua_pushlstring (L, method.ptr, method.len);
-  lua_pushlstring (L, version.ptr, version.len);
+  lua_pushstring (L, hin_http_method_name (method));
+  lua_pushinteger (L, version);
   lua_pushstring (L, http->hostname);
+
+  free (parsed);
 
   return 5;
 }
@@ -50,14 +56,14 @@ static int l_hin_parse_headers (lua_State *L) {
   httpd_client_t * http = (httpd_client_t*)client;
   string_t temp = http->headers;
   string_t line, param;
-  if (find_line (&temp, &line) == 0) {
+  if (hin_find_line (&temp, &line) == 0) {
     return 0;
   }
 
   lua_newtable (L);
   int n = 1;
 
-  while (find_line (&temp, &line)) {
+  while (hin_find_line (&temp, &line)) {
     if (line.len == 0) break;
     int used = match_string (&line, "([%w%-_]+):%s*", &param);
     if (used <= 0) {

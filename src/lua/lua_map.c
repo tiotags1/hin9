@@ -49,8 +49,10 @@ int httpd_vhost_map_callback (httpd_client_t * http, int type) {
 
   string_t source = http->headers;
   string_t path;
-  if (match_string (&source, "%a+ ("HIN_HTTP_PATH_ACCEPT")", &path) <= 0) {}
-  const char * max = path.ptr + path.len;
+  if (hin_http_parse_header_line (&source, NULL, &path, NULL) < 0) {}
+  char * new = hin_parse_url_encoding (&path, 0);
+  const char * max = new + path.len;
+  int ret = 1;
 
   while (vhost) {
     httpd_vhost_map_t * map_start;
@@ -62,7 +64,7 @@ int httpd_vhost_map_callback (httpd_client_t * http, int type) {
     for (httpd_vhost_map_t * map = map_start; map; map = map->next) {
       const char * pattern = map->pattern;
       int skip = 1;
-      for (const char * ptr = path.ptr; 1; ptr++) {
+      for (const char * ptr = new; 1; ptr++) {
         if (*pattern == '*') { skip = 0; break; }
         if (ptr >= max && *pattern == '\0') { skip = 0; break; }
         if (ptr >= max) { skip = 1; break; }
@@ -78,17 +80,20 @@ int httpd_vhost_map_callback (httpd_client_t * http, int type) {
       if (lua_pcall (L, 1, 1, 0) != 0) {
         printf ("error! map callback '%s' '%s'\n", vhost->hostname, lua_tostring (L, -1));
         lua_pop (L, 1);
-        return -1;
+        ret = -1;
+        goto finalize;
       }
-      int ret = 1;
+      ret = 1;
       if (lua_isboolean (L, -1) && lua_toboolean (L, -1)) {
         ret = 0;
       }
       lua_pop (L, 1);
-      if (ret <= 0) return ret;
+      if (ret <= 0) goto finalize;
     }
     vhost = vhost->parent;
   }
+finalize:
+  free (new);
   return 1;
 }
 

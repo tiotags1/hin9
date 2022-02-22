@@ -92,12 +92,12 @@ int httpd_parse_headers_line (httpd_client_t * http, string_t * line) {
 }
 
 int httpd_parse_headers (httpd_client_t * http, string_t * source) {
-  string_t line, method, path, param;
+  string_t line, path;
   string_t orig = *source;
 
   while (1) {
     if (source->len <= 0) return 0;
-    if (find_line (source, &line) == 0) return 0;
+    if (hin_find_line (source, &line) == 0) return 0;
     if (line.len == 0) break;
   }
 
@@ -109,37 +109,30 @@ int httpd_parse_headers (httpd_client_t * http, string_t * source) {
   }
 
   line.len = 0;
-  if (find_line (source, &line) == 0 || match_string (&line, "(%a+) ("HIN_HTTP_PATH_ACCEPT") HTTP/1.([01])", &method, &path, &param) <= 0) {
-    httpd_error (http, 400, "parsing request line '%.*s'", (int)line.len, line.ptr);
+  int method = 0, version = 0;
+  if (hin_find_line (source, &line) == 0
+|| hin_http_parse_header_line (&line, &method, &path, &version) < 0
+|| version == 0 || method == 0) {
+    int status = 400;
+    if (version == 0) { status = 505; }
+    if (method == 0) { status = 501; }
+    httpd_error (http, status, "parsing request line '%.*s'", (int)line.len, line.ptr);
     if (http->debug & (DEBUG_RW|DEBUG_RW_ERROR))
       printf (" raw request '\n%.*s'\n", (int)orig.len, orig.ptr);
     return -1;
   }
-  if (*param.ptr != '1') {
-    http->peer_flags |= HIN_HTTP_VER0;
-  } else {
-    http->peer_flags |= HIN_HTTP_KEEPALIVE;
-  }
-  if (matchi_string_equal (&method, "GET") > 0) {
-    http->method = HIN_METHOD_GET;
-  } else if (matchi_string_equal (&method, "POST") > 0) {
-    http->method = HIN_METHOD_POST;
-  } else if (matchi_string_equal (&method, "HEAD") > 0) {
-    http->method = HIN_METHOD_HEAD;
-  } else {
-    httpd_error (http, 405, "unknown method '%.*s'", (int)method.len, method.ptr);
-    if (http->debug & (DEBUG_RW|DEBUG_RW_ERROR))
-      printf (" raw request '\n%.*s'\n", (int)orig.len, orig.ptr);
-    return -1;
-  }
+
+  if (version == 0x10) { http->peer_flags |= HIN_HTTP_VER0;
+  } else { http->peer_flags |= HIN_HTTP_KEEPALIVE; }
 
   if (http->debug & (DEBUG_HTTP|DEBUG_RW))
-    printf ("httpd %d method '%.*s' path '%.*s' HTTP/1.%d\n", http->c.sockfd, (int)method.len, method.ptr,
-      (int)path.len, path.ptr, http->peer_flags & HIN_HTTP_VER0 ? 0 : 1);
+    printf ("httpd %d method %x path '%.*s' ver %x\n", http->c.sockfd, method,
+      (int)path.len, path.ptr, version);
 
   http->count = -1;
+  http->method = method;
 
-  while (find_line (source, &line)) {
+  while (hin_find_line (source, &line)) {
     if (http->debug & DEBUG_RW) printf (" %d '%.*s'\n", (int)line.len, (int)line.len, line.ptr);
     if (line.len == 0) break;
     if (httpd_parse_headers_line (http, &line) < 0) {

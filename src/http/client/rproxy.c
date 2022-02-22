@@ -49,8 +49,9 @@ static int hin_rproxy_headers (http_client_t * http, hin_pipe_t * pipe) {
   buf->parent = pipe;
   buf->debug = parent->debug;
 
-  find_line (&source, &line);
+  hin_find_line (&source, &line);
   if (matchi_string (&line, "HTTP/1.%d (%d+)", &param) <= 0) {
+    printf ("error! %d\n", 43534645);
   }
   parent->status = atoi (param.ptr);
 
@@ -60,7 +61,7 @@ static int hin_rproxy_headers (http_client_t * http, hin_pipe_t * pipe) {
     header (buf, "Content-Length: %ld\r\n", http->sz);
 
   while (1) {
-    if (find_line (&source, &line) == 0) { return 0; }
+    if (hin_find_line (&source, &line) == 0) { return 0; }
     if (line.len == 0) break;
     if (matchi_string (&line, "Content-Length:") > 0) {
     } else if (matchi_string (&line, "Transfer-Encoding:") > 0) {
@@ -136,9 +137,9 @@ static int hin_rproxy_send (http_client_t * http, hin_buffer_t * buf) {
 
   off_t sz = 0;
 
-  find_line (&source, &line);
+  hin_find_line (&source, &line);
   while (1) {
-    if (find_line (&source, &line) == 0) { return 0; }
+    if (hin_find_line (&source, &line) == 0) { return 0; }
     if (line.len == 0) break;
     orig = line;
     if (matchi_string (&line, "Host:") > 0) {
@@ -157,7 +158,7 @@ static int hin_rproxy_send (http_client_t * http, hin_buffer_t * buf) {
   if (sz > 0) {
     header (buf, "Content-Length: %ld\r\n", sz);
     header (buf, "\r\n");
-    if (source.len > sz) source.len = sz;
+    if ((off_t)source.len > sz) source.len = sz;
     header_raw (buf, source.ptr, source.len);
     hin_rproxy_send_post (http, sz - source.len);
     return 1;

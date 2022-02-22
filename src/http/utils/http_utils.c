@@ -67,7 +67,96 @@ const char * http_status_name (int nr) {
   }
 }
 
-int find_line (string_t * source, string_t * line) {
+const char * hin_http_method_name (int num) {
+  if (num == HIN_METHOD_GET) {
+    return "GET";
+  } else if (num == HIN_METHOD_POST) {
+    return "POST";
+  } else if (num == HIN_METHOD_HEAD) {
+    return "HEAD";
+  }
+  return NULL;
+}
+
+int hin_http_parse_header_line (string_t * line, int * method, string_t * path, int * version) {
+  string_t methods, paths, versions;
+  if (match_string (line, "(%a+) ("HIN_HTTP_PATH_ACCEPT") HTTP/([%d%.]+)", &methods, &paths, &versions) <= 0) return -1;
+
+  if (method) {
+    if (matchi_string_equal (&methods, "GET") > 0) {
+      *method = HIN_METHOD_GET;
+    } else if (matchi_string_equal (&methods, "POST") > 0) {
+      *method = HIN_METHOD_POST;
+    } else if (matchi_string_equal (&methods, "HEAD") > 0) {
+      *method = HIN_METHOD_HEAD;
+    } else {
+      *method = 0;
+    }
+  }
+
+  if (version) {
+    if (match_string_equal (&versions, "1.1") > 0) {
+      *version = 0x11;
+    } else if (match_string_equal (&versions, "1.0") > 0) {
+      *version = 0x10;
+    } else {
+      *version = 0;
+    }
+  }
+
+  if (path) {
+    *path = paths;
+  }
+
+  return 0;
+}
+
+static unsigned long int my_strtoul (const char* str, const char** endptr, int base) {
+  int ch;
+  const char * ptr = str;
+  unsigned long num = 0;
+  while (1) {
+    ch = *ptr;
+    if (ch >= '0' && ch <= '9') ch = ch - '0';
+    else if (ch >= 'A' && ch <= 'Z') ch = 10 + ch - 'A';
+    else break;
+    if (ch >= base) break;
+    ptr++;
+    num = num * base + ch;
+  }
+  if (endptr) *endptr = ptr;
+  return num;
+}
+
+char * hin_parse_url_encoding (string_t * source, uint32_t flags) {
+  const char * p1 = source->ptr;
+  const char * max = source->ptr + source->len;
+
+  char * new = malloc (source->len + 1);
+  char * p2 = new;
+
+  while (1) {
+    if (p1 >= max) break;
+    if (*p1 == '%') {
+      p1++;
+      int utf = my_strtoul (p1, &p1, 16);
+      if (utf > 0x1F)
+        *p2 = utf;
+    } else {
+      *p2 = *p1;
+      p1++;
+    }
+    p2++;
+  }
+  *p2 = '\0';
+
+  //printf ("old '%.*s'\n", source->len, source->ptr);
+  //printf ("new '%s'\n", new);
+
+  return new;
+}
+
+int hin_find_line (string_t * source, string_t * line) {
   char * ptr = source->ptr;
   char * max = ptr + source->len;
   char * last = ptr;
@@ -90,6 +179,8 @@ int find_line (string_t * source, string_t * line) {
   return 0;
 }
 
+#define PATH_ACCEPT "%w.=/;-_~!$&'%(%)%*%+,:%%@"
+
 int hin_parse_uri (const char * url, int len, hin_uri_t * info) {
   if (len <= 0) len = strlen (url);
   string_t c;
@@ -111,12 +202,12 @@ int hin_parse_uri (const char * url, int len, hin_uri_t * info) {
     memset (&info->host, 0, sizeof (string_t));
   }
   if (match_string (&c, ":(%d+)", &info->port) > 0) {}
-  if ((err = match_string (&c, "([%w%.=/;-_~!$&'%(%)%*%+,:@%%]+)", &info->path)) < 0) {
+  if ((err = match_string (&c, "(["PATH_ACCEPT"]+)", &info->path)) < 0) {
     printf ("error no path\n");
     return -1;
   }
-  if (match_string (&c, "%?([%w%.=/;-_~!$&'%(%)%*%+,:@%%]+)", &info->query) > 0) {}
-  if (match_string (&c, "%#([%w%.=/;-_~!$&'%(%)%*%+,:@%%]+)", &info->fragment) > 0) {}
+  if (match_string (&c, "%?(["PATH_ACCEPT"]+)", &info->query) > 0) {}
+  if (match_string (&c, "%#(["PATH_ACCEPT"]+)", &info->fragment) > 0) {}
   int used = (uintptr_t)c.ptr - (uintptr_t)url;
   info->all.ptr = (char*)url;
   info->all.len = used;

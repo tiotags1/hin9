@@ -29,8 +29,8 @@ basic_vfs_node_t * basic_vfs_ref_path (basic_vfs_t * vfs, basic_vfs_node_t * dir
   // try to iterate directories
   basic_vfs_dir_t * dir = basic_vfs_get_dir (vfs, current);
   while (1) {
-    int used = match_string (&source, "([%w%._-]+)", &param1);
-    //printf ("matching '%.*s' in %s\n", param1.len, param1.ptr, dir->path);
+    int used = match_string (&source, "([^/%z]+)", &param1);
+    //printf ("matching %d '%.*s' in %s\n", param1.len, param1.len, param1.ptr, dir->path);
     if (used <= 0) return NULL;
     next = basic_vfs_search_dir (vfs, dir, param1.ptr, param1.len);
     if (next == NULL) {

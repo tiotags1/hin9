@@ -22,7 +22,4 @@ int matchi_string (string_t *data, const char *format, ...);
 int match_string_equal (string_t * source, const char * format, ...);
 int matchi_string_equal (string_t * source, const char * format, ...);
 
-char * match_string_to_c (string_t * str);
-string_t match_c_to_string (const char * ptr);
-
 #endif

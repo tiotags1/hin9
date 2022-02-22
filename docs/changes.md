@@ -1,4 +1,13 @@
 
+* fixed parsing of percent-encoded paths, aka now you can have japanese file names and space in filenames (I forgot about this one)
+* simplified and improved the core pattern matching library (this does most of the parsing and should fix a few bugs)
+*  also added better error messages for malformatted format strings
+* parse\_path function now pushes url decoded path (real fs filename)
+* parse\_path function now pushes version as a number instead of a string
+* fixed set\_path not taking into account the filename passed
+* fixed old cgi compilation
+
+commit 2e1fac03d6d33081c49efd714ee2bad135706057
 * fixed command line downloader
 
 commit 112f72b8c3a5487fe9c672adc45466054bcf3883

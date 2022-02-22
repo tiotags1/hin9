@@ -43,14 +43,14 @@ static int http_client_headers_read_callback (hin_buffer_t * buffer, int receive
   string_t orig = *source;
 
   while (1) {
-    if (find_line (source, &line) == 0) return 0;
+    if (hin_find_line (source, &line) == 0) return 0;
     if (line.len == 0) break;
     if (source->len <= 0) return 0;
   }
 
   *source = orig;
 
-  if (find_line (source, &line) == 0 || match_string (&line, "HTTP/1.%d ([%d]+) %w+", &param1) <= 0) {
+  if (hin_find_line (source, &line) == 0 || match_string (&line, "HTTP/1.%d ([%d]+) %w+", &param1) <= 0) {
     httpc_error (http, 0, "http parsing error");
     // close connection return error
     return -1;
@@ -59,7 +59,7 @@ static int http_client_headers_read_callback (hin_buffer_t * buffer, int receive
   http->status = atoi (param1.ptr);
 
   if (http->debug & DEBUG_RW) printf ("http %d headers\n", http->c.sockfd);
-  while (find_line (source, &line)) {
+  while (hin_find_line (source, &line)) {
     if (http->debug & DEBUG_RW) printf (" %d '%.*s'\n", (int)line.len, (int)line.len, line.ptr);
     if (line.len == 0) break;
     if (http_parse_headers_line (http, &line) < 0) {

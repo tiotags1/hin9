@@ -113,7 +113,7 @@ typedef struct http_client_struct {
 } http_client_t;
 
 // TODO no [], pending changes to match_pattern
-#define HIN_HTTP_PATH_ACCEPT "[%w%.%%_-/+&#$?=,:;~@!'*()[]+"
+#define HIN_HTTP_PATH_ACCEPT "[%w.%%_-/+&#$?=,:;~@!'*()%[%]]+"
 #define HIN_HTTP_DATE_FORMAT "%a, %d %b %Y %X GMT"
 
 #include <basic_pattern.h>
@@ -176,6 +176,10 @@ int http_connection_allocate (http_client_t * http);
 int http_connection_release (http_client_t * http);
 
 int hin_find_line (string_t * source, string_t * line);
+
+const char * hin_http_method_name (int num);
+int hin_http_parse_header_line (string_t * line, int * method, string_t * path, int * version);
+char * hin_parse_url_encoding (string_t * source, uint32_t flags);
 
 #include "utils.h"
 

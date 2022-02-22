@@ -66,7 +66,7 @@ int httpd_request_chunked (httpd_client_t * http);
 int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_path, const char * script_path, const char * path_info) {
   hin_client_t * client = &http->c;
   hin_client_t * socket = (hin_client_t*)client->parent;
-  hin_vhost_t * vhost = (hin_vhost_t*)http->vhost;
+  httpd_vhost_t * vhost = (httpd_vhost_t*)http->vhost;
 
   if (http->state & HIN_REQ_DATA) return -1;
   http->state |= (HIN_REQ_DATA | HIN_REQ_CGI);
@@ -109,10 +109,9 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
   int hin_signal_clean ();
   hin_signal_clean ();
 
-  void httpd_close_socket ();
-  httpd_close_socket ();
   int hin_event_clean ();
   hin_event_clean ();
+  // TODO should clear former listen sockets
 
   if (dup2 (out_pipe[1], STDOUT_FILENO) < 0) {
     perror ("dup2");
@@ -136,10 +135,11 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
   memset (&env, 0, sizeof (env));
   env.debug = http->debug;
 
-  string_t source, line, method, path, param1;
+  string_t source, line, path, param1;
   source = http->headers;
-  if (find_line (&source, &line) == 0 || match_string (&line, "(%a+) ("HIN_HTTP_PATH_ACCEPT") HTTP/1.%d", &method, &path) <= 0) {
-    fprintf (stderr, "cgi parsing error\n");
+  int method, version;
+  if (hin_find_line (&source, &line) == 0 || hin_http_parse_header_line (&line, &method, &path, &version)) {
+    fprintf (stderr, "error! %d\n", 645641212);
     return -1;
   }
   hin_uri_t uri;
@@ -212,7 +212,7 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
   var (&env, "SCRIPT_FILENAME=%s%s", dir->path, file->name);
   var (&env, "DOCUMENT_ROOT=%.*s", cwd_dir->path_len-1, cwd_dir->path);
 
-  var (&env, "REQUEST_METHOD=%.*s", method.len, method.ptr);
+  var (&env, "REQUEST_METHOD=%s", hin_http_method_name (method));
   var (&env, "SERVER_PROTOCOL=HTTP/1.%d", http->peer_flags & HIN_HTTP_VER0 ? 0 : 1);
   var (&env, "SERVER_SOFTWARE=" HIN_HTTPD_SERVER_BANNER);
   var (&env, "GATEWAY_INTERFACE=CGI/1.1");
@@ -248,7 +248,7 @@ int hin_cgi (httpd_client_t * http, const char * exe_path, const char * root_pat
 
   string_t hostname;
   memset (&hostname, 0, sizeof (string_t));
-  while (find_line (&source, &line)) {
+  while (hin_find_line (&source, &line)) {
     if (line.len == 0) break;
     if (match_string (&line, "([%w_%-]+):%s*", &param1) > 0) {
       if (memcmp ("Host:", param1.ptr, 5) == 0) {

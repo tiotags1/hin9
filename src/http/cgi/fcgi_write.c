@@ -79,10 +79,11 @@ static int hin_fcgi_headers (hin_buffer_t * buf, hin_fcgi_worker_t * worker) {
   httpd_vhost_t * vhost = (httpd_vhost_t*)http->vhost;
   int sz = 0;
 
-  string_t source, line, method, path, param1;
+  string_t source, line, path, param1;
   source = http->headers;
-  if (find_line (&source, &line) == 0 || match_string (&line, "(%a+) ("HIN_HTTP_PATH_ACCEPT") HTTP/1.%d", &method, &path) <= 0) {
-    fprintf (stderr, "fcgi error! parsing req\n");
+  int method, version;
+  if (hin_find_line (&source, &line) == 0 || hin_http_parse_header_line (&line, &method, &path, &version) < 0) {
+    fprintf (stderr, "error! %d\n", 347000887);
     return -1;
   }
   hin_uri_t uri;
@@ -132,7 +133,7 @@ static int hin_fcgi_headers (hin_buffer_t * buf, hin_fcgi_worker_t * worker) {
   sz += param (buf, "SCRIPT_FILENAME", "%s%s", dir->path, file->name);
   sz += param (buf, "DOCUMENT_ROOT", "%.*s", cwd_dir->path_len-1, cwd_dir->path);
 
-  sz += param (buf, "REQUEST_METHOD", "%.*s", method.len, method.ptr);
+  sz += param (buf, "REQUEST_METHOD", "%s", hin_http_method_name (method));
   sz += param (buf, "SERVER_PROTOCOL", "HTTP/1.%d", http->peer_flags & HIN_HTTP_VER0 ? 0 : 1);
   sz += param (buf, "SERVER_SOFTWARE", "%s", HIN_HTTPD_SERVER_BANNER);
   sz += param (buf, "GATEWAY_INTERFACE", "CGI/1.1");
@@ -171,7 +172,7 @@ static int hin_fcgi_headers (hin_buffer_t * buf, hin_fcgi_worker_t * worker) {
 
   string_t hostname;
   memset (&hostname, 0, sizeof (string_t));
-  while (find_line (&source, &line)) {
+  while (hin_find_line (&source, &line)) {
     if (line.len == 0) break;
     if (match_string (&line, "([%w_%-]+):%s*", &param1) > 0) {
       if (memcmp ("Host:", param1.ptr, 5) == 0) {

@@ -6,8 +6,5 @@ int hin_client_addr (char * str, int len, struct sockaddr * ai_addr, socklen_t a
 
 #include <basic_pattern.h>
 
-int hin_string_equali (string_t * source, const char * format, ...);
-int find_line (string_t * source, string_t * line);
-
 #endif
 

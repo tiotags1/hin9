@@ -215,7 +215,7 @@ int httpd_respond_redirect (httpd_client_t * http, int status, const char * loca
 int httpd_respond_redirect_https (httpd_client_t * http) {
   string_t source, line, path;
   source = http->headers;
-  if (find_line (&source, &line) == 0 || match_string (&line, "%a+ ("HIN_HTTP_PATH_ACCEPT") HTTP/1.%d", &path) <= 0) {
+  if (hin_find_line (&source, &line) == 0 || hin_http_parse_header_line (&line, NULL, &path, NULL) < 0) {
     return -1;
   }
 

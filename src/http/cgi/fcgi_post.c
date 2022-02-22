@@ -74,7 +74,7 @@ int hin_fcgi_write_post (hin_buffer_t * buf, hin_fcgi_worker_t * worker) {
   string_t source, line;
   source = http->headers;
   while (1) {
-    if (find_line (&source, &line) == 0) { return 0; }
+    if (hin_find_line (&source, &line) == 0) { return 0; }
     if (line.len == 0) break;
   }
   if (source.len > (uintptr_t)http->post_sz) {
