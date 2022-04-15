@@ -119,6 +119,7 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer, int received) {
   pipe->in.fd = buffer->fd;
   pipe->in.flags = 0;
   pipe->in.pos = 0;
+  pipe->parent = http;
   pipe->parent1 = worker;
 
   if (worker->socket) {

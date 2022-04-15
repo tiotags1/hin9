@@ -3,7 +3,7 @@
 HIN_NAME=${HIN_NAME:-$RC_SVCNAME}
 HIN_RUN_DIR=${HIN_RUN_DIR:-/run/$HIN_NAME}
 HIN_LOG_DIR=${HIN_LOG_DIR:-/var/log/$HIN_NAME}
-HIN_TMP_DIR=${HIN_TMP_DIR:-/var/tmp/$HIN_NAME}
+HIN_TMP_DIR=${HIN_TMP_DIR:-/tmp/$HIN_NAME}
 HIN_WORK_DIR=${HIN_WORK_DIR:-/var/www/localhost}
 HIN_CFG_FILE=${HIN_CFG_FILE:-/etc/hinsightd/main.lua}
 HIN_LOG_FILE=${HIN_LOG_FILE:-$HIN_LOG_DIR/hindsight.log}

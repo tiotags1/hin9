@@ -14,6 +14,7 @@
 #include <basic_hashtable.h>
 
 typedef struct {
+  int dirfd;
   off_t size, max_size;
   basic_ht_t ht;
 } hin_cache_store_t;
@@ -63,13 +64,33 @@ hin_cache_store_t * hin_cache_create () {
   hin_cache_store_t * store = calloc (1, sizeof (hin_cache_store_t));
   uintptr_t seed;
   hin_random ((uint8_t*)&seed, sizeof (seed));
-  if (master.debug & DEBUG_CONFIG) printf ("cache seed is %zx\n", seed);
   if (basic_ht_init (&store->ht, 1024, seed) < 0) {
     printf ("error! %d\n", 1134557);
   }
   if (default_store == NULL)
     default_store = store;
   store->max_size = HIN_HTTPD_CACHE_MAX_SIZE;
+
+  int slen = strlen (master.tmpdir_path) + sizeof ("/"HIN_HTTPD_CACHE_DIRECTORY"/db") + 1;
+  char * new_path = malloc (slen);
+  snprintf (new_path, slen, "%s"HIN_HTTPD_CACHE_DIRECTORY"/db", master.tmpdir_path);
+  int hin_open_file_and_create_path (int dirfd, const char * path, int flags, mode_t mode);
+  int fd = hin_open_file_and_create_path (AT_FDCWD, new_path, O_WRONLY | O_APPEND | O_CLOEXEC | O_CREAT, 0660);
+  if (fd < 0) {
+    fprintf (stderr, "openat: %s %s\n", strerror (errno), new_path);
+  }
+  close (fd);
+  unlinkat (AT_FDCWD, new_path, 0);
+
+  snprintf (new_path, slen, "%s"HIN_HTTPD_CACHE_DIRECTORY"/", master.tmpdir_path);
+  store->dirfd = openat (AT_FDCWD, new_path, O_DIRECTORY, 0);
+  if (store->dirfd < 0) {
+    fprintf (stderr, "openat: %s %s\n", strerror (errno), new_path);
+  }
+  if (master.debug & DEBUG_CONFIG)
+    printf ("cache '%s' seed %zx dirfd %d\n", new_path, seed, store->dirfd);
+
+  free (new_path);
 
   return store;
 }
@@ -81,9 +102,10 @@ void hin_cache_item_clean (hin_cache_item_t * item) {
   hin_timer_remove (&item->timer);
 
   if (HIN_HTTPD_CACHE_CLEAN_ON_EXIT) {
-    char buffer[sizeof (HIN_HTTPD_CACHE_DIRECTORY) + 70];
-    snprintf (buffer, sizeof buffer, HIN_HTTPD_CACHE_DIRECTORY "/%zx_%zx", item->cache_key1, item->cache_key2);
-    if (unlinkat (AT_FDCWD, buffer, 0) < 0) perror ("unlinkat");
+    hin_cache_store_t * store = item->parent;
+    char buffer[70];
+    snprintf (buffer, sizeof buffer, "%zx_%zx", item->cache_key1, item->cache_key2);
+    if (unlinkat (store->dirfd, buffer, 0) < 0) perror ("unlinkat");
   }
 
   hin_cache_client_queue_t * next;
@@ -121,6 +143,7 @@ void hin_cache_store_clean (hin_cache_store_t * store) {
     hin_cache_unref (item);
   }
   basic_ht_clean (&store->ht);
+  close (store->dirfd);
   free (store);
 }
 
@@ -208,13 +231,13 @@ int hin_cache_save (void * store1, hin_pipe_t * pipe) {
   basic_ht_set_pair (&store->ht, http->cache_key1, http->cache_key2, (uintptr_t)item, 0);
 
   if (HIN_HTTPD_CACHE_TMPFILE) {
-    item->fd = openat (AT_FDCWD, HIN_HTTPD_CACHE_DIRECTORY, O_RDWR | O_TMPFILE, 0600);
+    item->fd = openat (store->dirfd, ".", O_RDWR | O_TMPFILE, 0600);
     if (item->fd < 0) perror ("openat");
   } else {
-    char buffer[sizeof (HIN_HTTPD_CACHE_DIRECTORY) + 70];
-    snprintf (buffer, sizeof buffer, HIN_HTTPD_CACHE_DIRECTORY "/%zx_%zx", http->cache_key1, http->cache_key2);
-    item->fd = openat (AT_FDCWD, buffer, O_RDWR | O_CREAT | O_TRUNC, 0600);
-    if (master.debug & DEBUG_CACHE) printf ("cache %zx_%zx create fd %d path '%s'\n", http->cache_key1, http->cache_key2, item->fd, buffer);
+    char buffer[70];
+    snprintf (buffer, sizeof buffer, "%zx_%zx", http->cache_key1, http->cache_key2);
+    item->fd = openat (store->dirfd, buffer, O_RDWR | O_CREAT | O_TRUNC, 0600);
+    if (master.debug & DEBUG_CACHE) printf ("cache %zx_%zx create fd %d\n", http->cache_key1, http->cache_key2, item->fd);
     if (item->fd < 0) {
       perror ("openat");
       return -1;

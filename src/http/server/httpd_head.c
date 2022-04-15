@@ -32,7 +32,7 @@ int httpd_parse_headers_line (httpd_client_t * http, string_t * line) {
       }
       if (match_string (line, "%s*,%s*") <= 0) break;
     }
-  } else if (match_string (line, "Host:%s*([%w%.]+)", &param1) > 0) {
+  } else if (match_string (line, "Host:%s*([%w.]+)", &param1) > 0) {
     if (httpd_vhost_request (http, param1.ptr, param1.len) < 0) {
       // can't find hostname
     }

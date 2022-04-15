@@ -1,4 +1,9 @@
 
+* fixed cache segfault
+* cache location now obeys temp dir directive
+* rewrote argument handling
+
+commit ce920ba6724dc39965d33b2f19a3c1bf985a324f
 * fixed parsing of percent-encoded paths, aka now you can have japanese file names and space in filenames (I forgot about this one)
 * simplified and improved the core pattern matching library (this does most of the parsing and should fix a few bugs)
 *  also added better error messages for malformatted format strings

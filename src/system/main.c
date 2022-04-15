@@ -57,34 +57,76 @@ void hin_clean1 () {
   #endif
 }
 
-static void print_help () {
-  printf ("usage hinsightd [OPTION]...\n\
- -d --download <url>: download file and exit\n\
- -o --output <path>: save download to file\n\
- -p --progress: show download progress\n\
- -n --name: derive download name from url\n\
-    --serve <port>: start server on <port> without loading any config file\n\
-    --config <path>: sets config path\n\
-    --tmpdir <path>: sets tmp dir path\n\
-    --logdir <path>: sets log dir path\n\
-    --workdir <path>: sets current directory\n\
-    --check: checks config file and exit\n\
-    --pidfile <path>: prints pid to file, used for daemons\n\
-    --daemonize: spawn a daemon from this process's zombie\n\
- -q --quiet: print only error messages\n\
- -V --verbose: print lots of information\n\
-    --loglevel <nr>: 0 prints only errors, 5 prints everything\n\
-    --debugmask 0x<nr>: debugmask in hex\n\
-    --reuse <nr>: used for graceful restart, should never be used otherwise\n\
- -v --version: print program version\n\
- -h --help: print this help\n\
-");
-}
-
 static http_client_t * current_download = NULL;
 
+typedef struct {
+  const char * nshort;
+  const char * nlong;
+  const char * help;
+  int cmd;
+  int opt;
+} hin_arg_t;
+
+enum {CVER=1, CHELP, CPIDFILE, CDAEMONIZE, CPRETEND,
+CDIR,
+CWORKDIR, CLOGDIR, CTMPDIR, CCONFIG, CDLOG, CREUSE,
+CVERBOSE, CQUIET, CLOGLEVEL, CLOGMASK,
+CDOWNLOAD, COUTPUT, CPROGRESS, CAUTONAME, CSERVE};
+
+static hin_arg_t cmdlist[] = {
+{"-v", "--version", "print version info", CVER, 0},
+{"-h", "--help", "print help", CHELP, 0},
+{NULL, "--pidfile", "set output pidfile", CPIDFILE, 0},
+{NULL, "--pretend", NULL, CPRETEND, 0},
+{NULL, "--check", "check config file and exit", CPRETEND, 0},
+{NULL, "--workdir", "set work dir path", CWORKDIR, CWORKDIR},
+{NULL, "--logdir", "set log dir path", CLOGDIR, CLOGDIR},
+{NULL, "--tmpdir", "set tmp dir path", CTMPDIR, CTMPDIR},
+{NULL, "--config", "load config file at path", CCONFIG, 0},
+{NULL, "--log", "set debug log file path", CDLOG, 0},
+{NULL, "--reuse", "internal, don't use", CREUSE, 0},
+{"-V", "--verbose", "verbose output", CVERBOSE, 0},
+{"-q", "--quiet", "print only errors", CQUIET, 0},
+{NULL, "--loglevel", "0 prints only errors, 5 prints everything", CLOGLEVEL, 0},
+{NULL, "--logmask", "debugmask in hex", CLOGMASK, 0},
+{"-d", "--download", "download file and exit", CDOWNLOAD, 0},
+{"-o", "--output", "save download to file", COUTPUT, 0},
+{"-p", "--progress", "show download progress", CPROGRESS, 0},
+{"-n", "--autoname", "derive download name from url", CAUTONAME, 0},
+{NULL, "--serve", "start server on <port> without loading any config file", CSERVE, 0},
+{NULL, NULL, NULL, 0, 0},
+};
+
+static void print_help () {
+  printf ("usage hinsightd [OPTION]...\n");
+  for (int i=0; (size_t)i < sizeof (cmdlist) / sizeof (cmdlist[0]) - 1; i++) {
+    hin_arg_t * cmd = &cmdlist[i];
+    if (cmd->nshort) {
+      printf (" %s", cmd->nshort);
+    } else {
+      printf ("   ");
+    }
+    printf (" %s", cmd->nlong);
+    if (cmd->help) {
+      printf ("\t%s", cmd->help);
+    }
+    printf ("\n");
+  }
+}
+
 int hin_process_argv (basic_args_t * args, const char * name) {
-  if (basic_args_cmp (name, "-v", "--version", NULL)) {
+  hin_arg_t * cmd = NULL;
+
+  for (int i=0; (size_t)i < sizeof (cmdlist) / sizeof (cmdlist[0]); i++) {
+    cmd = &cmdlist[i];
+    if ((cmd->nshort && strcmp (name, cmd->nshort) == 0) ||
+        (cmd->nlong && strcmp (name, cmd->nlong) == 0)) {
+      break;
+    }
+  }
+
+  switch (cmd->cmd) {
+  case CVER:
     printf ("%s", HIN_HTTPD_SERVER_BANNER);
     #ifdef HIN_USE_OPENSSL
     printf (" openssl");
@@ -98,77 +140,74 @@ int hin_process_argv (basic_args_t * args, const char * name) {
     #ifdef HIN_USE_CGI
     printf (" cgi");
     #endif
+    #ifdef HIN_USE_FFCALL
+    printf (" ffcall");
+    #endif
     printf ("\n");
     return 1;
-
-  } else if (basic_args_cmp (name, "-h", "--help", NULL)) {
+  break;
+  case CHELP:
     print_help ();
     return 1;
-
-  } else if (basic_args_cmp (name, "--pidfile", NULL)) {
+  break;
+  case CDAEMONIZE:
+    master.flags |= HIN_DAEMONIZE;
+  break;
+  case CPRETEND:
+    master.flags |= HIN_PRETEND;
+    httpd_vhost_set_debug (0);
+  break;
+  case CWORKDIR:
+  case CLOGDIR:
+  case CTMPDIR:
     const char * path = basic_args_get (args);
     if (path == NULL) {
-      printf ("missing pid path\n");
+      printf ("missing %s path\n", cmd->nlong);
+      print_help ();
+      return -1;
+    }
+    switch (cmd->cmd) {
+    case CWORKDIR:
+      hin_directory_path (path, &master.workdir_path);
+      if (chdir (master.workdir_path) < 0) perror ("chdir");
+    break;
+    case CLOGDIR:
+      hin_directory_path (path, &master.logdir_path);
+    break;
+    case CTMPDIR:
+      hin_directory_path (path, &master.tmpdir_path);
+    break;
+    }
+  break;
+  case CPIDFILE: {
+    const char * path = basic_args_get (args);
+    if (path == NULL) {
+      printf ("missing %s path\n", cmd->nlong);
       print_help ();
       return -1;
     }
     if (*path) master.pid_path = path;
-
-  } else if (basic_args_cmp (name, "--daemonize", NULL)) {
-    master.flags |= HIN_DAEMONIZE;
-
-  } else if (basic_args_cmp (name, "--pretend", "--check", NULL)) {
-    master.flags |= HIN_PRETEND;
-    httpd_vhost_set_debug (0);
-
-  } else if (basic_args_cmp (name, "--workdir", "--cwd", NULL)) {
+  break; }
+  case CCONFIG: {
     const char * path = basic_args_get (args);
     if (path == NULL) {
-      printf ("missing workdir path\n");
-      print_help ();
-      return -1;
-    }
-    hin_directory_path (path, &master.workdir_path);
-    if (chdir (master.workdir_path) < 0) perror ("chdir");
-
-  } else if (basic_args_cmp (name, "--logdir", NULL)) {
-    const char * path = basic_args_get (args);
-    if (path == NULL) {
-      printf ("missing logdir path\n");
-      print_help ();
-      return -1;
-    }
-    hin_directory_path (path, &master.logdir_path);
-
-  } else if (basic_args_cmp (name, "--tmpdir", NULL)) {
-    const char * path = basic_args_get (args);
-    if (path == NULL) {
-      printf ("missing tmpdir path\n");
-      print_help ();
-      return -1;
-    }
-    hin_directory_path (path, &master.tmpdir_path);
-
-  } else if (basic_args_cmp (name, "--config", NULL)) {
-    const char * path = basic_args_get (args);
-    if (path == NULL) {
-      printf ("missing config path\n");
+      printf ("missing %s path\n", cmd->nlong);
       print_help ();
       return -1;
     }
     master.conf_path = path;
     master.flags &= ~HIN_SKIP_CONFIG;
-
-  } else if (basic_args_cmp (name, "--log", NULL)) {
+  break; }
+  case CDLOG: {
     const char * path = basic_args_get (args);
     if (path == NULL) {
-      printf ("missing log path\n");
+      printf ("missing %s path\n", cmd->nlong);
       print_help ();
       return -1;
     }
     if (hin_redirect_log (path) < 0) return -1;
-
-  } else if (basic_args_cmp (name, "--reuse", NULL)) {
+  break; }
+  case CREUSE: {
     const char * path = basic_args_get (args);
     if (path == NULL) {
       printf ("don't use use --reuse\n");
@@ -181,14 +220,14 @@ int hin_process_argv (basic_args_t * args, const char * name) {
       exit (1);
     }
     master.sharefd = fd;
-
-  } else if (basic_args_cmp (name, "-V", "--verbose", NULL)) {
+  break; }
+  case CVERBOSE:
     httpd_vhost_set_debug (0xffffffff);
-
-  } else if (basic_args_cmp (name, "-q", "--quiet", NULL)) {
-    httpd_vhost_set_debug (0);
-
-  } else if (basic_args_cmp (name, "--loglevel", NULL)) {
+  break;
+  case CQUIET:
+    httpd_vhost_set_debug (0x0);
+  break;
+  case CLOGLEVEL: {
     const char * path = basic_args_get (args);
     if (path == NULL) {
       printf ("missing loglevel\n");
@@ -207,8 +246,8 @@ int hin_process_argv (basic_args_t * args, const char * name) {
     default: printf ("unkown loglevel '%s'\n", path); return -1; break;
     }
     httpd_vhost_set_debug (master.debug);
-
-  } else if (basic_args_cmp (name, "--debugmask", NULL)) {
+  break; }
+  case CLOGMASK: {
     const char * path = basic_args_get (args);
     if (path == NULL) {
       printf ("missing debugmask\n");
@@ -216,9 +255,8 @@ int hin_process_argv (basic_args_t * args, const char * name) {
       return -1;
     }
     httpd_vhost_set_debug (strtol (path, NULL, 16));
-
-  // download
-  } else if (basic_args_cmp (name, "-d", "--download", NULL)) {
+  break; }
+  case CDOWNLOAD: {
     const char * path = basic_args_get (args);
     if (path == NULL) {
       printf ("missing uri\n");
@@ -231,8 +269,8 @@ int hin_process_argv (basic_args_t * args, const char * name) {
     master.flags |= HIN_SKIP_CONFIG;
     master.debug &= ~(DEBUG_BASIC | DEBUG_CONFIG);
     master.flags |= HIN_FLAG_QUIT;
-
-  } else if (basic_args_cmp (name, "-o", "--output", NULL)) {
+  break; }
+  case COUTPUT: {
     const char * path = basic_args_get (args);
     if (path == NULL) {
       printf ("missing arg for output path\n");
@@ -249,24 +287,24 @@ int hin_process_argv (basic_args_t * args, const char * name) {
       printf ("error! can't open %s %s\n", path, strerror (errno));
       return -1;
     }
-
-  } else if (basic_args_cmp (name, "-p", "--progress", NULL)) {
+  break; }
+  case CPROGRESS:
     if (current_download == NULL) {
       printf ("no current download\n");
       return -1;
     }
     http_client_t * http = current_download;
     http->debug |= DEBUG_PROGRESS;
-
-  } else if (basic_args_cmp (name, "-n", "--name", NULL)) {
+  break;
+  case CAUTONAME: {
     if (current_download == NULL) {
       printf ("no current download\n");
       return -1;
     }
     http_client_t * http = current_download;
     http->flags |= HIN_FLAG_AUTONAME;
-
-  } else if (basic_args_cmp (name, "--serve", NULL)) {
+  break; }
+  case CSERVE: {
     const char * port = basic_args_get (args);
     if (port == NULL) {
       printf ("missing port for serve\n");
@@ -280,11 +318,12 @@ int hin_process_argv (basic_args_t * args, const char * name) {
     httpd_vhost_t * vhost = httpd_vhost_get_default ();
     sock->c.parent = vhost;
     master.flags |= HIN_SKIP_CONFIG;
-
-  } else {
+  break; }
+  default:
     printf ("unkown option '%s'\n", name);
     print_help ();
     return -1;
+  break;
   }
   return 0;
 }
@@ -298,6 +337,7 @@ int main (int argc, const char * argv[], const char * envp[]) {
   master.debug = HIN_DEBUG_MASK;
   hin_directory_path (HIN_LOGDIR_PATH, &master.logdir_path);
   hin_directory_path (HIN_WORKDIR_PATH, &master.workdir_path);
+  hin_directory_path (HIN_TEMP_PATH, &master.tmpdir_path);
 
   int ret = basic_args_process (argc, argv, hin_process_argv);
   if (ret) {
@@ -370,8 +410,6 @@ int main (int argc, const char * argv[], const char * envp[]) {
 
   void * hin_cache_create ();
   hin_cache_create ();
-
-  hin_check_alive ();
 
   hin_event_loop ();
 

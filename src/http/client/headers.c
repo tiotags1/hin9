@@ -58,7 +58,7 @@ static int http_client_headers_read_callback (hin_buffer_t * buffer, int receive
 
   http->status = atoi (param1.ptr);
 
-  if (http->debug & DEBUG_RW) printf ("http %d headers\n", http->c.sockfd);
+  if (http->debug & DEBUG_RW) printf ("http %d headers status %d\n", http->c.sockfd, http->status);
   while (hin_find_line (source, &line)) {
     if (http->debug & DEBUG_RW) printf (" %d '%.*s'\n", (int)line.len, (int)line.len, line.ptr);
     if (line.len == 0) break;
@@ -139,7 +139,7 @@ static int http_client_sent_callback (hin_buffer_t * buf, int ret) {
 }
 
 int http_client_start_headers (http_client_t * http, hin_buffer_t * received) {
-  if (http->debug & DEBUG_HTTP) printf ("http %d request begin\n", http->c.sockfd);
+  if (http->debug & DEBUG_HTTP) printf ("http %d '%s' begin\n", http->c.sockfd, http->uri.all.ptr);
 
   hin_lines_t * lines = (hin_lines_t*)&http->read_buffer->buffer;
   lines->read_callback = http_client_headers_read_callback;

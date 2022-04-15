@@ -80,7 +80,7 @@ const char * hin_http_method_name (int num) {
 
 int hin_http_parse_header_line (string_t * line, int * method, string_t * path, int * version) {
   string_t methods, paths, versions;
-  if (match_string (line, "(%a+) ("HIN_HTTP_PATH_ACCEPT") HTTP/([%d%.]+)", &methods, &paths, &versions) <= 0) return -1;
+  if (match_string (line, "(%a+) ("HIN_HTTP_PATH_ACCEPT") HTTP/([%d.]+)", &methods, &paths, &versions) <= 0) return -1;
 
   if (method) {
     if (matchi_string_equal (&methods, "GET") > 0) {
@@ -194,10 +194,10 @@ int hin_parse_uri (const char * url, int len, hin_uri_t * info) {
     info->https = 1;
   } else if (match_string (&c, "(http)://", &info->scheme) > 0) {
     info->https = 0;
-  } else if (match_string (&c, "([%w%+%-%.]+)://", &info->scheme) > 0) {
+  } else if (match_string (&c, "([%w+-.]+)://", &info->scheme) > 0) {
   } else {
   }// generic scheme is letter+number, +, -, .
-  if (match_string (&c, "([%w%.%-_]+)", &info->host) < 0) {
+  if (match_string (&c, "([%w.-_]+)", &info->host) < 0) {
     //return -1;
     memset (&info->host, 0, sizeof (string_t));
   }

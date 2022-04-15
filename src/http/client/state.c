@@ -9,9 +9,6 @@
 int http_client_start_headers (http_client_t * http, int ret);
 
 int hin_http_state (http_client_t * http, int state, uintptr_t data) {
-  if (http->debug & DEBUG_HTTP)
-    printf ("http %d state is %d\n", http->c.sockfd, state);
-
   string_t url = http->uri.all;
   switch (state) {
   case HIN_HTTP_STATE_CONNECTED:
@@ -29,6 +26,10 @@ int hin_http_state (http_client_t * http, int state, uintptr_t data) {
   case HIN_HTTP_STATE_ERROR:
     if (http->debug & (DEBUG_HTTP|DEBUG_RW_ERROR))
       fprintf (stderr, "%.*s generic error\n", (int)url.len, url.ptr);
+  break;
+  default:
+    if (http->debug & DEBUG_HTTP)
+      printf ("http %d state is %d\n", http->c.sockfd, state);
   break;
   }
   if (http->state_callback) {
