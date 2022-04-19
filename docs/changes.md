@@ -1,5 +1,11 @@
 
-* fixed cache segfault
+* fixed crash when handling some http error status codes
+* fixed https client not connecting to port 443 by default
+* fixed https client use after free, didn't handle the case where you finish the buffer as soon as you issue the read operation
+* fixed https client memleak
+
+commit 7da2363557e1f725e5b9068ea282d00e31235efb
+* fixed cache use-after-free
 * cache location now obeys temp dir directive
 * rewrote argument handling
 

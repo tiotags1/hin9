@@ -25,6 +25,8 @@ int hin_clean () {
   hin_timer_clean ();
   int hin_socket_clean ();
   hin_socket_clean ();
+  void hin_ssl_cleanup ();
+  hin_ssl_cleanup ();
   return 0;
 }
 

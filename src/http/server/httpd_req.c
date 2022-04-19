@@ -136,8 +136,8 @@ int httpd_respond_fatal (httpd_client_t * http, int status, const char * body) {
   http->state &= ~(HIN_REQ_DATA | HIN_REQ_POST);
   http->state |= HIN_REQ_ERROR;
   http->method = HIN_METHOD_GET;
+  http->peer_flags &= ~HIN_HTTP_KEEPALIVE;
   httpd_respond_text (http, status, body);
-  httpd_client_shutdown (http);
   return 0;
 }
 
@@ -146,8 +146,8 @@ int httpd_respond_fatal_and_full (httpd_client_t * http, int status, const char 
   http->state &= ~(HIN_REQ_DATA | HIN_REQ_POST);
   http->state |= HIN_REQ_ERROR;
   http->method = HIN_METHOD_GET;
+  http->peer_flags &= ~HIN_HTTP_KEEPALIVE;
   httpd_respond_text (http, status, body);
-  httpd_client_shutdown (http);
   return 0;
 }
 

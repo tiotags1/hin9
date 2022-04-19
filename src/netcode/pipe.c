@@ -172,15 +172,15 @@ static int hin_pipe_read_next (hin_pipe_t * pipe, hin_buffer_t * buffer) {
   buffer->pos = pipe->in.pos;
   if ((pipe->in.flags & HIN_COUNT) && pipe->left < READ_SZ) buffer->count = pipe->left;
 
+  buffer->list.next = buffer->list.prev = NULL;
+  basic_dlist_append (&pipe->reading, &buffer->list);
+
   if (hin_request_read (buffer) < 0) {
     if (pipe->in_error_callback)
       pipe->in_error_callback (pipe, 0);
     hin_pipe_close (pipe);
     return -1;
   }
-
-  buffer->list.next = buffer->list.prev = NULL;
-  basic_dlist_append (&pipe->reading, &buffer->list);
 
   return 0;
 }

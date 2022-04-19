@@ -18,7 +18,7 @@
 #ifdef HIN_USE_OPENSSL
 
 // Global SSL context
-SSL_CTX * default_ctx = NULL;
+static SSL_CTX * default_ctx = NULL;
 
 SSL_CTX * hin_ssl_default_init () {
   SSL_CTX * ctx = NULL;
@@ -75,7 +75,7 @@ int hin_ssl_connect_init (hin_client_t * client) {
 
   SSL_set_connect_state (ssl->ssl); // sets ssl to work in connect mode.
   SSL_set_bio (ssl->ssl, ssl->rbio, ssl->wbio);
-  SSL_set_ex_data(ssl->ssl, 0, client);
+  SSL_set_ex_data (ssl->ssl, 0, client);
 
   client->flags |= HIN_SSL;
   if (master.debug & DEBUG_SSL) printf ("ssl init connect sockfd %d\n", client->sockfd);
@@ -85,6 +85,13 @@ int hin_ssl_connect_init (hin_client_t * client) {
 void hin_client_ssl_cleanup (hin_client_t * client) {
   hin_ssl_t * ssl = &client->ssl;
   SSL_free (ssl->ssl);   // free the SSL object and its BIO's
+}
+
+void hin_ssl_cleanup () {
+  if (default_ctx) {
+    SSL_CTX_free (default_ctx);
+    default_ctx = NULL;
+  }
 }
 
 void hin_ssl_print_error () {

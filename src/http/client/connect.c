@@ -17,7 +17,13 @@ void http_client_clean (http_client_t * http) {
     close (http->save_fd);
     http->save_fd = 0;
   }
+  if (http->progress) {
+    free (http->progress);
+  }
   http->c.parent = NULL;
+
+  if (http->c.flags & HIN_SSL)
+    hin_client_ssl_cleanup (&http->c);
 
   http->io_state &= HIN_REQ_HEADERS;
 }
@@ -181,6 +187,8 @@ http_client_t * http_connection_get (const char * url1) {
     http->host = strndup (info.host.ptr, info.host.len);
     if (info.port.len > 0) {
       http->port = strndup (info.port.ptr, info.port.len);
+    } else if (info.https) {
+      http->port = strdup ("443");
     } else {
       http->port = strdup ("80");
     }

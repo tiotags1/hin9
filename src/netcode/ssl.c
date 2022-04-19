@@ -74,7 +74,8 @@ int hin_ssl_read_callback (hin_buffer_t * crypt, int ret) {
     //return hin_ssl_callback (plain, ret);
   }
 
-  hin_ssl_handshake (ssl, crypt);
+  if (hin_ssl_handshake (ssl, crypt)) {
+  }
   return 0;
 }
 
@@ -102,7 +103,8 @@ static int hin_ssl_write_callback (hin_buffer_t * crypt, int ret) {
   } else {
     if (crypt->debug & DEBUG_SSL) printf ("ssl done write crypt %d/%d\n", ret, crypt->count);
   }
-  hin_ssl_handshake (crypt->ssl, crypt);
+  if (hin_ssl_handshake (crypt->ssl, crypt)) {
+  }
   return 0;
 }
 
@@ -118,6 +120,7 @@ static int hin_ssl_do_read (hin_ssl_t * ssl, hin_buffer_t * crypt) {
     if (crypt->debug & DEBUG_SSL) printf ("ssl read ahead read %d plain %d\n", m, plain->count);
     ssl->flags &= ~HIN_SSL_READ;
     basic_dlist_remove (&ssl->read_list, &plain->list);
+    plain->ssl_buffer = crypt;
     return hin_ssl_callback (plain, m); // does clean inside the function
   }
 
@@ -281,7 +284,10 @@ int hin_ssl_request_write (hin_buffer_t * buffer) {
   hin_ssl_t * ssl = buffer->ssl;
   if (buffer->list.prev || buffer->list.next) { printf ("error! %d\n", 435343478); }
   basic_dlist_append (&ssl->write_list, &buffer->list);
-  if (ssl->write_list.next == &buffer->list) hin_ssl_handshake (ssl, buffer);
+  if (ssl->write_list.next == &buffer->list) {
+    if (hin_ssl_handshake (ssl, buffer)) {
+    }
+  }
   return 0;
 }
 
@@ -289,7 +295,10 @@ int hin_ssl_request_read (hin_buffer_t * buffer) {
   hin_ssl_t * ssl = buffer->ssl;
   if (buffer->list.prev || buffer->list.next) { printf ("error! %d\n", 436767676); }
   basic_dlist_append (&ssl->read_list, &buffer->list);
-  if (ssl->read_list.next == &buffer->list) hin_ssl_handshake (ssl, buffer);
+  if (ssl->read_list.next == &buffer->list) {
+    if (hin_ssl_handshake (ssl, buffer)) {
+    }
+  }
   return 0;
 }
 
