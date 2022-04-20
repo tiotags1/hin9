@@ -1,4 +1,7 @@
 
+* fixed init.d script
+
+commit 4f2bcd4030eebfc536e5b246e88f1d9e5f6e86a1
 * fixed crash when handling some http error status codes
 * fixed https client not connecting to port 443 by default
 * fixed https client use after free, didn't handle the case where you finish the buffer as soon as you issue the read operation

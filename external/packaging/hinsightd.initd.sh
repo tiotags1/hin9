@@ -12,7 +12,7 @@ extra_commands="checkconfig reload"
 
 command=${HIN_BIN:-/usr/sbin/hinsightd}
 pidfile="${HIN_PID_FILE:-$HIN_RUN_DIR/$HIN_NAME.pid}"
-command_args="--log $HIN_LOG_FILE --config $HIN_CFG_FILE --logdir $HIN_LOG_DIR --tmpdir $HIN_TMP_DIR --cwd $HIN_WORK_DIR --pidfile $pidfile.1"
+command_args="--log $HIN_LOG_FILE --config $HIN_CFG_FILE --logdir $HIN_LOG_DIR --tmpdir $HIN_TMP_DIR --workdir $HIN_WORK_DIR --pidfile $pidfile.1"
 command_args_background="--daemonize"
 command_user=${HIN_USER:-hinsightd}
 

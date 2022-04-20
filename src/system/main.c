@@ -76,24 +76,25 @@ CDOWNLOAD, COUTPUT, CPROGRESS, CAUTONAME, CSERVE};
 static hin_arg_t cmdlist[] = {
 {"-v", "--version", "print version info", CVER, 0},
 {"-h", "--help", "print help", CHELP, 0},
-{NULL, "--pidfile", "set output pidfile", CPIDFILE, 0},
-{NULL, "--pretend", NULL, CPRETEND, 0},
-{NULL, "--check", "check config file and exit", CPRETEND, 0},
-{NULL, "--workdir", "set work dir path", CWORKDIR, CWORKDIR},
-{NULL, "--logdir", "set log dir path", CLOGDIR, CLOGDIR},
-{NULL, "--tmpdir", "set tmp dir path", CTMPDIR, CTMPDIR},
-{NULL, "--config", "load config file at path", CCONFIG, 0},
-{NULL, "--log", "set debug log file path", CDLOG, 0},
-{NULL, "--reuse", "internal, don't use", CREUSE, 0},
-{"-V", "--verbose", "verbose output", CVERBOSE, 0},
-{"-q", "--quiet", "print only errors", CQUIET, 0},
-{NULL, "--loglevel", "0 prints only errors, 5 prints everything", CLOGLEVEL, 0},
-{NULL, "--logmask", "debugmask in hex", CLOGMASK, 0},
 {"-d", "--download", "download file and exit", CDOWNLOAD, 0},
 {"-o", "--output", "save download to file", COUTPUT, 0},
 {"-p", "--progress", "show download progress", CPROGRESS, 0},
 {"-n", "--autoname", "derive download name from url", CAUTONAME, 0},
 {NULL, "--serve", "start server on <port> without loading any config file", CSERVE, 0},
+{NULL, "--config", "load config file at path", CCONFIG, 0},
+{NULL, "--log", "set debug log file path", CDLOG, 0},
+{NULL, "--pretend", NULL, CPRETEND, 0},
+{NULL, "--check", "check config file and exit", CPRETEND, 0},
+{NULL, "--pidfile", "set output pidfile", CPIDFILE, 0},
+{NULL, "--daemonize", "daemonize service", CDAEMONIZE, 0},
+{NULL, "--workdir", "set work dir path", CWORKDIR, CWORKDIR},
+{NULL, "--logdir", "set log dir path", CLOGDIR, CLOGDIR},
+{NULL, "--tmpdir", "set tmp dir path", CTMPDIR, CTMPDIR},
+{NULL, "--reuse", "internal, don't use", CREUSE, 0},
+{"-V", "--verbose", "verbose output", CVERBOSE, 0},
+{"-q", "--quiet", "print only errors", CQUIET, 0},
+{NULL, "--loglevel", "0 prints only errors, 5 prints everything", CLOGLEVEL, 0},
+{NULL, "--logmask", "debugmask in hex", CLOGMASK, 0},
 {NULL, NULL, NULL, 0, 0},
 };
 
@@ -230,7 +231,7 @@ int hin_process_argv (basic_args_t * args, const char * name) {
   case CLOGLEVEL: {
     const char * path = basic_args_get (args);
     if (path == NULL) {
-      printf ("missing loglevel\n");
+      printf ("missing argument for %s\n", cmd->nlong);
       print_help ();
       return -1;
     }
@@ -250,7 +251,7 @@ int hin_process_argv (basic_args_t * args, const char * name) {
   case CLOGMASK: {
     const char * path = basic_args_get (args);
     if (path == NULL) {
-      printf ("missing debugmask\n");
+      printf ("missing argument for %s\n", cmd->nlong);
       print_help ();
       return -1;
     }
@@ -259,7 +260,7 @@ int hin_process_argv (basic_args_t * args, const char * name) {
   case CDOWNLOAD: {
     const char * path = basic_args_get (args);
     if (path == NULL) {
-      printf ("missing uri\n");
+      printf ("missing argument for %s\n", cmd->nlong);
       print_help ();
       return -1;
     }
@@ -273,12 +274,12 @@ int hin_process_argv (basic_args_t * args, const char * name) {
   case COUTPUT: {
     const char * path = basic_args_get (args);
     if (path == NULL) {
-      printf ("missing arg for output path\n");
+      printf ("missing argument for %s\n", cmd->nlong);
       print_help ();
       return -1;
     }
     if (current_download == NULL) {
-      printf ("no current download for outpath '%s'\n", path);
+      printf ("no current download for %s\n", cmd->nlong);
       return -1;
     }
     http_client_t * http = current_download;
@@ -290,7 +291,7 @@ int hin_process_argv (basic_args_t * args, const char * name) {
   break; }
   case CPROGRESS:
     if (current_download == NULL) {
-      printf ("no current download\n");
+      printf ("no current download for %s\n", cmd->nlong);
       return -1;
     }
     http_client_t * http = current_download;
@@ -298,7 +299,7 @@ int hin_process_argv (basic_args_t * args, const char * name) {
   break;
   case CAUTONAME: {
     if (current_download == NULL) {
-      printf ("no current download\n");
+      printf ("no current download for %s\n", cmd->nlong);
       return -1;
     }
     http_client_t * http = current_download;
@@ -307,7 +308,7 @@ int hin_process_argv (basic_args_t * args, const char * name) {
   case CSERVE: {
     const char * port = basic_args_get (args);
     if (port == NULL) {
-      printf ("missing port for serve\n");
+      printf ("missing argument for %s\n", cmd->nlong);
       print_help ();
       return -1;
     }
