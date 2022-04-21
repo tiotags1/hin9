@@ -1,4 +1,8 @@
 
+* fixed not properly exiting if listen sockets are waiting for the socket to become not busy
+* fixed compilation errors
+
+commit f5cfd6c267572641678d1206e4efa17d581f4942
 * fixed init.d script
 
 commit 4f2bcd4030eebfc536e5b246e88f1d9e5f6e86a1

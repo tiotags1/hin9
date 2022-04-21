@@ -81,7 +81,7 @@ static hin_arg_t cmdlist[] = {
 {"-p", "--progress", "show download progress", CPROGRESS, 0},
 {"-n", "--autoname", "derive download name from url", CAUTONAME, 0},
 {NULL, "--serve", "start server on <port> without loading any config file", CSERVE, 0},
-{NULL, "--config", "load config file at path", CCONFIG, 0},
+{"-c", "--config", "load config file at path", CCONFIG, 0},
 {NULL, "--log", "set debug log file path", CDLOG, 0},
 {NULL, "--pretend", NULL, CPRETEND, 0},
 {NULL, "--check", "check config file and exit", CPRETEND, 0},
@@ -160,7 +160,7 @@ int hin_process_argv (basic_args_t * args, const char * name) {
   break;
   case CWORKDIR:
   case CLOGDIR:
-  case CTMPDIR:
+  case CTMPDIR: {
     const char * path = basic_args_get (args);
     if (path == NULL) {
       printf ("missing %s path\n", cmd->nlong);
@@ -179,7 +179,7 @@ int hin_process_argv (basic_args_t * args, const char * name) {
       hin_directory_path (path, &master.tmpdir_path);
     break;
     }
-  break;
+  break; }
   case CPIDFILE: {
     const char * path = basic_args_get (args);
     if (path == NULL) {
@@ -401,6 +401,9 @@ int main (int argc, const char * argv[], const char * envp[]) {
     return -1;
   }
 
+  void * hin_cache_create ();
+  hin_cache_create ();
+
   if (master.flags & HIN_FLAG_QUIT) {
   } else if (master.num_listen <= 0) {
     printf ("WARNING! no listen sockets\n");
@@ -408,9 +411,6 @@ int main (int argc, const char * argv[], const char * envp[]) {
   } else if (master.debug & DEBUG_BASIC)
     printf ("hin serve ...\n");
   master.share->done = 1;
-
-  void * hin_cache_create ();
-  hin_cache_create ();
 
   hin_event_loop ();
 

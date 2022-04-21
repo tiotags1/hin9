@@ -34,6 +34,9 @@ void hin_stop () {
   master.flags |= HIN_FLAG_QUIT;
 
   basic_dlist_t * elem = master.server_list.next;
+  if (elem == NULL) {
+    hin_check_alive ();
+  }
   while (elem) {
     hin_server_t * server = basic_dlist_ptr (elem, offsetof (hin_client_t, list));
     elem = elem->next;
