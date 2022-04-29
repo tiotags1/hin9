@@ -1,7 +1,7 @@
 function reference
 ------------------
 
-moved at [new site](https://tiotags1.github.io/tiotags1/docs/reference.html)
+moved at [new site](https://tiotags.gitlab.io/hinsightd/docs/reference)
 
 
 
