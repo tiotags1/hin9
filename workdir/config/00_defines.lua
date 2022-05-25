@@ -5,6 +5,12 @@
 access_log = logdir .. "access.log"
 server_name = "localhost"
 
+server_http_port = "8080"
+server_https_port = "8081"
+server_bind_host = "localhost"
+server_htdocs = "htdocs"
+server_remote = "http://localhost:28081/"
+
 -- content
 to_cache = {ico=true, txt=true, js=true, jpg=true, png=true, css=true}
 

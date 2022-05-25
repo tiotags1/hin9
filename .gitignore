@@ -31,9 +31,9 @@ workdir/logs/*
 !workdir/logs/.keep
 workdir/config/*
 !workdir/config/00_defines.lua
-!workdir/config/01_localhost.lua
-!workdir/config/_10_proxy.lua
-!workdir/config/_10_fcgi.lua
+!workdir/config/10_localhost.lua
+!workdir/config/_20_proxy.lua
+!workdir/config/_20_fcgi.lua
 !workdir/config/99_default.lua
 
 *.pem

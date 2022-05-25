@@ -6,11 +6,11 @@ cert = create_cert ("workdir/ssl/cert.pem", "workdir/ssl/key.pem")
 main = add_vhost {
 host = {"localhost"},
 socket = {
-  {bind=nil, port="8080", sock_type="ipv4"},
-  {bind=nil, port="8081", sock_type="ipv4", ssl=true},
+  {bind=server_bind_host, port=server_http_port, sock_type="ipv4"},
+  {bind=server_bind_host, port=server_https_port, sock_type="ipv4", ssl=true},
 },
 cert = cert,
-htdocs="htdocs",
+htdocs = server_htdocs,
 --hsts=600,
 --hsts_flags="subdomains preload no_redirect no_header",
 }

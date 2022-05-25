@@ -1,4 +1,10 @@
 
+* added some tests
+* made the default config a bit easier to modify
+* simplified default reverse proxy config
+* fixed default index.html
+
+commit 53e209bd61859915c5526fe00d2ed099b5952205
 * fixed not properly exiting if listen sockets are waiting for the socket to become not busy
 * fixed compilation errors
 

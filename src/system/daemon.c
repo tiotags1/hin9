@@ -128,9 +128,9 @@ int hin_linux_set_limits () {
   }
 
   if (new.rlim_cur < HIN_RLIMIT_MEMLOCK) {
-    printf ("WARNING! low RLIMIT_MEMLOCK, possible crashes\n");
-    printf (" current: %lld\n", (long long)new.rlim_cur);
-    printf (" suggested: %lld\n", (long long)HIN_RLIMIT_MEMLOCK);
+    fprintf (stderr, "WARNING! low RLIMIT_MEMLOCK, possible crashes\n");
+    fprintf (stderr, " current: %lld\n", (long long)new.rlim_cur);
+    fprintf (stderr, " suggested: %lld\n", (long long)HIN_RLIMIT_MEMLOCK);
   }
 
   memset (&new, 0, sizeof (new));
