@@ -1,11 +1,7 @@
 
 set -e
 
-exit 1
-
-URL=http://$HOST:$PORT/proxy/
-
-# broken inside test, works outside ?
+URL=http://$HOST:$PORT/tests/cache.php
 
 export RET="$(ab -k -c $BENCH_CON -n $BENCH_NUM $URL)"
 

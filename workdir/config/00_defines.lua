@@ -16,8 +16,9 @@ to_cache = {ico=true, txt=true, js=true, jpg=true, png=true, css=true}
 
 to_compress = {html=true, css=true, js=true, txt=true, php=true}
 
-content_type = {html="text/html", jpg="image/jpeg", png="image/png", gif="image/gif", txt="text/plain", css="text/css", ico="image/vnd.microsoft.icon", js="text/javascript",
-svg="image/svg+xml"}
+content_type = {html="text/html", jpg="image/jpeg", png="image/png", gif="image/gif", txt="text/plain", css="text/css", ico="image/vnd.microsoft.icon", js="text/javascript", svg="image/svg+xml",
+bin="application/octet-stream",
+apng="image/apng", avif="image/avif", webp="image/webp"}
 
 -- if no index file is present try to list files inside the directory
 --set_server_option (main, "directory_listing", true)

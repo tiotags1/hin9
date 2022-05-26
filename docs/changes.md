@@ -1,4 +1,11 @@
 
+* new tests
+* added ability to only run a single test
+* POST test actually POSTs
+* centralized number of requests sent to ab in the main test.sh
+* httpd made headers case insensitive
+
+commit 4e9471ad52a530d817ffe7c331b3ca088d1cb831
 * added some tests
 * made the default config a bit easier to modify
 * simplified default reverse proxy config

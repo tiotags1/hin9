@@ -49,7 +49,9 @@ int httpd_vhost_map_callback (httpd_client_t * http, int type) {
 
   string_t source = http->headers;
   string_t path;
-  if (hin_http_parse_header_line (&source, NULL, &path, NULL) < 0) {}
+  if (hin_http_parse_header_line (&source, NULL, &path, NULL) < 0) {
+    return 0;
+  }
   char * new = hin_parse_url_encoding (&path, 0);
   const char * max = new + path.len;
   int ret = 1;

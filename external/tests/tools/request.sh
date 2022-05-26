@@ -1,6 +1,6 @@
 
 set -e
-set -o xtrace
+#set -o xtrace
 
 out_file=$test_dir/$name.bin
 

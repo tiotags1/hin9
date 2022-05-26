@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# requires curl, apache bench, netcat, coreutils
+
 cd "${0%/*}"
 ROOT=`pwd`
 
@@ -9,6 +11,8 @@ export HOST=localhost
 export PORT=8080
 export PORTS=8081
 export REMOTE=http://localhost:28081/
+export BENCH_CON=1000
+export BENCH_NUM=10000
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -18,7 +22,7 @@ complete=0
 total=0
 
 export run_dir=`pwd`/build/tests/
-export scripts_dir=$ROOT
+export scripts_dir=$ROOT/tools/
 
 mkdir -p $run_dir
 
@@ -28,29 +32,39 @@ work_dir=`pwd`/workdir/
 
 cat $work_dir/config/_20_fcgi.lua $work_dir/config/_20_proxy.lua > $work_dir/config/20_test_temp.lua
 
-rm -f $run_dir/bench.txt
+#rm -f $run_dir/bench.txt
+date >> $run_dir/bench.txt
 
 build/hin9 > ${run_dir}server.log &
 PID=$!
 
 sleep 1
 
-for file in $ROOT/tests/*.sh; do
+run_test () {
   export name=`basename $file`
   export name="${name%.*}"
   export test_dir=$run_dir/
   ((total++))
-  if sh $file > ${run_dir}$name.log 2>&1; then
-    printf "$name\t ${GREEN}successful$NC\n"
+  if sh $file &> ${run_dir}$name.log; then
+    printf "${GREEN}success$NC\t$name\n"
     ((complete++))
   else
-    printf "$name\t ${RED}failed$NC\n"
+    printf "${RED}failed$NC\t$name\n"
   fi
-done
+}
+
+if [ -n "$1" ]; then
+  file=$ROOT/$1
+  run_test
+else
+  for file in $ROOT/tests/*.sh; do
+    run_test
+  done
+fi
 
 rm $work_dir/config/20_test_temp.lua
 
-kill $PID
+kill -2 $PID
 wait
 
 echo "Successfully finished $complete/$total tests"
