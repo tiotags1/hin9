@@ -20,6 +20,8 @@ content_type = {html="text/html", jpg="image/jpeg", png="image/png", gif="image/
 bin="application/octet-stream",
 apng="image/apng", avif="image/avif", webp="image/webp"}
 
+forbidden_files = {php=true}
+
 -- if no index file is present try to list files inside the directory
 --set_server_option (main, "directory_listing", true)
 

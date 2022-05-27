@@ -1,6 +1,8 @@
 #!/bin/bash
 
 # requires curl, apache bench, netcat, coreutils
+# for php: requires a php-fpm listening on local port 9000
+# for rproxy: requires another http server listening on port 28081 with the same htdocs as this one and php enabled
 
 cd "${0%/*}"
 ROOT=`pwd`
@@ -13,6 +15,9 @@ export PORTS=8081
 export REMOTE=http://localhost:28081/
 export BENCH_CON=1000
 export BENCH_NUM=10000
+export ROOT_DIR=`pwd`
+
+#export PORT=28081
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -30,7 +35,7 @@ export htdocs=`pwd`/htdocs/
 
 work_dir=`pwd`/workdir/
 
-cat $work_dir/config/_20_fcgi.lua $work_dir/config/_20_proxy.lua > $work_dir/config/20_test_temp.lua
+cat $work_dir/config/_20_*.lua > $work_dir/config/20_test_temp.lua
 
 #rm -f $run_dir/bench.txt
 date >> $run_dir/bench.txt

@@ -1,4 +1,8 @@
 
+* added more tests
+* php files are now banned from being served by default
+
+commit b32447d4ac5bf811769b65fdef187631747e9804
 * new tests
 * added ability to only run a single test
 * POST test actually POSTs

@@ -34,6 +34,7 @@ workdir/config/*
 !workdir/config/10_localhost.lua
 !workdir/config/_20_proxy.lua
 !workdir/config/_20_fcgi.lua
+!workdir/config/_20_null_request.lua
 !workdir/config/99_default.lua
 
 *.pem

@@ -9,6 +9,7 @@ fpm_apps.php = {uri="tcp://localhost:9000", max=4}
 -- index directories with the index.php file
 table.insert (index_files, 1, "index.php")
 
+forbidden_files.php = nil
 
 -- python example
 --fpm_apps.py = {uri="blah"}

@@ -30,6 +30,10 @@ map (main, "*", 0, function (req)
     end
   end
 
+  if (forbidden_files[ext]) then
+    return respond (req, 403)
+  end
+
   if (to_compress[ext] == nil) then
     set_option (req, "disable", "compress")
   end

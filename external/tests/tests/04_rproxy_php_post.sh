@@ -3,7 +3,7 @@ set -e
 
 VALUE=helloworldhowareyou
 
-URL="http://$HOST:$PORT/tests/post.php"
+URL="http://$HOST:$PORT/proxy/tests/post.php"
 
 A1=`curl -v -k --form VALUE="$VALUE" "$URL" | grep VALUE`
 A2="  <tr><td>VALUE</td><td>$VALUE</td></tr>"
