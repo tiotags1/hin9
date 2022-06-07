@@ -45,10 +45,10 @@ int httpd_parse_headers_line (httpd_client_t * http, string_t * line) {
   } else if (matchi_string (line, "Connection:%s*") > 0) {
     while (1) {
       if (matchi_string (line, "close") > 0) {
-        if (http->debug & (DEBUG_HTTP|DEBUG_HTTP_FILTER)) printf ("  connection requested closed\n");
+        if (http->debug & (DEBUG_HTTP|DEBUG_HTTP_FILTER)) printf ("  close\n");
         http->peer_flags &= ~HIN_HTTP_KEEPALIVE;
       } else if (matchi_string (line, "keep-alive") > 0) {
-        if (http->debug & (DEBUG_HTTP|DEBUG_HTTP_FILTER)) printf ("  connection requested keepalive\n");
+        if (http->debug & (DEBUG_HTTP|DEBUG_HTTP_FILTER)) printf ("  keepalive\n");
         http->peer_flags |= HIN_HTTP_KEEPALIVE;
       } else if (match_string (line, "%w+") > 0) {
       }

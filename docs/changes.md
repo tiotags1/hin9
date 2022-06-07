@@ -1,4 +1,16 @@
 
+* fixed being able to upload lots of files to fcgi at the same time, misinterpretation of fcgi spec, fcgi uploads are sequential only, aka now you can receive more simultaneous uploads than fcgi sockets
+* fixed HEAD request (on static files)
+* fixed not cleaning http client flags
+* fixed basic pattern library consuming random '*' characters
+* fixed parsing of debug masks
+* added more tests
+* tests check if server crashed, better logging, etc
+* tweaked debug messages
+* redirect log to file is now truncated on start and line buffered
+* chased an use-after-free bug and ended up fixed like 5 things and now the new commit diff is unbearable
+
+commit f04ca19742645fcc5f72c02ac0befb87d5a0d246
 * added more tests
 * php files are now banned from being served by default
 

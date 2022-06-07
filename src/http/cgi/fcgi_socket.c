@@ -11,6 +11,20 @@
 
 #include "fcgi.h"
 
+int hin_fcgi_socket_continue (hin_fcgi_socket_t * socket) {
+  socket->flags &= ~HIN_FCGI_BUSY;
+
+  basic_dlist_t * next = socket->que.next;
+  while (next && (socket->flags & HIN_FCGI_BUSY) == 0) {
+    hin_fcgi_worker_t * worker = basic_dlist_ptr (next, offsetof (hin_fcgi_worker_t, list));
+    next = next->next;
+
+    basic_dlist_remove (&socket->que, &worker->list);
+    hin_fcgi_worker_run (worker);
+  }
+  return 0;
+}
+
 void hin_fcgi_socket_close (hin_fcgi_socket_t * socket) {
   if (master.debug & DEBUG_CGI)
     printf ("fcgi %d cleanup\n", socket->fd);
@@ -91,18 +105,11 @@ static int hin_fcgi_connect_callback (hin_buffer_t * buf, int ret) {
     return -1;
   }
 
-  socket->fd = buf->fd;
-
   if (buf->debug & DEBUG_CGI)
-    printf ("fcgi %d worker connected '%s'\n", socket->fd, fcgi->uri);
+    printf ("fcgi %d worker connected '%s'\n", buf->fd, fcgi->uri);
 
-  basic_dlist_t * next = socket->que.next;
-  while (next) {
-    hin_fcgi_worker_t * worker = basic_dlist_ptr (next, offsetof (hin_fcgi_worker_t, list));
-    next = next->next;
-    hin_fcgi_write_request (worker);
-    basic_dlist_remove (&socket->que, &worker->list);
-  }
+  socket->fd = buf->fd;
+  hin_fcgi_socket_continue (socket);
 
   hin_buffer_t * buf1 = hin_lines_create_raw (READ_SZ);
   buf1->flags = socket->cflags;
@@ -142,6 +149,9 @@ hin_fcgi_socket_t * hin_fcgi_get_socket (hin_fcgi_group_t * fcgi) {
   sock->fd = -1;
   sock->fcgi = fcgi;
   sock->cflags = HIN_SOCKET;
+
+  sock->last_worker = 0;
+  sock->flags = HIN_FCGI_BUSY;
 
   hin_connect (fcgi->host, fcgi->port, hin_fcgi_connect_callback, sock, &sock->ai_addr, &sock->ai_addrlen);
   // TODO handle unix sockets

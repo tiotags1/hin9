@@ -101,7 +101,7 @@ int httpd_send_file (httpd_client_t * http, hin_cache_item_t * item, hin_buffer_
   hin_pipe_t * pipe = calloc (1, sizeof (*pipe));
   hin_pipe_init (pipe);
   pipe->in.fd = item->fd;
-  pipe->in.flags = HIN_OFFSETS;
+  pipe->in.flags = HIN_OFFSETS | HIN_COUNT;
   pipe->in.pos = http->pos;
   pipe->finish_callback = done_file;
 

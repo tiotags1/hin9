@@ -278,12 +278,50 @@ static int l_hin_set_global_option (lua_State *L) {
   return 0;
 }
 
-static uint32_t get_debug_mask (const char * str) {
+static uint32_t get_debug_mask (lua_State *L, const char * str) {
   uint32_t mask = 0;
-  if (strcmp (str, "http") == 0) {
-    mask |= DEBUG_HTTP;
+  if (strcmp (str, "basic") == 0) {
+    mask |= DEBUG_BASIC;
+  } else if (strcmp (str, "config") == 0) {
+    mask |= DEBUG_CONFIG;
+  } else if (strcmp (str, "vfs") == 0) {
+    mask |= DEBUG_VFS;
+  } else if (strcmp (str, "socket") == 0) {
+    mask |= DEBUG_SOCKET;
   } else if (strcmp (str, "uring") == 0) {
     mask |= DEBUG_URING;
+  } else if (strcmp (str, "ssl") == 0) {
+    mask |= DEBUG_SSL;
+  } else if (strcmp (str, "syscall") == 0) {
+    mask |= DEBUG_SYSCALL;
+  } else if (strcmp (str, "memory") == 0) {
+    mask |= DEBUG_MEMORY;
+  } else if (strcmp (str, "http") == 0) {
+    mask |= DEBUG_HTTP;
+  } else if (strcmp (str, "cgi") == 0) {
+    mask |= DEBUG_CGI;
+  } else if (strcmp (str, "proxy") == 0) {
+    mask |= DEBUG_PROXY;
+  } else if (strcmp (str, "http_filter") == 0) {
+    mask |= DEBUG_HTTP_FILTER;
+  } else if (strcmp (str, "post") == 0) {
+    mask |= DEBUG_POST;
+  } else if (strcmp (str, "child") == 0) {
+    mask |= DEBUG_CHILD;
+  } else if (strcmp (str, "cache") == 0) {
+    mask |= DEBUG_CACHE;
+  } else if (strcmp (str, "timeout") == 0) {
+    mask |= DEBUG_TIMEOUT;
+  } else if (strcmp (str, "rw") == 0) {
+    mask |= DEBUG_RW;
+  } else if (strcmp (str, "rw_error") == 0) {
+    mask |= DEBUG_RW_ERROR;
+  } else if (strcmp (str, "pipe") == 0) {
+    mask |= DEBUG_PIPE;
+  } else if (strcmp (str, "info") == 0) {
+    mask |= DEBUG_INFO;
+  } else {
+    return luaL_error (L, "unknown mask '%s'", str);
   }
   return mask;
 }
@@ -291,13 +329,16 @@ static uint32_t get_debug_mask (const char * str) {
 static int l_hin_enable_debug (lua_State *L) {
   uint32_t debug = 0, mask = 0;
 
-  if (hin_lua_mask_from_str (L, 1, &debug) < 0) {
-    return 0;
+  for (int i=2; i <= lua_gettop (L); i++) {
+    if (!lua_isstring (L, i)) continue;
+    const char * str = lua_tostring (L, i);
+    mask |= get_debug_mask (L, str);
   }
 
-  for (int i=2; i <= lua_gettop (L); i++) {
-    const char * str = lua_tostring (L, i);
-    mask |= get_debug_mask (str);
+  if (mask == 0) {
+    if (hin_lua_mask_from_str (L, 1, &mask) < 0) {
+      return 0;
+    }
   }
 
   debug |= mask;
@@ -310,13 +351,16 @@ static int l_hin_enable_debug (lua_State *L) {
 static int l_hin_disable_debug (lua_State *L) {
   uint32_t debug = 0, mask = 0;
 
-  if (hin_lua_mask_from_str (L, 1, &debug) < 0) {
-    return 0;
+  for (int i=2; i <= lua_gettop (L); i++) {
+    if (!lua_isstring (L, i)) continue;
+    const char * str = lua_tostring (L, i);
+    mask |= get_debug_mask (L, str);
   }
 
-  for (int i=2; i <= lua_gettop (L); i++) {
-    const char * str = lua_tostring (L, i);
-    mask |= get_debug_mask (str);
+  if (mask == 0) {
+    if (hin_lua_mask_from_str (L, 1, &mask) < 0) {
+      return 0;
+    }
   }
 
   debug &= ~mask;

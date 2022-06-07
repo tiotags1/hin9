@@ -36,7 +36,7 @@ hin_fcgi_worker_t * hin_fcgi_get_worker (hin_fcgi_group_t * fcgi) {
   sock->num_worker++;
 
   int req_id = sock->last_worker++;
-  if (sock->last_worker > sock->max_worker) {
+  while (sock->last_worker > sock->max_worker) {
     int new = 5;
     int max = sock->max_worker + new;
     sock->worker = realloc (sock->worker, sizeof (void*) * max);
@@ -76,16 +76,6 @@ int hin_fcgi_worker_reset (hin_fcgi_worker_t * worker) {
     hin_fcgi_socket_close (socket);
   }
   return 0;
-}
-
-void hin_fcgi_worker_run (hin_fcgi_worker_t * worker) {
-  hin_fcgi_socket_t * socket = worker->socket;
-  if (socket->fd < 0) {
-    basic_dlist_append (&socket->que, &worker->list);
-    return ;
-  }
-
-  hin_fcgi_write_request (worker);
 }
 
 

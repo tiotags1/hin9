@@ -1,8 +1,6 @@
 #!/bin/bash
 
-# requires curl, apache bench, netcat, coreutils
-# for php: requires a php-fpm listening on local port 9000
-# for rproxy: requires another http server listening on port 28081 with the same htdocs as this one and php enabled
+# tests info in documents folder
 
 cd "${0%/*}"
 ROOT=`pwd`
@@ -17,8 +15,6 @@ export BENCH_CON=1000
 export BENCH_NUM=10000
 export ROOT_DIR=`pwd`
 
-#export PORT=28081
-
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 NC='\033[0m' # No Color
@@ -29,18 +25,19 @@ total=0
 export run_dir=`pwd`/build/tests/
 export scripts_dir=$ROOT/tools/
 
-mkdir -p $run_dir
+mkdir -p $run_dir $run_dir/config
 
 export htdocs=`pwd`/htdocs/
 
 work_dir=`pwd`/workdir/
 
-cat $work_dir/config/_20_*.lua > $work_dir/config/20_test_temp.lua
+cp $work_dir/main.lua $work_dir/lib.lua $run_dir
+cp $work_dir/config/00_defines.lua $work_dir/config/10_localhost.lua $work_dir/config/99_default.lua $run_dir/config/
+cat $work_dir/config/_20_*.lua > $run_dir/config/20_test_temp.lua
 
-#rm -f $run_dir/bench.txt
 date >> $run_dir/bench.txt
 
-build/hin9 > ${run_dir}server.log &
+build/hin9 --config ${run_dir}main.lua --log ${run_dir}server.log &
 PID=$!
 
 sleep 1
@@ -50,7 +47,14 @@ run_test () {
   export name="${name%.*}"
   export test_dir=$run_dir/
   ((total++))
-  if sh $file &> ${run_dir}$name.log; then
+  echo "Test $name started on `date`" &> ${run_dir}$name.log
+  sh $file &>> ${run_dir}$name.log
+  exit_code=$?
+  if ! kill -s 0 $PID &> ${run_dir}server.log; then
+    exit_code=1
+    echo "Server crashed" > ${run_dir}$name.log
+  fi
+  if [ $exit_code -eq 0 ]; then
     printf "${GREEN}success$NC\t$name\n"
     ((complete++))
   else
@@ -59,22 +63,23 @@ run_test () {
 }
 
 if [ -n "$1" ]; then
-  file=$ROOT/$1
-  run_test
+  for fn in "$@"
+  do
+    file=$ROOT/$fn
+    run_test
+  done
 else
   for file in $ROOT/tests/*.sh; do
     run_test
   done
 fi
 
-rm $work_dir/config/20_test_temp.lua
-
-kill -2 $PID
+kill -2 $PID &> ${run_dir}server.log
 wait
 
 echo "Successfully finished $complete/$total tests"
 
 if [ $complete != $total ]; then
-  exit 1
+  exit $(($total-$complete))
 fi
 

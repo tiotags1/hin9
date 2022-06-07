@@ -14,6 +14,11 @@ Connection: close\r\n\
 do_req
 echo "GET request OK"
 
+REQ=$(printf "GET / HTTP/1.1\r\n\
+Connection: close\r\n\
+\r\n")
+do_req
+echo "GET HTTP/1.1 no host ok"
 
 #echo "GET deflate request"
 #echo "GET gzip request"

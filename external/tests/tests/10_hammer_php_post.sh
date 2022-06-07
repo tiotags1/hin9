@@ -1,9 +1,6 @@
 
-# it fails even with a lower number so doesn't matter
-BENCH_CON=4
-BENCH_NUM=100
-
-exit 1
+BENCH_CON=8
+BENCH_NUM=10
 
 set -e
 
@@ -23,6 +20,8 @@ base64 $tmp_path >> $upload_file
 
 printf "\r\n--$border--" >> $upload_file
 
-export RET="$(ab -p $upload_file -T "multipart/form-data; boundary=$border" -k -c $BENCH_CON -n $BENCH_NUM $URL)"
+# warning http/1.0 and keepalive when targeting php chunked doesn't make sense
+
+export RET="$(ab -p $upload_file -T "multipart/form-data; boundary=$border" -c $BENCH_CON -n $BENCH_NUM $URL)"
 
 sh $scripts_dir/hammer.sh

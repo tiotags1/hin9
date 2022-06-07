@@ -209,6 +209,8 @@ void * hin_ssl_init (const char * cert, const char * key) {
   return NULL;
 }
 
+void hin_ssl_cleanup () {}
+
 int hin_ssl_request_write (hin_buffer_t * buffer) { return -1; }
 int hin_ssl_request_read (hin_buffer_t * buffer) { return -1; }
 

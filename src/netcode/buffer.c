@@ -35,7 +35,8 @@ hin_buffer_t * hin_buffer_create_from_data (void * parent, const char * ptr, int
   buf->count = buf->sz = sz;
   buf->ptr = buf->buffer;
   buf->parent = parent;
-  memcpy (buf->ptr, ptr, sz);
+  if (ptr)
+    memcpy (buf->ptr, ptr, sz);
   return buf;
 }
 

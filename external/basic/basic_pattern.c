@@ -48,32 +48,45 @@ static inline int get_pattern (const char * fmt, uint32_t * matches, uint32_t * 
     *character = *(fmt);
     return 1;
   }
-  switch (*(fmt+1)) {
-  case 'a': *matches = PATTERN_LETTER;		break; // letters
-  case 's': *matches = PATTERN_SPACE;		break; // spaces
-  case 'c': *matches = PATTERN_CONTROL;		break; // control characters
-  case 'd': *matches = PATTERN_DIGIT;		break; // digits
-  case 'l': *matches = PATTERN_LOWER;		break; // lower case
-  case 'u': *matches = PATTERN_UPPER;		break; // punctuation
-  case 'p': *matches = PATTERN_PUNCTUATION;	break; // uppercase
-  case 'w': *matches = PATTERN_ALPHANUM;	break; // alpha numeric
-  case 'x': *matches = PATTERN_HEXA;		break; // hexa numbers
-  case 'z': *matches = PATTERN_NULL_CHAR;	break; // /0
+  fmt++;
+  switch (*fmt) {
+  case 'a': *matches =  PATTERN_LETTER;		break; // letters
   case 'A': *matches = ~PATTERN_LETTER; 	break; // not all non letters
+
+  case 's': *matches =  PATTERN_SPACE;		break; // spaces
   case 'S': *matches = ~PATTERN_SPACE;		break; // not spaces
+
+  case 'c': *matches =  PATTERN_CONTROL;	break; // control characters
   case 'C': *matches = ~PATTERN_CONTROL;	break; // not control characters
+
+  case 'd': *matches =  PATTERN_DIGIT;		break; // digits
   case 'D': *matches = ~PATTERN_DIGIT;		break; // not digits
+
+  case 'l': *matches =  PATTERN_LOWER;		break; // lower case
   case 'L': *matches = ~PATTERN_LOWER;		break; // not lower case
+
+  case 'u': *matches =  PATTERN_UPPER;		break; // punctuation
   case 'U': *matches = ~PATTERN_UPPER;		break; // not punctuation
+
+  case 'p': *matches =  PATTERN_PUNCTUATION;	break; // uppercase
   case 'P': *matches = ~PATTERN_PUNCTUATION;	break; // not uppercase
+
+  case 'w': *matches =  PATTERN_ALPHANUM;	break; // alpha numeric
   case 'W': *matches = ~PATTERN_ALPHANUM;	break; // not alpha numeric
+
+  case 'x': *matches =  PATTERN_HEXA;		break; // hexa numbers
   case 'X': *matches = ~PATTERN_HEXA;		break; // not hexa numbers
+
+  case 'z': *matches =  PATTERN_NULL_CHAR;	break; // /0
   case 'Z': *matches = ~PATTERN_NULL_CHAR; 	break; // not /0
-  //case '.': *matches = PATTERN_ALL;		break; // TODO more testing
+
+  case 'y': *matches =  PATTERN_ALL;		break; // TODO more testing
+  case 'Y': *matches = ~PATTERN_ALL;		break; // TODO more testing
+
   default:
     // add only the specific char to the buffer
     *matches = PATTERN_CUSTOM;
-    *character = *(fmt+1);
+    *character = *fmt;
   break;
   }
   return 2;
@@ -143,8 +156,8 @@ do_next:
       pattern.ptr = (char*)(fmt++);
       fmt++;
       specifier = get_specifier (*fmt);
-      if (specifier != RUN_ONE) fmt++;
       pattern.len = fmt-pattern.ptr;
+      if (specifier != RUN_ONE) fmt++;
 
       string.ptr = (char*)ptr;
       string.len = max - ptr;

@@ -76,7 +76,7 @@ int httpd_vhost_switch (httpd_client_t * http, httpd_vhost_t * vhost) {
 
 int httpd_vhost_request (httpd_client_t * http, const char * name, int len) {
   if (http->hostname) {
-    if (strncmp (http->hostname, name, len) == 0 && len == (int)strlen (http->hostname))
+    if ((len == (int)strlen (http->hostname)) && strncmp (http->hostname, name, len) == 0)
       return 0;
     return -1;
   }
@@ -84,8 +84,9 @@ int httpd_vhost_request (httpd_client_t * http, const char * name, int len) {
   http->hostname = strndup (name, len);
 
   httpd_vhost_t * vhost = httpd_vhost_get (name, len);
-  if (http->debug & (DEBUG_HTTP|DEBUG_INFO))
-    printf ("hostname '%.*s'%s\n", len, name, vhost ? "" : " not found");
+  if (http->debug & (DEBUG_HTTP|DEBUG_INFO)) {
+    printf ("  hostname '%.*s' vhost %s\n", len, name, vhost ? vhost->hostname : "not found");
+  }
 
   if (vhost) {
     httpd_vhost_switch (http, vhost);

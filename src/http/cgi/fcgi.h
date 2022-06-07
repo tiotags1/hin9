@@ -32,6 +32,8 @@
 #define FCGI_PADDING (sizeof (uintptr_t))
 #define FCGI_ROUND_TO_PAD(num) ((((num-1) / FCGI_PADDING) + 1) * FCGI_PADDING)
 
+enum { HIN_FCGI_BUSY = 0x1 };
+
 typedef struct __attribute__((__packed__)) {
   uint8_t version;
   uint8_t type;
@@ -86,6 +88,7 @@ typedef struct {
 typedef struct hin_fcgi_socket_struct {
   int fd, id;
   uint32_t cflags;
+  uint32_t flags;
 
   struct sockaddr ai_addr;
   socklen_t ai_addrlen;
@@ -122,7 +125,7 @@ void hin_fcgi_socket_close (hin_fcgi_socket_t * socket);
 
 hin_fcgi_worker_t * hin_fcgi_get_worker (hin_fcgi_group_t * fcgi_group);
 int hin_fcgi_worker_reset (hin_fcgi_worker_t * worker);
-void hin_fcgi_worker_run (hin_fcgi_worker_t * worker);
+int hin_fcgi_worker_run (hin_fcgi_worker_t * worker);
 void hin_fcgi_worker_free (hin_fcgi_worker_t * worker);
 
 #endif

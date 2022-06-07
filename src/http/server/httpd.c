@@ -52,14 +52,15 @@ void httpd_client_clean (httpd_client_t * http) {
 int httpd_client_start_request (httpd_client_t * http) {
   http->state = HIN_REQ_HEADERS | (http->state & HIN_REQ_STOPPING);
 
-  hin_server_t * server = (hin_server_t*)http->c.parent;
-  httpd_vhost_t * vhost = (httpd_vhost_t*)server->c.parent;
-  httpd_vhost_switch (http, vhost);
-
   if (http->debug & DEBUG_HTTP) {
     printf ("http%sd %d request begin %lld\n", (http->c.flags & HIN_SSL) ? "s" : "",
       http->c.sockfd, (long long)time (NULL));
   }
+
+  hin_server_t * server = (hin_server_t*)http->c.parent;
+  httpd_vhost_t * vhost = (httpd_vhost_t*)server->c.parent;
+  httpd_vhost_switch (http, vhost);
+
   return 0;
 }
 
@@ -90,8 +91,8 @@ int httpd_client_finish_request (httpd_client_t * http, hin_pipe_t * pipe) {
     basic_vfs_unref (vfs, http->file);
   }
 
-  httpd_client_clean (http);
   if (keep) {
+    httpd_client_clean (http);
     httpd_client_start_request (http);
     httpd_client_reread (http);
   } else {

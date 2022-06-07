@@ -87,7 +87,7 @@ int hin_daemonize () {
 
 
 int hin_redirect_log (const char * path) {
-  int fd = hin_open_file_and_create_path (AT_FDCWD, path, O_WRONLY | O_APPEND | O_CLOEXEC | O_CREAT, 0660);
+  int fd = hin_open_file_and_create_path (AT_FDCWD, path, O_WRONLY | O_APPEND | O_CLOEXEC | O_CREAT | O_TRUNC, 0660);
   if (fd < 0) {
     printf ("hin can't open log '%s' %s\n", path, strerror (errno));
     exit (1);
@@ -95,6 +95,9 @@ int hin_redirect_log (const char * path) {
 
   fflush (stdout);
   fflush (stderr);
+  setvbuf (stdout, NULL, _IOLBF, 1024);
+  setvbuf (stderr, NULL, _IOLBF, 1024);
+
   if (dup2 (fd, STDOUT_FILENO) < 0) perror ("dup2 stdout");
   if (dup2 (fd, STDERR_FILENO) < 0) perror ("dup2 stderr");
   close (fd);

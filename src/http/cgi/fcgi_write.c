@@ -56,7 +56,7 @@ static int param (hin_buffer_t * buf, const char * name, const char * fmt, ...) 
   va_end (ap1);
 
   if (buf->debug & DEBUG_CGI)
-    printf ("param %d '%s' %d '%s'\n", name_len, name, value_len, ptr);
+    printf ("  %d '%s' %d '%s'\n", name_len, name, value_len, ptr);
   return num;
 }
 
@@ -95,7 +95,7 @@ static int hin_fcgi_headers (hin_buffer_t * buf, hin_fcgi_worker_t * worker) {
 
   hin_fcgi_socket_t * sock = worker->socket;
   if (http->debug & DEBUG_CGI)
-    fprintf (stderr, "fcgi %d http %d\n", sock->fd, http->c.sockfd);
+    fprintf (stderr, "httpd %d fcgi %d write headers\n", http->c.sockfd, sock->fd);
 
   // if file set then create script path
   extern basic_vfs_t * vfs;
@@ -208,11 +208,16 @@ static int hin_fcgi_write_callback (hin_buffer_t * buf, int ret) {
   return 1;
 }
 
-int hin_fcgi_write_request (hin_fcgi_worker_t * worker) {
+int hin_fcgi_worker_run (hin_fcgi_worker_t * worker) {
   hin_fcgi_socket_t * socket = worker->socket;
   hin_fcgi_group_t * fcgi = socket->fcgi;
   httpd_client_t * http = worker->http;
 
+  if (socket->flags & HIN_FCGI_BUSY) {
+    basic_dlist_append (&socket->que, &worker->list);
+    return 1;
+  }
+  socket->flags |= HIN_FCGI_BUSY;
   worker->io_state |= HIN_REQ_DATA;
 
   int buf_sz = READ_SZ * 2;

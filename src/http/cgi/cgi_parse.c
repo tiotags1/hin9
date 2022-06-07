@@ -49,7 +49,7 @@ static int hin_fcgi_pipe_finish_callback (hin_pipe_t * pipe) {
   hin_fcgi_socket_t * socket = worker->socket;
   httpd_client_t * http = worker->http;
   if (http && http->debug & DEBUG_CGI)
-    printf ("fcgi %d worker %d done.\n", socket->fd, worker->req_id);
+    printf ("httpd %d fcgi %d worker %d done.\n", http->c.sockfd, socket->fd, worker->req_id);
 
   http->state &= ~HIN_REQ_FCGI;
 
@@ -175,7 +175,7 @@ static int hin_cgi_headers_read_callback (hin_buffer_t * buffer, int received) {
   httpd_write_common_headers (http, buf);
 
   if (http->debug & (DEBUG_CGI|DEBUG_RW))
-    fprintf (stderr, "cgi %d headers\n", http->c.sockfd);
+    fprintf (stderr, "httpd %d cgi read\n", http->c.sockfd);
   while (1) {
     if (hin_find_line (source, &line) == 0) { hin_buffer_clean (buf); return 0; }
     if (line.len == 0) break;

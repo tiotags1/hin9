@@ -19,8 +19,14 @@ void http_client_clean (http_client_t * http) {
   }
   if (http->progress) {
     free (http->progress);
+    http->progress = NULL;
   }
   http->c.parent = NULL;
+  http->flags = 0;
+  http->method = http->status = 0;
+  http->sz = http->count = 0;
+  http->cache_flags = 0;
+  http->cache = 0;
 
   if (http->c.flags & HIN_SSL)
     hin_client_ssl_cleanup (&http->c);

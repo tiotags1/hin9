@@ -8,13 +8,24 @@
 
 #include "fcgi.h"
 
-static int hin_fcgi_post_done_callback (hin_pipe_t * pipe) {
-  if (pipe->debug & DEBUG_POST)
-    printf ("fcgi post done %d\n", pipe->out.fd);
+static void hin_fcgi_stdin_done (hin_fcgi_worker_t * worker) {
+  hin_fcgi_socket_t * socket = worker->socket;
+  socket->flags &= ~HIN_FCGI_BUSY;
 
+  int hin_fcgi_socket_continue (hin_fcgi_socket_t * socket);
+  hin_fcgi_socket_continue (socket);
+}
+
+static int hin_fcgi_post_done_callback (hin_pipe_t * pipe) {
   httpd_client_t * http = (httpd_client_t*)pipe->parent;
 
+  if (pipe->debug & (DEBUG_POST|DEBUG_HTTP))
+    printf ("httpd %d fcgi %d post done\n", pipe->in.fd, pipe->out.fd);
+
   hin_fcgi_worker_t * worker = pipe->parent1;
+
+  hin_fcgi_stdin_done (worker);
+
   worker->io_state &= ~HIN_REQ_POST;
   hin_fcgi_worker_reset (worker);
 
@@ -67,9 +78,13 @@ int hin_fcgi_write_post (hin_buffer_t * buf, hin_fcgi_worker_t * worker) {
   hin_fcgi_socket_t * socket = worker->socket;
 
   if (http->method != HIN_METHOD_POST) {
+    hin_fcgi_stdin_done (worker);
     hin_fcgi_header (buf, FCGI_STDIN, worker->req_id, 0);
     return 0;
   }
+
+  if (http->debug & (DEBUG_POST|DEBUG_HTTP))
+    printf ("httpd %d fcgi %d start post\n", http->c.sockfd, socket->fd);
 
   string_t source, line;
   source = http->headers;
