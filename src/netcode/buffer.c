@@ -4,13 +4,14 @@
 #include <stdlib.h>
 
 #include "hin.h"
+#include "hin_internal.h"
 
 void hin_buffer_clean (hin_buffer_t * buffer) {
   if (buffer->flags & HIN_ACTIVE) {
-    printf ("error! buf still active %p\n", buffer);
+    hin_error ("buf still active %p", buffer);
   }
 
-  if (buffer->debug & DEBUG_MEMORY) printf ("cleanup buffer %p\n", buffer);
+  if (buffer->debug & DEBUG_MEMORY) hin_debug ("cleanup buffer %p\n", buffer);
   if (buffer->ssl_buffer) {
     hin_buffer_clean (buffer->ssl_buffer);
   }
@@ -22,6 +23,7 @@ void hin_buffer_clean (hin_buffer_t * buffer) {
 }
 
 void hin_buffer_stop_clean (hin_buffer_t * buf) {
+  // TODO learn how to cancel io uring requests
   if (buf->flags & HIN_ACTIVE) {
     //printf ("error! buf still active %p\n", buf);
   }
@@ -50,7 +52,7 @@ int hin_buffer_continue_write (hin_buffer_t * buf, int ret) {
       buf->pos += ret;
 
     if (hin_request_write (buf) < 0)
-      printf ("error! %d\n", 3253534);
+      hin_weird_error (3253534);
 
   } else if (buf->list.next) {
     hin_buffer_t * next = hin_buffer_list_ptr (buf->list.next);
@@ -58,7 +60,7 @@ int hin_buffer_continue_write (hin_buffer_t * buf, int ret) {
     next->parent = buf->parent;
 
     if (hin_request_write (next) < 0)
-      printf ("error! %d\n", 3253534);
+      hin_weird_error (3253534);
     hin_buffer_clean (buf);
   } else {
     return 0;
@@ -108,16 +110,16 @@ int hin_lines_request (hin_buffer_t * buffer, int min) {
   else if (left < (buffer->sz / 2)) { new = READ_SZ; }
   else { new = left; }
   if (left < 0) {
-    printf ("error! lines request negative %d - %d = %d\n", buffer->sz, lines->count, left);
+    hin_error ("lines request negative %d - %d = %d", buffer->sz, lines->count, left);
   }
   if (new < 0) {
-    printf ("error! lines new is %d: min %d left %d\n", new, min, left);
+    hin_error ("lines new is %d: min %d left %d", new, min, left);
   }
   hin_buffer_prepare (buffer, new);
   buffer->callback = hin_lines_read_callback;
   if (buffer->fd >= 0) {
   if (hin_request_read (buffer) < 0) {
-    printf ("error! %d\n", 3464354);
+    hin_weird_error (3464354);
     return -1;
   }
   }
@@ -134,7 +136,7 @@ int hin_lines_default_eat (hin_buffer_t * buffer, int num) {
     if (lines->close_callback) {
       return lines->close_callback (buffer, num);
     } else {
-      weird_error ("lines close");
+      hin_weird_error (6778900);
     }
     return -1;
   }

@@ -18,8 +18,8 @@ src/*
 
 external/*
 !external/basic
-!external/packaging
 !external/docker
+!external/packaging
 !external/tests
 !external/tools
 

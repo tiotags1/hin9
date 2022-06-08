@@ -21,14 +21,14 @@ typedef struct hin_server_struct {
   intptr_t ai_family, ai_protocol, ai_socktype;
   hin_buffer_t * accept_buffer;
   basic_dlist_t client_list;
-  void * rp_base, * rp;
+  void * rp_base;
 } hin_server_t;
 
 
-int hin_server_listen (const char * addr, const char * port, const char * sock_type, hin_server_t * ptr);
+int hin_socket_listen (const char * addr, const char * port, const char * sock_type, hin_server_t * ptr);
+int hin_request_listen (hin_server_t * server, const char * addr, const char * port, const char * sock_type);
 
-int hin_server_stop (hin_server_t * server);
-int hin_server_unlink (hin_server_t * server);
+int hin_server_close (hin_server_t * server);
 
 #endif
 

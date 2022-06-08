@@ -1,4 +1,9 @@
 
+* refactored hin netcode library
+* changed hin netcode library api
+* added hin\_error and hin\_debug functions
+
+commit dd9fe168b76158bb69cc63bf9b2633f015749e8c
 * fixed being able to upload lots of files to fcgi at the same time, misinterpretation of fcgi spec, fcgi uploads are sequential only, aka now you can receive more simultaneous uploads than fcgi sockets
 * fixed HEAD request (on static files)
 * fixed not cleaning http client flags

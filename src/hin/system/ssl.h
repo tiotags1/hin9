@@ -35,6 +35,7 @@ int hin_ssl_connect_init (hin_client_t * client);
 int hin_ssl_accept_init (hin_client_t * client);
 int hin_ssl_request_write (hin_buffer_t * buffer);
 int hin_ssl_request_read (hin_buffer_t * buffer);
+void hin_client_ssl_cleanup (hin_client_t * client);
 
 #endif
 

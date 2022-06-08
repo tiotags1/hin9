@@ -115,7 +115,7 @@ static int httpd_client_close_callback (hin_buffer_t * buffer, int ret) {
     http->read_buffer = NULL;
   }
   httpd_client_clean (http);
-  hin_client_unlink (&http->c);
+  hin_client_close (&http->c);
   return 1;
 }
 
@@ -252,7 +252,7 @@ hin_server_t * httpd_create (const char * addr, const char * port, const char * 
   if (master.debug & (DEBUG_BASIC|DEBUG_SOCKET))
     printf ("http%sd listening on '%s':'%s'\n", ssl_ctx ? "s" : "", addr ? addr : "all", port);
 
-  int err = hin_listen_request (addr, port, sock_type, server);
+  int err = hin_request_listen (server, addr, port, sock_type);
   if (err < 0) {
     printf ("error requesting socket\n");
     // free socket

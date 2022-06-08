@@ -10,9 +10,8 @@
 #include <fcntl.h>
 
 #include "hin.h"
+#include "hin_internal.h"
 #include "conf.h"
-
-#include <basic_vfs.h> // for statx on musl
 
 #if HIN_URING_REDUCE_SYSCALLS
 #define io_uring_submit1(x)
@@ -20,7 +19,7 @@
 #define io_uring_submit1(x) io_uring_submit(x);
 #endif
 
-struct io_uring ring;
+static struct io_uring ring;
 
 typedef struct hin_sqe_que_struct {
   struct io_uring_sqe sqe;
@@ -84,7 +83,7 @@ int hin_request_write (hin_buffer_t * buffer) {
   if (hin_request_active (buffer)) return -1;
 
   if (buffer->flags & HIN_SSL) {
-    if (buffer->debug & DEBUG_URING) printf (" req %s buf %p cb %p fd %d\n", buffer->flags & HIN_SOCKET ? "send" : "writ", buffer, buffer->callback, buffer->fd);
+    if (buffer->debug & DEBUG_URING) hin_debug (" req %s buf %p cb %p fd %d\n", buffer->flags & HIN_SOCKET ? "send" : "writ", buffer, buffer->callback, buffer->fd);
     hin_ssl_request_write (buffer);
     return 0;
   }
@@ -111,7 +110,7 @@ int hin_request_write (hin_buffer_t * buffer) {
   io_uring_sqe_set_data (sqe, buffer);
   io_uring_submit1 (&ring);
 
-  if (buffer->debug & DEBUG_URING) printf (" req %s buf %p cb %p fd %d\n", buffer->flags & HIN_SOCKET ? "send" : "writ", buffer, buffer->callback, buffer->fd);
+  if (buffer->debug & DEBUG_URING) hin_debug (" req %s buf %p cb %p fd %d\n", buffer->flags & HIN_SOCKET ? "send" : "writ", buffer, buffer->callback, buffer->fd);
   return 0;
 }
 
@@ -119,7 +118,7 @@ int hin_request_read (hin_buffer_t * buffer) {
   if (hin_request_active (buffer)) return -1;
 
   if (buffer->flags & HIN_SSL) {
-    if (buffer->debug & DEBUG_URING) printf (" req %s buf %p cb %p fd %d\n", buffer->flags & HIN_SOCKET ? "recv" : "read", buffer, buffer->callback, buffer->fd);
+    if (buffer->debug & DEBUG_URING) hin_debug (" req %s buf %p cb %p fd %d\n", buffer->flags & HIN_SOCKET ? "recv" : "read", buffer, buffer->callback, buffer->fd);
     hin_ssl_request_read (buffer);
     return 0;
   }
@@ -148,7 +147,7 @@ int hin_request_read (hin_buffer_t * buffer) {
   io_uring_sqe_set_data (sqe, buffer);
   io_uring_submit1 (&ring);
 
-  if (buffer->debug & DEBUG_URING) printf (" req %s buf %p cb %p fd %d\n", buffer->flags & HIN_SOCKET ? "recv" : "read", buffer, buffer->callback, buffer->fd);
+  if (buffer->debug & DEBUG_URING) hin_debug (" req %s buf %p cb %p fd %d\n", buffer->flags & HIN_SOCKET ? "recv" : "read", buffer, buffer->callback, buffer->fd);
   return 0;
 }
 
@@ -173,7 +172,7 @@ int hin_request_accept (hin_buffer_t * buffer, int flags) {
   io_uring_sqe_set_data (sqe, buffer);
   io_uring_submit1 (&ring);
 
-  if (buffer->debug & DEBUG_URING) printf (" req acpt buf %p cb %p\n", buffer, buffer->callback);
+  if (buffer->debug & DEBUG_URING) hin_debug (" req acpt buf %p cb %p\n", buffer, buffer->callback);
   return 0;
 }
 
@@ -194,7 +193,7 @@ int hin_request_connect (hin_buffer_t * buffer, struct sockaddr * ai_addr, int a
   io_uring_sqe_set_data (sqe, buffer);
   io_uring_submit1 (&ring);
 
-  if (buffer->debug & DEBUG_URING) printf (" req conn buf %p cb %p\n", buffer, buffer->callback);
+  if (buffer->debug & DEBUG_URING) hin_debug (" req conn buf %p cb %p\n", buffer, buffer->callback);
   return 0;
 }
 
@@ -211,7 +210,7 @@ int hin_request_close (hin_buffer_t * buffer) {
   io_uring_sqe_set_data (sqe, buffer);
   io_uring_submit1 (&ring);
 
-  if (buffer->debug & DEBUG_URING) printf (" req clos buf %p cb %p fd %d\n", buffer, buffer->callback, buffer->fd);
+  if (buffer->debug & DEBUG_URING) hin_debug (" req clos buf %p cb %p fd %d\n", buffer, buffer->callback, buffer->fd);
   return 0;
 }
 
@@ -228,15 +227,15 @@ int hin_request_openat (hin_buffer_t * buffer, int dfd, const char * path, int f
   io_uring_sqe_set_data (sqe, buffer);
   io_uring_submit1 (&ring);
 
-  if (buffer->debug & DEBUG_URING) printf (" req open buf %p cb %p\n", buffer, buffer->callback);
+  if (buffer->debug & DEBUG_URING) hin_debug (" req open buf %p cb %p\n", buffer, buffer->callback);
   return 0;
 }
 
-int hin_request_timeout (hin_buffer_t * buffer, struct timespec * ts, int count, int flags) {
+int hin_request_timeout (hin_buffer_t * buffer, struct __kernel_timespec * ts, int count, int flags) {
   if (hin_request_active (buffer)) return -1;
 
   if (buffer->flags & (HIN_SYNC | HIN_EPOLL)) {
-    printf ("error! timeout can't be sync/epoll\n");
+    hin_error ("timeout can't be sync/epoll");
     return -1;
   }
 
@@ -245,7 +244,7 @@ int hin_request_timeout (hin_buffer_t * buffer, struct timespec * ts, int count,
   io_uring_sqe_set_data (sqe, buffer);
   io_uring_submit1 (&ring);
 
-  if (buffer->debug & DEBUG_URING) printf (" req time buf %p cb %p\n", buffer, buffer->callback);
+  if (buffer->debug & DEBUG_URING) hin_debug (" req time buf %p cb %p\n", buffer, buffer->callback);
   return 0;
 }
 
@@ -258,12 +257,15 @@ int hin_request_statx (hin_buffer_t * buffer, int dfd, const char * path, int fl
   }
 
   struct io_uring_sqe *sqe = hin_request_sqe ();
-  if (buffer->count < (int)sizeof (struct statx)) { printf ("error! statx insufficient buf\n"); return -1; }
+  if (buffer->count < (int)sizeof (struct statx)) {
+    hin_error ("statx insufficient buf");
+    return -1;
+  }
   io_uring_prep_statx (sqe, dfd, path, flags, mask, (struct statx *)buffer->ptr);
   io_uring_sqe_set_data (sqe, buffer);
   io_uring_submit1 (&ring);
 
-  if (buffer->debug & DEBUG_URING) printf (" req stat buf %p cb %p\n", buffer, buffer->callback);
+  if (buffer->debug & DEBUG_URING) hin_debug (" req stat buf %p cb %p\n", buffer, buffer->callback);
   return 0;
 }
 
@@ -277,13 +279,13 @@ int hin_event_init () {
   memset (&ring, 0, sizeof (ring));
   int err = io_uring_queue_init_params (HIN_URING_QUEUE_DEPTH, &ring, &params);
   if (err < 0) {
-    fprintf (stderr, "error! io_uring_queue_init %s\n", strerror (-err));
+    hin_error ("io_uring_queue_init %s", strerror (-err));
     exit (1);
   }
   #if HIN_URING_DONT_FORK
   err = io_uring_ring_dontfork (&ring);
   if (err < 0) {
-    printf ("error! io_uring_ring_dontfork %s\n", strerror (-err));
+    hin_error ("io_uring_ring_dontfork %s", strerror (-err));
     exit (1);
   }
   #endif
@@ -297,49 +299,71 @@ int hin_event_clean () {
   if (ring.ring_fd > 0)
     io_uring_queue_exit (&ring);
   memset (&ring, 0, sizeof (ring));
-  #if HIN_HTTPD_NULL_SERVER
-  hin_buffer_t * next = NULL;
-  for (hin_buffer_t * buf = buf_list; buf; buf=next) {
-    next = buf->next;
-    hin_buffer_clean (buf);
-  }
-  buf_list = NULL;
-  #endif
   return 0;
 }
 
-int hin_event_loop () {
-  struct io_uring_cqe *cqe;
+int hin_event_wait () {
+  if ((master.flags & HIN_FLAG_FINISH)) return 0;
+
+  #ifdef HIN_URING_REDUCE_SYSCALLS
+  io_uring_submit (&ring);
+  #endif
+
+  while (1) {
+    struct io_uring_cqe *cqe;
+    int err = io_uring_wait_cqe (&ring, &cqe);
+    if (err) {
+      if (err == -EINTR) continue;
+      hin_error ("io_uring_wait_cqe: %s", strerror (-err));
+      io_uring_cqe_seen (&ring, cqe);
+    }
+    break;
+  }
+
+  return 1;
+}
+
+int hin_event_process () {
+  struct io_uring_cqe *cqes[64];
+;
   int err;
 
   hin_check_alive ();
 
-  while ((master.flags & HIN_FLAG_FINISH) == 0) {
-    if (queue) {
-      hin_process_sqe_queue ();
+  if (queue) {
+    hin_process_sqe_queue ();
+  }
+
+  err = io_uring_peek_batch_cqe (&ring, cqes, 64);
+  /*if (err == -1) {
+    if (err == -EINTR) continue;
+    if (err == -EAGAIN) {
+      //printf ("received eagain\n");
+      break;
     }
-    io_uring_submit (&ring);
-    if ((err = io_uring_wait_cqe (&ring, &cqe)) < 0) {
-      if (err == -EINTR) continue;
-      printf ("error! io_uring_wait_cqe: %s\n", strerror (errno));
-      io_uring_cqe_seen (&ring, cqe);
-      continue;
-    }
+    hin_error ("io_uring_peek_cqe: %s", strerror (-err));
+    //io_uring_cqe_seen (&ring, cqe);
+    continue;
+  }*/
+
+  for (int i=0; i<err; i++) {
+    struct io_uring_cqe *cqe = cqes[i];
 
     hin_buffer_t * buffer = (hin_buffer_t *)cqe->user_data;
-    uint32_t debug = buffer->debug;
-    if (debug & DEBUG_URING) printf ("req begin buf %p cb %p %d\n", buffer, buffer->callback, cqe->res);
 
-    io_uring_cqe_seen (&ring, cqe);
+    uint32_t debug = buffer->debug;
+    if (debug & DEBUG_URING) hin_debug ("req begin buf %p cb %p %d\n", buffer, buffer->callback, cqe->res);
+
     buffer->flags &= ~HIN_ACTIVE;
     err = buffer->callback (buffer, cqe->res);
-    if (debug & DEBUG_URING) printf ("req done. buf %p %d\n", buffer, err);
     if (err) {
       hin_buffer_clean (buffer);
     }
+    io_uring_cqe_seen (&ring, cqe);
+
+    if (debug & DEBUG_URING) hin_debug ("req done. buf %p %d\n", buffer, err);
   }
+
   return 0;
 }
-
-
 

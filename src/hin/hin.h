@@ -28,11 +28,6 @@ DEBUG_ALL=0xffffffff,
 };
 
 typedef struct {
-  uint32_t flags;
-  int (*callback) (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush);
-} hin_pipe_filter_t;
-
-typedef struct {
   int fd;
   uint32_t flags;  // flags deal with if recv or read
   hin_ssl_t * ssl;
@@ -61,10 +56,7 @@ int hin_connect (const char * host, const char * port, hin_callback_t callback, 
 int hin_unix_sock (const char * path, hin_callback_t callback, void * parent);
 void hin_connect_release (int fd);
 
-int hin_listen_request (const char * addr, const char *port, const char * sock_type, hin_server_t * client);
-int hin_listen_do ();
-
-int hin_server_start_accept (hin_server_t * server);
+#include "liburing/compat.h"
 
 // uring
 int hin_request_write (hin_buffer_t * buffer);
@@ -76,15 +68,16 @@ int hin_request_connect (hin_buffer_t * buffer, struct sockaddr * ai_addr, int a
 int hin_request_close (hin_buffer_t * buffer);
 int hin_request_openat (hin_buffer_t * buffer, int dfd, const char * path, int flags, int mode);
 int hin_request_statx (hin_buffer_t * buffer, int dfd, const char * path, int flags, int mask);
-int hin_request_timeout (hin_buffer_t * buffer, struct timespec * ts, int count, int flags);
+int hin_request_timeout (hin_buffer_t * buffer, struct __kernel_timespec * ts, int count, int flags);
 int hin_request_is_overloaded ();
 
-void hin_client_unlink (hin_client_t * client);
-void hin_client_shutdown (hin_client_t * client);
 void hin_client_close (hin_client_t * client);
 
-int hin_client_ssl_init (hin_client_t * client);
-void hin_client_ssl_cleanup (hin_client_t * client);
+// pipe
+enum {
+HIN_PIPE_DECODE = 0x1,
+HIN_PIPE_ALL = 0xff,
+};
 
 hin_buffer_t * hin_pipe_get_buffer (hin_pipe_t * pipe, int sz);
 int hin_pipe_init (hin_pipe_t * pipe);
@@ -92,15 +85,11 @@ int hin_pipe_start (hin_pipe_t * pipe);
 int hin_pipe_advance (hin_pipe_t * pipe);
 int hin_pipe_finish (hin_pipe_t * pipe);
 
-enum {
-HIN_PIPE_DECODE = 0x1,
-HIN_PIPE_ALL = 0xff,
-};
-
 int hin_pipe_append_raw (hin_pipe_t * pipe, hin_buffer_t * buffer);
 int hin_pipe_prepend_raw (hin_pipe_t * pipe, hin_buffer_t * buf);
 int hin_pipe_write_process (hin_pipe_t * pipe, hin_buffer_t * buffer, uint32_t flags);
 
+// buffer
 hin_buffer_t * hin_buffer_create_from_data (void * parent, const char * ptr, int sz);
 void hin_buffer_clean (hin_buffer_t * buffer);
 void hin_buffer_stop_clean (hin_buffer_t * buffer);
@@ -112,6 +101,8 @@ void hin_buffer_list_add (hin_buffer_t ** list, hin_buffer_t * new);
 int hin_buffer_continue_write (hin_buffer_t * buf, int ret);
 int hin_buffer_prepare (hin_buffer_t * buffer, int num);
 int hin_buffer_eat (hin_buffer_t * buffer, int num);
+
+#include <stddef.h>
 
 #define hin_buffer_list_ptr(elem) (basic_dlist_ptr (elem, offsetof (hin_buffer_t, list)))
 
@@ -134,7 +125,15 @@ typedef struct hin_timer_struct {
 int hin_timer_update (hin_timer_t * timer, time_t new);
 int hin_timer_remove (hin_timer_t * timer);
 
+#include <errno.h>
+#include <stdio.h>
+#include <string.h>
 
-#define weird_error(err) printf ("error! %s\n", err);
+#define hin_error(fmt, ...) fprintf(stderr, "error! " fmt "\n", ##__VA_ARGS__)
+#define hin_perror(fmt, ...) fprintf(stderr, "error! " fmt ": %s\n", ##__VA_ARGS__, strerror (errno))
+#define hin_debug(fmt, ...) printf (fmt, ##__VA_ARGS__)
+#define hin_weird_error(errcode) fprintf(stderr, "error! %d\n", (errcode))
+
+int hin_client_addr (char * str, int len, struct sockaddr * ai_addr, socklen_t ai_addrlen);
 
 #endif

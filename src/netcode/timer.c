@@ -8,6 +8,7 @@
 #include <unistd.h>
 
 #include "hin.h"
+#include "hin_internal.h"
 #include "conf.h"
 
 static hin_buffer_t * timeout_buffer = NULL;
@@ -19,18 +20,18 @@ void hin_timer_clean () {
 
 typedef struct {
   time_t time;
-  struct timespec ts;
+  struct __kernel_timespec ts;
   int pad;
   int (*callback) (int ms);
 } hin_timeout_t;
 
 static int hin_timer_callback (hin_buffer_t * buffer, int ret) {
   if (ret < 0 && ret != -ETIME) {
-    printf ("timer error %s\n", strerror (-ret));
+    hin_error ("timer error %s", strerror (-ret));
   }
   hin_timeout_t * tm = (void*)&buffer->buffer;
   if (hin_request_timeout (buffer, &tm->ts, 0, 0) < 0) {
-    printf ("error! %d\n", 78347122);
+    hin_weird_error (78347122);
     return -1;
   }
 
@@ -70,7 +71,7 @@ int hin_timer_init (int (*callback) (int ms)) {
   tm->callback = callback;
 
   if (hin_request_timeout (buf, &tm->ts, 0, 0) < 0) {
-    printf ("error! %d\n", 212223556);
+    hin_weird_error (212223556);
     return -1;
   }
 

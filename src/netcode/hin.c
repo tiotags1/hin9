@@ -4,10 +4,10 @@
 #include <string.h>
 
 #include "hin.h"
+#include "hin_internal.h"
+#include "listen.h"
 
 hin_master_t master;
-
-#include "listen.h"
 
 int hin_init () {
   int hin_event_init ();
@@ -23,8 +23,6 @@ int hin_clean () {
   hin_epoll_clean ();
   void hin_timer_clean ();
   hin_timer_clean ();
-  int hin_socket_clean ();
-  hin_socket_clean ();
   void hin_ssl_cleanup ();
   hin_ssl_cleanup ();
   return 0;
@@ -42,8 +40,8 @@ void hin_stop () {
     elem = elem->next;
 
     if (master.debug & DEBUG_CONFIG)
-      printf ("stopping server %d\n", server->c.sockfd);
-    hin_server_stop (server);
+      hin_debug ("stopping server %d\n", server->c.sockfd);
+    hin_server_close (server);
   }
 }
 
@@ -63,7 +61,7 @@ int hin_check_alive () {
   }
   if ((master.flags & HIN_FLAG_QUIT) == 0) return 1;
   if (master.server_list.next || master.num_connection) {
-    if (master.debug & DEBUG_CONFIG) printf ("hin live client %d conn %d\n", master.num_client, master.num_connection);
+    if (master.debug & DEBUG_CONFIG) hin_debug ("hin live client %d conn %d\n", master.num_client, master.num_connection);
     return 1;
   }
   master.flags |= HIN_FLAG_FINISH;

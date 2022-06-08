@@ -66,7 +66,8 @@ extern hin_master_t master;
 int hin_init ();
 int hin_timer_init (int (*callback) (int ms));
 int hin_clean ();
-int hin_event_loop ();
+int hin_event_process ();
+int hin_event_wait ();
 
 void hin_stop ();
 int hin_restart1 ();

@@ -6,11 +6,12 @@
 #include <time.h>
 
 #include "hin.h"
+#include "hin_internal.h"
 #include "conf.h"
 
 static hin_buffer_t * new_buffer (hin_buffer_t * buffer, int min_sz) {
   if (buffer->debug & DEBUG_RW)
-    printf ("header needed to make new buffer\n");
+    hin_debug ("header requires more buffer\n");
   int sz = READ_SZ > min_sz ? READ_SZ : min_sz;
   hin_buffer_t * buf = calloc (1, sizeof (hin_buffer_t) + sz);
   buf->sz = sz;
@@ -38,7 +39,7 @@ int vheader (hin_buffer_t * buffer, const char * fmt, va_list ap) {
   int len = vsnprintf (buffer->ptr + pos, sz, fmt, ap);
   if (len < 0) return 0;
   if (len > HIN_HTTPD_MAX_HEADER_LINE_SIZE) {
-    printf ("'header' failed to write more\n");
+    hin_error ("header failed to write more");
     va_end (ap);
     return 0;
   }
@@ -69,7 +70,7 @@ int header_raw (hin_buffer_t * buffer, const char * data, int len) {
   int pos = buffer->count;
   int sz = buffer->sz - buffer->count;
   if (len > HIN_HTTPD_MAX_HEADER_LINE_SIZE) {
-    printf ("'header_raw' failed to write more\n");
+    hin_error ("header_raw failed to write more");
     return 0;
   }
   if (len > sz) {
@@ -90,7 +91,7 @@ void * header_ptr (hin_buffer_t * buffer, int len) {
   int pos = buffer->count;
   int sz = buffer->sz - buffer->count;
   if (len > HIN_HTTPD_MAX_HEADER_LINE_SIZE) {
-    printf ("'header_raw1' failed to write more\n");
+    hin_error ("header_ptr failed to write more");
     return NULL;
   }
   if (len > sz) {
@@ -106,7 +107,7 @@ void * header_ptr (hin_buffer_t * buffer, int len) {
 int header_date (hin_buffer_t * buf, const char * fmt, time_t time) {
   struct tm data;
   struct tm *info = gmtime_r (&time, &data);
-  if (info == NULL) { perror ("gmtime_r"); return 0; }
+  if (info == NULL) { hin_perror ("gmtime_r"); return 0; }
   int sz = 80;
   char * buffer = header_ptr (buf, sz);
   int len = strftime (buffer, sz, fmt, info);

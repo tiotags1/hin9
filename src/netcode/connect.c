@@ -13,6 +13,7 @@
 #include <fcntl.h>
 
 #include "hin.h"
+#include "hin_internal.h"
 
 typedef struct {
   struct addrinfo * rp, * base;
@@ -34,13 +35,13 @@ static int complete (hin_buffer_t * buf, int ret) {
 			NI_NUMERICHOST | NI_NUMERICSERV);
   if (err) {
     hbuf[0] = sbuf[0] = '\0';
-    fprintf (stderr, "getnameinfo: %s\n", gai_strerror (err));
+    hin_error ("getnameinfo: %s", gai_strerror (err));
   }
 
   if (ret >= 0) {
-    if (master.debug & DEBUG_SOCKET) printf ("connect %d %s:%s complete\n", ret, hbuf, sbuf);
+    if (master.debug & DEBUG_SOCKET) hin_debug ("connect %d %s:%s complete\n", ret, hbuf, sbuf);
   } else {
-    if (master.debug & DEBUG_SOCKET) printf ("connect %s:%s failed! %s\n", hbuf, sbuf, strerror (-ret));
+    if (master.debug & DEBUG_SOCKET) hin_debug ("connect %s:%s failed! %s\n", hbuf, sbuf, strerror (-ret));
   }
 
   if (conn->callback (buf, ret)) {
@@ -57,7 +58,7 @@ static int hin_connect_try_next (hin_buffer_t * buf) {
   for (; rp; rp = rp->ai_next) {
     buf->fd = socket (rp->ai_family, rp->ai_socktype, rp->ai_protocol);
     if (buf->fd < 0) {
-      perror ("socket");
+      hin_error ("socket");
       continue;
     }
 
@@ -65,7 +66,7 @@ static int hin_connect_try_next (hin_buffer_t * buf) {
     *conn->ai_addr = *rp->ai_addr;
     *conn->ai_addrlen = rp->ai_addrlen;
     if (hin_request_connect (buf, conn->ai_addr, *conn->ai_addrlen) < 0) {
-      printf ("error! %d\n", 146465465);
+      hin_weird_error (146465465);
       break;
     }
     return 0;
@@ -92,11 +93,11 @@ static int hin_connect_recheck (hin_buffer_t * buf, int ret) {
 
 int hin_connect (const char * host, const char * port, hin_callback_t callback, void * parent, struct sockaddr * ai_addr, socklen_t * ai_addrlen) {
   if (master.debug & DEBUG_SOCKET)
-    printf ("connect start %s:%s\n", host, port);
+    hin_debug ("connect start %s:%s\n", host, port);
   struct addrinfo hints;
   struct addrinfo *result;
   if (parent == NULL || callback == NULL) {
-    fprintf (stderr, "can't connect without a callback ?\n");
+    hin_error ("connect requires callback");
     return -1;
   }
 
@@ -108,7 +109,7 @@ int hin_connect (const char * host, const char * port, hin_callback_t callback, 
 
   int err = getaddrinfo (host, port, &hints, &result);
   if (err) {
-    fprintf (stderr, "getaddrinfo: %s\n", gai_strerror (err));
+    hin_error ("getaddrinfo: %s", gai_strerror (err));
     return -1;
   }
 
@@ -140,7 +141,7 @@ int hin_unix_sock (const char * path, hin_callback_t callback, void * parent) {
   sock = (struct sockaddr_un *)buf->buffer;
 
   if ((buf->fd = socket (AF_UNIX, SOCK_STREAM, 0)) == -1) {
-    perror("socket");
+    hin_perror ("socket");
     return -1;
   }
 
@@ -149,7 +150,7 @@ int hin_unix_sock (const char * path, hin_callback_t callback, void * parent) {
   sock->sun_path[len] = '\0';
 
   if (hin_request_connect (buf, (struct sockaddr *)sock, sz) < 0) {
-    printf ("connect unix failed\n");
+    hin_error ("connect unix failed");
     return -1;
   }
 

@@ -396,10 +396,6 @@ int main (int argc, const char * argv[], const char * envp[]) {
     int hin_pidfile (const char * path);
     if (hin_pidfile (master.pid_path) < 0) { return -1; }
   }
-  if (hin_listen_do () < 0) {
-    printf ("error listening to sockets\n");
-    return -1;
-  }
 
   void * hin_cache_create ();
   hin_cache_create ();
@@ -412,7 +408,9 @@ int main (int argc, const char * argv[], const char * envp[]) {
     printf ("hin serve ...\n");
   master.share->done = 1;
 
-  hin_event_loop ();
+  while (hin_event_wait ()) {
+    hin_event_process ();
+  }
 
   hin_clean1 ();
 

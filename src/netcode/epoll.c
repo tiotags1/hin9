@@ -8,6 +8,7 @@
 #include <sys/epoll.h>
 
 #include "hin.h"
+#include "hin_internal.h"
 
 #define MAX_EVENTS 32
 static int epoll_fd = -1;
@@ -16,7 +17,7 @@ static int hin_init_epoll () {
   if (epoll_fd < 0) {
     epoll_fd = epoll_create1 (0);
     if (epoll_fd < 0) {
-      perror ("epoll_create");
+      hin_perror ("epoll_create");
       return -1;
     }
   }
@@ -45,7 +46,7 @@ int hin_epoll_request_read (hin_buffer_t * buf) {
   }
 
   if (epoll_ctl (epoll_fd, op, buf->fd, &event) < 0) {
-    perror ("epoll_ctl");
+    hin_perror ("epoll_ctl");
     return -1;
   }
 
@@ -68,7 +69,7 @@ int hin_epoll_request_write (hin_buffer_t * buf) {
   }
 
   if (epoll_ctl (epoll_fd, op, buf->fd, &event) < 0) {
-    perror ("epoll_ctl");
+    hin_perror ("epoll_ctl");
     return -1;
   }
 
@@ -85,7 +86,7 @@ int hin_epoll_check () {
 
     int ret = 0;
     if ((buf->flags & HIN_EPOLL) == HIN_EPOLL) {
-      printf ("error epoll read&write\n");
+      hin_error ("epoll read&write");
       return -1;
     } else if (buf->flags & HIN_EPOLL_READ) {
       ret = read (buf->fd, buf->ptr, buf->count);

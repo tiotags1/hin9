@@ -14,6 +14,7 @@
 #include <fcntl.h>
 
 #include "hin.h"
+#include "hin_internal.h"
 
 #ifdef HIN_USE_OPENSSL
 
@@ -34,7 +35,7 @@ SSL_CTX * hin_ssl_default_init () {
   ctx = SSL_CTX_new (method);
 
   if (ctx == NULL) {
-    perror ("Unable to create SSL context");
+    hin_error ("ssl context creation failed");
     return NULL;
   }
 
@@ -57,7 +58,7 @@ int hin_ssl_accept_init (hin_client_t * client) {
   SSL_set_ex_data(ssl->ssl, 0, client);
 
   client->flags |= HIN_SSL;
-  if (master.debug & DEBUG_SSL) printf ("ssl init accept sockfd %d\n", client->sockfd);
+  if (master.debug & DEBUG_SSL) hin_debug ("ssl init accept sockfd %d\n", client->sockfd);
   return 1;
 }
 
@@ -78,7 +79,7 @@ int hin_ssl_connect_init (hin_client_t * client) {
   SSL_set_ex_data (ssl->ssl, 0, client);
 
   client->flags |= HIN_SSL;
-  if (master.debug & DEBUG_SSL) printf ("ssl init connect sockfd %d\n", client->sockfd);
+  if (master.debug & DEBUG_SSL) hin_debug ("ssl init connect sockfd %d\n", client->sockfd);
   return 1;
 }
 
@@ -108,12 +109,12 @@ static int hin_ssl_sni_callback (SSL *ssl, int *ad, void *arg) {
   const char* servername = SSL_get_servername (ssl, TLSEXT_NAMETYPE_host_name);
   if (servername == NULL || servername[0] == '\0') {
     if (debug & (DEBUG_SSL|DEBUG_INFO))
-      printf ("ssl SNI null\n");
+      hin_debug ("ssl SNI null\n");
     return SSL_TLSEXT_ERR_NOACK;
   }
 
   if (debug & (DEBUG_SSL))
-    printf ("ssl SNI '%s'\n", servername);
+    hin_debug ("ssl SNI '%s'\n", servername);
 
   hin_client_t * client = SSL_get_ex_data (ssl, 0);
   hin_server_t * server = client->parent;
@@ -123,7 +124,7 @@ static int hin_ssl_sni_callback (SSL *ssl, int *ad, void *arg) {
     if (new) {
       SSL_CTX * r = SSL_set_SSL_CTX (ssl, new);
       if (r != new) {
-        printf ("ssl can't set new ctx\n");
+        hin_error ("ssl can't set new ctx");
         return SSL_TLSEXT_ERR_ALERT_FATAL;
       }
     }
@@ -146,7 +147,7 @@ SSL_CTX * hin_ssl_init (const char * cert, const char * key) {
   ctx = SSL_CTX_new (method);
 
   if (ctx == NULL) {
-    perror ("Unable to create SSL context");
+    hin_error ("ssl context creation failed");
     return NULL;
   }
 
@@ -156,26 +157,26 @@ SSL_CTX * hin_ssl_init (const char * cert, const char * key) {
   int err;
   err = SSL_CTX_use_certificate_file (ctx, cert, SSL_FILETYPE_PEM);
   if (err != 1) {
-    printf ("SSL_CTX_use_certificate_file '%s' failed\n", cert);
+    hin_error ("SSL_CTX_use_certificate_file '%s' failed", cert);
     hin_ssl_print_error ();
     return NULL;
   }
   if (master.debug & HIN_SSL)
-    printf ("ssl cert '%s' ok.\n", cert);
+    hin_debug ("ssl cert '%s' ok.\n", cert);
 
   // Indicate the key file to be used
   err = SSL_CTX_use_PrivateKey_file (ctx, key, SSL_FILETYPE_PEM);
   if (err != 1) {
-    printf ("SSL_CTX_use_PrivateKey_file '%s' failed\n", key);
+    hin_error ("SSL_CTX_use_PrivateKey_file '%s' failed", key);
     hin_ssl_print_error ();
     return NULL;
   }
   if (master.debug & HIN_SSL)
-    printf("ssl key '%s' ok.\n", key);
+    hin_debug ("ssl key '%s' ok.\n", key);
 
   // Make sure the key and certificate file match.
   if (SSL_CTX_check_private_key (ctx) != 1) {
-    printf ("SSL_CTX_check_private_key failed");
+    hin_error ("SSL_CTX_check_private_key failed");
     hin_ssl_print_error ();
     return NULL;
   }
@@ -193,19 +194,19 @@ SSL_CTX * hin_ssl_init (const char * cert, const char * key) {
 #else
 
 int hin_ssl_accept_init (hin_client_t * client) {
-  printf ("openssl disabled\n");
+  hin_error ("ssl disabled");
   return -1;
 }
 
 int hin_ssl_connect_init (hin_client_t * client) {
-  printf ("openssl disabled\n");
+  hin_error ("ssl disabled");
   return -1;
 }
 
 void hin_client_ssl_cleanup (hin_client_t * client) {}
 
 void * hin_ssl_init (const char * cert, const char * key) {
-  printf ("openssl disabled\n");
+  hin_error ("ssl disabled");
   return NULL;
 }
 
