@@ -1,4 +1,7 @@
 
+* added hin netcode library example programs
+
+commit 0071fff132d2920050e97edd277402d465a9c367
 * refactored hin netcode library
 * changed hin netcode library api
 * added hin\_error and hin\_debug functions

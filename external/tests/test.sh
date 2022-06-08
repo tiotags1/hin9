@@ -41,6 +41,7 @@ build/hin9 --config ${run_dir}main.lua --log ${run_dir}server.log &
 PID=$!
 
 sleep 1
+server_crashed=0
 
 run_test () {
   export name=`basename $file`
@@ -53,6 +54,10 @@ run_test () {
   if ! kill -s 0 $PID &> ${run_dir}server.log; then
     exit_code=1
     echo "Server crashed" > ${run_dir}$name.log
+    if [ $server_crashed -eq 0 ]; then
+      printf "Server ${RED}crashed${NC} !!!\n"
+      server_crashed=1
+    fi
   fi
   if [ $exit_code -eq 0 ]; then
     printf "${GREEN}success$NC\t$name\n"
