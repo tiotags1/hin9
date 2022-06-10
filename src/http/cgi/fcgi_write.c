@@ -95,7 +95,7 @@ static int hin_fcgi_headers (hin_buffer_t * buf, hin_fcgi_worker_t * worker) {
 
   hin_fcgi_socket_t * sock = worker->socket;
   if (http->debug & DEBUG_CGI)
-    fprintf (stderr, "httpd %d fcgi %d write headers\n", http->c.sockfd, sock->fd);
+    fprintf (stderr, "httpd %d fcgi %d worker %d write headers\n", http->c.sockfd, sock->fd, worker->req_id);
 
   // if file set then create script path
   extern basic_vfs_t * vfs;
@@ -214,6 +214,8 @@ int hin_fcgi_worker_run (hin_fcgi_worker_t * worker) {
   httpd_client_t * http = worker->http;
 
   if (socket->flags & HIN_FCGI_BUSY) {
+    if (http->debug & DEBUG_CGI)
+      printf ("httpd %d fcgi %d worker %d busy queued\n", http->c.sockfd, socket->fd, worker->req_id);
     basic_dlist_append (&socket->que, &worker->list);
     return 1;
   }

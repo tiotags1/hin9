@@ -46,7 +46,7 @@ static int hin_fcgi_pipe_end (hin_fcgi_worker_t * worker, FCGI_Header * head) {
   FCGI_EndRequestBody * req = (FCGI_EndRequestBody*)head->data;
   req->appStatus = endian_swap32 (req->appStatus);
   if (http->debug & DEBUG_CGI)
-    printf ("httpd %d fcgi %d req_id %d status %d proto %d end\n", http->c.sockfd, socket->fd, head->request_id, req->appStatus, req->protocolStatus);
+    printf ("httpd %d fcgi %d worker %d status %d proto %d end\n", http->c.sockfd, socket->fd, head->request_id, req->appStatus, req->protocolStatus);
 
   if (req->protocolStatus != FCGI_REQUEST_COMPLETE || req->appStatus) {
     printf ("httpd %d fcgi %d finish error\n", http->c.sockfd, socket->fd);
@@ -83,7 +83,7 @@ int hin_fcgi_read_rec (hin_buffer_t * buf, char * ptr, int left) {
   hin_fcgi_worker_t * worker = sock->worker[req_id];
 
   if (buf->debug & DEBUG_CGI)
-    printf ("httpd %d fcgi %d rec type %d id %d len %d\n", worker->http->c.sockfd, buf->fd, head->type, head->request_id, head->length);
+    printf ("httpd %d fcgi %d worker %d type %d len %d\n", worker->http->c.sockfd, buf->fd, head->request_id, head->type, head->length);
 
   switch (head->type) {
   case FCGI_STDOUT:

@@ -1,8 +1,6 @@
 
 set -e
 
-exit 1
-
 URL=http://$HOST:$PORT/proxy/
 
 # broken inside test, works outside ?

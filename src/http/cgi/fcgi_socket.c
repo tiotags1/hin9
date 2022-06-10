@@ -15,13 +15,16 @@ int hin_fcgi_socket_continue (hin_fcgi_socket_t * socket) {
   socket->flags &= ~HIN_FCGI_BUSY;
 
   basic_dlist_t * next = socket->que.next;
-  while (next && (socket->flags & HIN_FCGI_BUSY) == 0) {
+  while (next && ((socket->flags & HIN_FCGI_BUSY) == 0)) {
     hin_fcgi_worker_t * worker = basic_dlist_ptr (next, offsetof (hin_fcgi_worker_t, list));
     next = next->next;
 
-    basic_dlist_remove (&socket->que, &worker->list);
-    hin_fcgi_worker_run (worker);
+    if ((worker->io_state & HIN_REQ_DATA) == 0) {
+      basic_dlist_remove (&socket->que, &worker->list);
+      hin_fcgi_worker_run (worker);
+    }
   }
+
   return 0;
 }
 

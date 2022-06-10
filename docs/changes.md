@@ -1,4 +1,9 @@
 
+* fixed segfault from writing the fcgi request multiple times
+* better debug messages
+* fixed php head test
+
+commit 085567277214334b264286e3aa64740e343be2f6
 * added hin netcode library example programs
 
 commit 0071fff132d2920050e97edd277402d465a9c367

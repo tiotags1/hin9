@@ -8,9 +8,12 @@
 
 #include "fcgi.h"
 
-static void hin_fcgi_stdin_done (hin_fcgi_worker_t * worker) {
+static void hin_fcgi_stdin_done (httpd_client_t * http, hin_fcgi_worker_t * worker) {
   hin_fcgi_socket_t * socket = worker->socket;
   socket->flags &= ~HIN_FCGI_BUSY;
+
+  if (http->debug & (DEBUG_CGI|DEBUG_POST))
+    printf ("httpd %d fcgi %d worker %d stdin done\n", http->c.sockfd, worker->socket->fd, worker->req_id);
 
   int hin_fcgi_socket_continue (hin_fcgi_socket_t * socket);
   hin_fcgi_socket_continue (socket);
@@ -24,7 +27,7 @@ static int hin_fcgi_post_done_callback (hin_pipe_t * pipe) {
 
   hin_fcgi_worker_t * worker = pipe->parent1;
 
-  hin_fcgi_stdin_done (worker);
+  hin_fcgi_stdin_done (http, worker);
 
   worker->io_state &= ~HIN_REQ_POST;
   hin_fcgi_worker_reset (worker);
@@ -78,8 +81,8 @@ int hin_fcgi_write_post (hin_buffer_t * buf, hin_fcgi_worker_t * worker) {
   hin_fcgi_socket_t * socket = worker->socket;
 
   if (http->method != HIN_METHOD_POST) {
-    hin_fcgi_stdin_done (worker);
     hin_fcgi_header (buf, FCGI_STDIN, worker->req_id, 0);
+    hin_fcgi_stdin_done (http, worker);
     return 0;
   }
 

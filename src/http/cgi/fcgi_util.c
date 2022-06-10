@@ -18,7 +18,7 @@ FCGI_Header * hin_fcgi_header (hin_buffer_t * buf, int type, int id, int sz) {
   head->length = endian_swap16 (sz);
   head->padding = 0;
   if (buf->debug & DEBUG_CGI)
-    printf ("fcgi type %d req %d sz %d\n", type, id, sz);
+    printf ("fcgi %d worker %d type %d sz %d packet\n", buf->fd, id, type, sz);
   return head;
 }
 
