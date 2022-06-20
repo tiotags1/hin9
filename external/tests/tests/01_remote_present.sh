@@ -1,5 +1,5 @@
 
 set -e
 
-curl -v -k $REMOTE
+curl --fail $CURL_FLAGS $REMOTE
 

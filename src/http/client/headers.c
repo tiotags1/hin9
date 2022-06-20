@@ -168,6 +168,7 @@ int http_client_start_headers (http_client_t * http, hin_buffer_t * received) {
   const char * method = "GET";
   switch (http->method) {
   case HIN_METHOD_POST: method = "POST"; break;
+  case HIN_METHOD_HEAD: method = "HEAD"; break;
   }
 
   header (buf, "%s %.*s HTTP/1.1\r\n", method, path_max - path, path);

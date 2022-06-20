@@ -1,9 +1,10 @@
 
 set -e
 
-export URL=http://$HOST:$PORT/tests
-export LOCALFILE=tests/index.html
-export CURL_FLAGS="-L"
+export URL_PATH=tests
+export LOCAL_PATH=$DOCS_DIR/tests/index.html
+export SUBTEST="normal ssl deflate gzip"
+export CURL_FLAGS="$CURL_FLAGS -L"
 
-sh $scripts_dir/request.sh
+sh $TOOL_DIR/request.sh
 

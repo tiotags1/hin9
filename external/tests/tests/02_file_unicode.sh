@@ -16,10 +16,11 @@ return 0
 
 file_name="世界さんこんにちは.html"
 temp=`urlencode "$file_name"`
-echo "$temp"
+echo "urlencoded filename is $temp"
 
-export URL="http://$HOST:$PORT/tests/$temp"
-export LOCALFILE="tests/$file_name"
+export URL_PATH="tests/$temp"
+export LOCAL_PATH="$DOCS_DIR/tests/$file_name"
+export SUBTEST="normal ssl head deflate gzip no_keepalive hammer"
 
-sh $scripts_dir/request.sh
+sh $TOOL_DIR/request.sh
 

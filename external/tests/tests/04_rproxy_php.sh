@@ -1,18 +1,11 @@
 
 set -e
 
-TARGET="tests/min.php"
+exit 1
 
-export URL="http://$HOST:$PORT/proxy/$TARGET"
+export URL_PATH=proxy/tests/min.php
+export PHP_PATH=$DOCS_DIR/tests/min.php
+export SUBTEST="normal ssl head deflate gzip no_keepalive hammer post"
 
-A1=`curl -v -k "$URL"`
-A2=`php $htdocs/$TARGET`
-
-echo "received  '$A1'"
-echo "should be '$A2'"
-
-if [ "$A1" != "$A2" ]; then
-  echo "Output doesn't match"
-  exit 1
-fi
+sh $TOOL_DIR/request.sh
 

@@ -17,4 +17,4 @@ if [ -n "$failed" ]; then
   exit 1
 fi
 
-echo "$name $total" >> $run_dir/bench.txt
+echo "${name} $total" >> $LOGS_DIR/bench.txt

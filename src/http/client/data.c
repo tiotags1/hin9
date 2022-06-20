@@ -32,7 +32,7 @@ hin_pipe_t * http_client_start_pipe (http_client_t * http, string_t * source) {
   pipe->in.flags = HIN_SOCKET | (http->c.flags & HIN_SSL);
   pipe->in.ssl = &http->c.ssl;
   pipe->in.pos = 0;
-  pipe->out.fd = 1;
+  pipe->out.fd = STDOUT_FILENO;
   pipe->out.flags = 0;
   pipe->out.pos = 0;
   pipe->parent = http;
@@ -41,7 +41,11 @@ hin_pipe_t * http_client_start_pipe (http_client_t * http, string_t * source) {
     pipe->read_callback = http->read_callback;
   pipe->debug = http->debug;
 
-  if (http->flags & HIN_HTTP_CHUNKED) {
+  if (http->method == HIN_METHOD_HEAD) {
+    pipe->in.flags |= HIN_COUNT;
+    pipe->left = pipe->sz = 0;
+    len = 0;
+  } else if (http->flags & HIN_HTTP_CHUNKED) {
     int hin_pipe_decode_chunked (hin_pipe_t * pipe, hin_buffer_t * buffer, int num, int flush);
     pipe->decode_callback = hin_pipe_decode_chunked;
   } else if (http->sz > 0) {

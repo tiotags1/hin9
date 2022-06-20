@@ -25,7 +25,10 @@ static int hin_rproxy_headers (http_client_t * http, hin_pipe_t * pipe) {
   pipe->parent = http;
   pipe->parent1 = parent;
 
-  if ((http->flags & HIN_HTTP_CHUNKED)) {
+  if (http->method == HIN_METHOD_HEAD) {
+    pipe->in.flags |= HIN_COUNT;
+    pipe->left = pipe->sz = 0;
+  } else if ((http->flags & HIN_HTTP_CHUNKED)) {
     pipe->left = pipe->sz = 0;
     pipe->in.flags &= ~HIN_COUNT;
   } else {

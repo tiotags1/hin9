@@ -1,4 +1,10 @@
 
+* greatly improved performance, now we're faster than nginx ! (for some use cases)
+* improved testing infrastructure, better error messages, better logs, etc
+* added a bunch of new tests, especially benchmarks
+* fixed rproxy not sending HEAD requests
+
+commit 71558f0fa1e434f3c7dd8d059b7f85536e250d65
 * fixed segfault from writing the fcgi request multiple times
 * better debug messages
 * fixed php head test

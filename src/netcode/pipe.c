@@ -170,6 +170,14 @@ static int hin_pipe_read_next (hin_pipe_t * pipe, hin_buffer_t * buffer) {
   buffer->count = buffer->sz;
 #endif
 
+  if ((pipe->flags & HIN_CONDENSE)
+   && (pipe->write_que.next)) {
+    hin_buffer_t * buf1 = hin_buffer_list_ptr (pipe->write_que.next);
+    if (buf1->count < (buffer->sz / 2)) {
+      buffer->count -= buf1->count;
+    }
+  }
+
   buffer->pos = pipe->in.pos;
   if ((pipe->in.flags & HIN_COUNT) && pipe->left < READ_SZ) buffer->count = pipe->left;
 
@@ -187,6 +195,38 @@ static int hin_pipe_read_next (hin_pipe_t * pipe, hin_buffer_t * buffer) {
 }
 
 static int hin_pipe_write_next (hin_pipe_t * pipe, hin_buffer_t * buffer) {
+  if ((pipe->flags & HIN_CONDENSE)
+   && (buffer->count < buffer->sz)) {
+    basic_dlist_t * elem = pipe->write_que.next->next;
+    if (elem == NULL && (pipe->in.flags & HIN_DONE) == 0) {
+      return 0;
+    }
+    while (elem) {
+      hin_buffer_t * buf = hin_buffer_list_ptr (elem);
+      elem = elem->next;
+
+      int len = buffer->sz - buffer->count;
+      if (len > buf->count) len = buf->count;
+      else if (len == 0) break;
+
+      if (buffer->ptr < buffer->buffer || buffer->ptr > buffer->buffer + buffer->sz) {
+        printf ("buf ptr not inside buffer using a dynamic buffer not supported\n");
+      } else if (buffer->ptr != buffer->buffer) {
+        memmove (buffer->buffer, buffer->ptr, buffer->count);
+        buffer->ptr = buffer->buffer;
+      }
+
+      memcpy (&buffer->ptr[buffer->count], buf->ptr, len);
+      buf->ptr += len;
+      buf->count -= len;
+      buffer->count += len;
+      if (buf->count == 0) {
+        basic_dlist_remove (&pipe->write_que, &buf->list);
+        hin_buffer_clean (buf);
+      }
+    }
+  }
+
   buffer->fd = pipe->out.fd;
   buffer->ssl = pipe->out.ssl;
   buffer->flags = pipe->out.flags;

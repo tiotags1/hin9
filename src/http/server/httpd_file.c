@@ -104,6 +104,7 @@ int httpd_send_file (httpd_client_t * http, hin_cache_item_t * item, hin_buffer_
   pipe->in.flags = HIN_OFFSETS | HIN_COUNT;
   pipe->in.pos = http->pos;
   pipe->finish_callback = done_file;
+  pipe->flags |= HIN_CONDENSE;
 
   if (item->type) { pipe->parent1 = item; }
 

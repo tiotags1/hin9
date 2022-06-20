@@ -1,12 +1,9 @@
 
 set -e
 
-source $scripts_dir/files.sh
+export URL_PATH=large.bin
+export LOCAL_PATH=$DOCS_DIR/large.bin
+export SUBTEST="normal ssl deflate gzip head"
 
-file_name=`basename $large_path`
-
-export URL=http://$HOST:$PORT/$file_name
-export LOCALFILE=$file_name
-
-sh $scripts_dir/request.sh
+sh $TOOL_DIR/request.sh
 
