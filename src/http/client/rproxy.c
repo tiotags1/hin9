@@ -19,6 +19,7 @@ static int hin_rproxy_headers (http_client_t * http, hin_pipe_t * pipe) {
   pipe->out.flags &= ~(HIN_FILE | HIN_OFFSETS);
 
   parent->count = http->sz;
+  parent->peer_flags |= http->flags & HIN_HTTP_CHUNKED;
 
   httpd_pipe_set_http11_response_options (parent, pipe);
   pipe->out_error_callback = httpd_pipe_error_callback;

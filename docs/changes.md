@@ -1,4 +1,8 @@
 
+* fixed rproxy backend not properly sending the close signal to chunked connections
+* moved rproxy php hammer to separate test, can't make other servers serve >1000 php connections
+
+commit 0456315f5d4aa2243efc948fa46d70ca1542e2e8
 * greatly improved performance, now we're faster than nginx ! (for some use cases)
 * improved testing infrastructure, better error messages, better logs, etc
 * added a bunch of new tests, especially benchmarks

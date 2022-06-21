@@ -42,6 +42,7 @@ if [ ! -f ${WORK_DIR}/ssl/key.pem ]; then
 fi
 
 $TOOL_DIR/temp_files.sh &>> ${LOGS_DIR}server.log
+rm -f ${LOGS_DIR}/access.log
 
 build/hin9 --config ${RUN_DIR}main.lua --log ${LOGS_DIR}server.log --logdir ${LOGS_DIR} &
 PID=$!
