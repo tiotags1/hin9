@@ -28,11 +28,6 @@ typedef struct hin_sqe_que_struct {
 
 static hin_sqe_que_t * queue = NULL;
 
-int hin_ssl_request_write (hin_buffer_t * buffer);
-int hin_ssl_request_read (hin_buffer_t * buffer);
-int hin_epoll_request_read (hin_buffer_t * buf);
-int hin_epoll_request_write (hin_buffer_t * buf);
-
 static inline int hin_request_callback (hin_buffer_t * buf, int ret) {
   if (ret < 0) ret = -errno;
   int err = buf->callback (buf, ret);

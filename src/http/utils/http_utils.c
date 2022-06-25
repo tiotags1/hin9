@@ -119,6 +119,7 @@ static unsigned long int my_strtoul (const char* str, const char** endptr, int b
     ch = *ptr;
     if (ch >= '0' && ch <= '9') ch = ch - '0';
     else if (ch >= 'A' && ch <= 'Z') ch = 10 + ch - 'A';
+    else if (ch >= 'a' && ch <= 'z') ch = 10 + ch - 'a';
     else break;
     if (ch >= base) break;
     ptr++;

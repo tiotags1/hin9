@@ -172,9 +172,16 @@ static int hin_pipe_read_next (hin_pipe_t * pipe, hin_buffer_t * buffer) {
 
   if ((pipe->flags & HIN_CONDENSE)
    && (pipe->write_que.next)) {
-    hin_buffer_t * buf1 = hin_buffer_list_ptr (pipe->write_que.next);
-    if (buf1->count < (buffer->sz / 2)) {
-      buffer->count -= buf1->count;
+    int count = 0;
+    basic_dlist_t * elem = pipe->write_que.next;
+    while (elem) {
+      hin_buffer_t * buf = hin_buffer_list_ptr (elem);
+      elem = elem->next;
+      count += buf->count;
+    }
+    if (count > 0 && count < buffer->sz) {
+      buffer->count = buffer->sz - count;
+      //printf ("requested %d bytes\n", buffer->count);
     }
   }
 
@@ -201,6 +208,8 @@ static int hin_pipe_write_next (hin_pipe_t * pipe, hin_buffer_t * buffer) {
     if (elem == NULL && (pipe->in.flags & HIN_DONE) == 0) {
       return 0;
     }
+    if (elem && master.debug & DEBUG_HTTP)
+      printf ("httpd %d condense %d/%d\n", buffer->fd, buffer->count, buffer->sz);
     while (elem) {
       hin_buffer_t * buf = hin_buffer_list_ptr (elem);
       elem = elem->next;
@@ -210,7 +219,7 @@ static int hin_pipe_write_next (hin_pipe_t * pipe, hin_buffer_t * buffer) {
       else if (len == 0) break;
 
       if (buffer->ptr < buffer->buffer || buffer->ptr > buffer->buffer + buffer->sz) {
-        printf ("buf ptr not inside buffer using a dynamic buffer not supported\n");
+        hin_error ("buf ptr not inside buffer using a dynamic buffer not supported\n");
       } else if (buffer->ptr != buffer->buffer) {
         memmove (buffer->buffer, buffer->ptr, buffer->count);
         buffer->ptr = buffer->buffer;
@@ -267,15 +276,24 @@ int hin_pipe_advance (hin_pipe_t * pipe) {
   }
 
   if ((pipe->in.flags & (HIN_DONE|HIN_INACTIVE)) == 0
-    && pipe->reading.next == NULL) {
-    hin_buffer_t * new = pipe->buffer_callback (pipe, READ_SZ);
-    if (hin_pipe_read_next (pipe, new) < 0) {
-      hin_buffer_clean (new);
-      return -1;
+   && pipe->reading.next == NULL) {
+    off_t queued = 0;
+    basic_dlist_t * elem = pipe->write_que.next;
+    while (elem) {
+      hin_buffer_t * buf = hin_buffer_list_ptr (elem);
+      elem = elem->next;
+      queued += buf->count;
+    }
+    if (queued < READ_SZ * 2) {
+      hin_buffer_t * new = pipe->buffer_callback (pipe, READ_SZ);
+      if (hin_pipe_read_next (pipe, new) < 0) {
+        hin_buffer_clean (new);
+        return -1;
+      }
     }
   }
 
-  if (pipe->write_que.next && (pipe->out.flags & HIN_DONE)) {
+  if (pipe->write_que.next && (pipe->writing.next == NULL)) {
     hin_buffer_t * buffer = hin_buffer_list_ptr (pipe->write_que.next);
     if (hin_pipe_write_next (pipe, buffer) < 0) return -1;
   }

@@ -64,14 +64,38 @@ static int hin_server_accept_callback (hin_buffer_t * buffer, int ret) {
 
   if (ret < 0) {
     if (server->accept_buffer == NULL) return 1;
-    hin_error ("failed accept %d '%s'", server->c.sockfd, strerror (-ret));
     switch (-ret) {
-    case EBADF:
-    case EINVAL:
-    case ENOTSOCK:
-    case EOPNOTSUPP:
+    case EAGAIN:
+    #if EAGAIN != EWOULDBLOCK
+    case EWOULDBLOCK:
+    #endif
+    case EINTR:
+    case ECONNABORTED:
+    case ENETDOWN:
+    case EPROTO:
+    case EHOSTDOWN:
+    case ENONET:
+    case EHOSTUNREACH:
+    case ENETUNREACH:
+      // retry errors
+    break;
+    case EMFILE:
+    case ENFILE:
+    case ENOBUFS:
+    case ENOMEM:
+    case EPERM:
+      // slow down errors
+      if (master.debug & (DEBUG_INFO|DEBUG_CONFIG|DEBUG_RW_ERROR))
+        hin_error ("accept %d ran out of resources: %s", server->c.sockfd, strerror (-ret));
       return 0;
-    default: break;
+    break;
+    default:
+      // other errors are fatal
+      hin_error ("failed accept %d '%s'", server->c.sockfd, strerror (-ret));
+      server->accept_buffer = NULL;
+      // TODO do you need to clean the rest too ?
+      return -1;
+    break;
     }
     if (hin_request_accept (buffer, server->accept_flags) < 0) {
       hin_weird_error (5364567);
@@ -106,6 +130,26 @@ static int hin_server_accept_callback (hin_buffer_t * buffer, int ret) {
   if (hin_request_accept (buffer, server->accept_flags) < 0) {
     hin_weird_error (435332);
     return -1;
+  }
+  return 0;
+}
+
+int hin_server_reaccept () {
+  basic_dlist_t * elem = master.server_list.next;
+  if (elem == NULL) {
+    //hin_check_alive ();
+  }
+  while (elem) {
+    hin_server_t * server = basic_dlist_ptr (elem, offsetof (hin_client_t, list));
+    elem = elem->next;
+
+    hin_buffer_t * buf = server->accept_buffer;
+    if (buf == NULL) continue;
+    if (buf->flags & HIN_ACTIVE) continue;
+    if (hin_request_accept (buf, server->accept_flags) < 0) {
+      hin_weird_error (436332);
+      return -1;
+    }
   }
   return 0;
 }

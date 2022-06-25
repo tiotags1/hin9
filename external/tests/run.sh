@@ -49,7 +49,7 @@ PID=$!
 
 sleep 1
 
-echo "testing $HOST:$PORT REMOTE $REMOTE with -c $BENCH_CON -n $BENCH_NUM on `date`" >> $LOGS_DIR/bench.txt
+printf "\ntesting $HOST:$PORT REMOTE $REMOTE with -c $BENCH_CON -n $BENCH_NUM on `date`\n" >> $LOGS_DIR/bench.txt
 
 run_test () {
   export name=`basename $file`

@@ -14,7 +14,7 @@ typedef struct hin_pipe_struct hin_pipe_t;
 #include <basic_lists.h>
 
 #define READ_SZ 4096
-// TODO check if 16k is better
+// TODO check if 16384 is better
 
 #define HIN_CONNECT_MAGIC 0xfeabc321
 #define HIN_CLIENT_MAGIC 0xfeabc111

@@ -34,7 +34,7 @@ compile & run
 
 `git clone https://github.com/tiotags1/hin9.git && cd hin9`
 
-`mkdir -p build && cd build && cmake .. && make && cd .. && build/hin9`
+`mkdir -p build && cd build && cmake -DCMAKE_BUILD_TYPE=Release .. && make && cd .. && build/hin9`
 
 download mode
 -------------

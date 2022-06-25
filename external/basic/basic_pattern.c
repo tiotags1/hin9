@@ -26,7 +26,7 @@ static inline char get_specifier (int x) {
 }
 
 static inline int match_char (const char * ptr, uint32_t matches, uint32_t ch) {
-  if (matches & PATTERN_CUSTOM 		&& *ptr == ch) return 1;
+  if (matches & PATTERN_CUSTOM 		&& (uint32_t)*ptr == ch) return 1;
   if (matches & PATTERN_SPACE 		&& isspace (*ptr)) return 1;
   if (matches & PATTERN_ALPHANUM 	&& isalnum (*ptr)) return 1;
   if (matches & PATTERN_LETTER 		&& isalpha (*ptr)) return 1;
@@ -37,7 +37,7 @@ static inline int match_char (const char * ptr, uint32_t matches, uint32_t ch) {
   if (matches & PATTERN_UPPER 		&& isupper (*ptr)) return 1;
   if (matches & PATTERN_HEXA 		&& isxdigit (*ptr)) return 1;
   if (matches & PATTERN_NULL_CHAR	&& *ptr == '\0') return 1;
-  if (matches & PATTERN_NEGATIVE	&& *ptr != ch) return 1;
+  if (matches & PATTERN_NEGATIVE	&& (uint32_t)*ptr != ch) return 1;
   if (matches & PATTERN_ALL 		&& *ptr != '\0') return 1;
   return 0;
 }

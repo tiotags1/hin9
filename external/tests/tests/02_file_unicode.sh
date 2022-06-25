@@ -20,7 +20,7 @@ echo "urlencoded filename is $temp"
 
 export URL_PATH="tests/$temp"
 export LOCAL_PATH="$DOCS_DIR/tests/$file_name"
-export SUBTEST="normal ssl head deflate gzip no_keepalive hammer"
+export SUBTEST="normal ssl deflate gzip head no_keepalive hammer"
 
 sh $TOOL_DIR/request.sh
 

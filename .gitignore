@@ -49,6 +49,7 @@ workdir/config/*
 *.tar.gz
 
 perf.data*
+gmon.out
 *.c1
 *.h1
 

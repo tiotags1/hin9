@@ -3,18 +3,25 @@ set -e
 
 echo "$RET"
 
-total=`echo "$RET" | grep "Requests per second"`
-
 set +e
 non200=`echo "$RET" | grep "Non-2xx responses"`
 if [ -n "$non200" ]; then
-  echo "got non 200 requests $non200"
+  echo "$name $module got non 200 requests $non200"
   exit 1
 fi
 failed=`echo "$RET" | grep "Exceptions:"`
 if [ -n "$failed" ]; then
-  echo "got faild requests $failed"
+  echo "$name $module got faild requests $failed"
   exit 1
 fi
+failed=`echo "$RET" | grep "apr_pollset_poll"`
+if [ -n "$failed" ]; then
+  echo "$name $module got timedout requests $failed"
+  exit 1
+fi
+set -e
 
-echo "${name} $total" >> $LOGS_DIR/bench.txt
+total=`echo "$RET" | grep "Requests per second"`
+if [ -z "$NO_BENCH" ]; then
+  echo "${name} $total" >> $LOGS_DIR/bench.txt
+fi

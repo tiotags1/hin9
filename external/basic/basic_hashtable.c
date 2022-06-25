@@ -52,7 +52,7 @@ basic_ht_t * basic_ht_create (int size, basic_ht_hash_t seed) {
 
 void basic_ht_clean (basic_ht_t * hashtable) {
   basic_ht_pair_t * pair, * pair_old;
-  for (int i=0; i<hashtable->size; i++) {
+  for (int i = 0; i < hashtable->size; i++) {
     pair = hashtable->table [i];
     while (pair) {
       pair_old = pair;
@@ -72,7 +72,7 @@ basic_ht_hash_t basic_ht_hash (const char * str, size_t size, basic_ht_hash_t se
   basic_ht_hash_t hash1 = 5381 * seed;
   basic_ht_hash_t hash2 = 6883 * seed;
   int c;
-  const char * max = str+size;
+  const char * max = str + size;
   while (str < max) {
     c = *str++;
     hash1 = ((hash1 << 5) + hash1) + c; // hash * 33 + c
@@ -87,7 +87,7 @@ basic_ht_hash_t basic_ht_hash_continue (const char * str, size_t size, basic_ht_
   basic_ht_hash_t hash1 = *h1;
   basic_ht_hash_t hash2 = *h2;
   int c;
-  const char * max = str+size;
+  const char * max = str + size;
   while (str < max) {
     c = *str++;
     hash1 = ((hash1 << 5) + hash1) + c; // hash * 33 + c
@@ -176,7 +176,7 @@ basic_ht_pair_t * basic_ht_iterate_pair (basic_ht_t * hashtable, basic_ht_iterat
     iter->pair = iter->pair->next;
     return iter->pair;
   }
-  for (basic_ht_hash_t i=iter->bin; i<hashtable->size; i++) {
+  for (int i = iter->bin; i < hashtable->size; i++) {
     iter->pair = hashtable->table[i];
     if (iter->pair) {
       iter->bin = i+1;

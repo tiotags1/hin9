@@ -26,22 +26,8 @@ check_output () {
 }
 
 check_hammer () {
-  echo "$RET"
-  total=`echo "$RET" | grep "Requests per second"`
-
-  set +e
-  non200=`echo "$RET" | grep "Non-2xx responses"`
-  if [ -n "$non200" ]; then
-    echo "$name $module got failed requests '$non200'"
-    exit 1
-  fi
-  failed=`echo "$RET" | grep "Exceptions:"`
-  if [ -n "$failed" ]; then
-    echo "$name $module got exceptions '$failed'"
-    exit 1
-  fi
-  set -e
-  echo "${name}_${module} $total" >> $LOGS_DIR/bench.txt
+  export RET
+  sh $TOOL_DIR/hammer.sh
 }
 
 #export SUBTEST="normal ssl head deflate gzip no_keepalive POST hammer"

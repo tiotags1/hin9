@@ -35,8 +35,8 @@ static int hin_timer_callback (hin_buffer_t * buffer, int ret) {
     return -1;
   }
 
-  int hin_epoll_check ();
   hin_epoll_check ();
+  hin_server_reaccept ();
 
   time_t new = time (NULL);
   if (tm->time == new) return 0;

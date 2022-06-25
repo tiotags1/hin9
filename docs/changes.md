@@ -1,4 +1,11 @@
 
+* fixed misaligned packet condensing
+* fixed potential out of memory segfaults, pipe queued infinite read requests
+* new tests, bandwidth tests, 'too many files open'
+* improved handling of out of fds for new connections
+* removed -Os from cmake
+
+commit 3a4271b764aaabf7c0421ca32f00d9a441f0ec49
 * fixed rproxy backend not properly sending the close signal to chunked connections
 * moved rproxy php hammer to separate test, can't make other servers serve >1000 php connections
 
