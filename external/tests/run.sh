@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# tests info in documents folder
+# tests documentation in top root docs folder
 
 CWD_DIR=`pwd`
 SCRIPT_DIR="$( realpath ` dirname -- "$0" ` )"

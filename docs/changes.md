@@ -1,4 +1,7 @@
 
+* tweaks
+
+commit 99ddc9677c51b428455e758830d24c1b653b4001
 * fixed misaligned packet condensing
 * fixed potential out of memory segfaults, pipe queued infinite read requests
 * new tests, bandwidth tests, 'too many files open'

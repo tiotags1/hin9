@@ -2,7 +2,7 @@
 set -e
 
 export BENCH_CON=10
-export BENCH_NUM=100
+export BENCH_NUM=50
 
 export URL_PATH=large.bin
 export LOCAL_PATH=$DOCS_DIR/large.bin

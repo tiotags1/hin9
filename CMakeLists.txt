@@ -123,7 +123,6 @@ add_executable (hin9 ${hin_exe} ${other_src})
 target_link_libraries (hin9 hinsightd ${TARGET_LIBS})
 
 add_executable (hin9_pid_helper external/tools/pid_helper.c)
-add_test(NAME console_tests COMMAND sh external/tests/test.sh)
 
 install(PROGRAMS $<TARGET_FILE:hin9> DESTINATION sbin RENAME hinsightd)
 install(PROGRAMS $<TARGET_FILE:hin9_pid_helper> DESTINATION bin RENAME hinsightd_pid_helper)
