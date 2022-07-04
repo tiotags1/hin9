@@ -130,7 +130,7 @@ int hin_linux_set_limits () {
     perror ("setrlimit");
   }
 
-  if (new.rlim_cur < HIN_RLIMIT_MEMLOCK) {
+  if (new.rlim_cur < HIN_RLIMIT_MEMLOCK && (master.debug & DEBUG_CONFIG)) {
     fprintf (stderr, "WARNING! low RLIMIT_MEMLOCK, possible crashes, message possibly outdated\n");
     fprintf (stderr, " current: %lld\n", (long long)new.rlim_cur);
     fprintf (stderr, " suggested: %lld\n", (long long)HIN_RLIMIT_MEMLOCK);

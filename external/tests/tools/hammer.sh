@@ -23,5 +23,5 @@ set -e
 
 total=`echo "$RET" | grep "Requests per second"`
 if [ -z "$NO_BENCH" ]; then
-  echo "${name} $total" >> $LOGS_DIR/bench.txt
+  echo "${name} ${module} $total" >> $LOGS_DIR/bench.txt
 fi

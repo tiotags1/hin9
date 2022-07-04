@@ -1,4 +1,10 @@
 
+* added pl, py, rb, cgi file extensions to forbidden list
+* added the module name in benchmarks
+* hammer fds now targets the root directory
+
+v0.9.15
+commit 4242aacbaa2b6bf1f4eadc8706079e2eb60fcde6
 * tweaks
 
 commit 99ddc9677c51b428455e758830d24c1b653b4001
@@ -64,6 +70,7 @@ commit 53e209bd61859915c5526fe00d2ed099b5952205
 * fixed not properly exiting if listen sockets are waiting for the socket to become not busy
 * fixed compilation errors
 
+v0.9.14
 commit f5cfd6c267572641678d1206e4efa17d581f4942
 * fixed init.d script
 
@@ -117,6 +124,7 @@ commit c83db77b2819e3b10225dda01a5ea07daf732628
 * log ssl cert location to make it easier to debug problems with paths
 * rewrote the proxy example, previous one didn't handle query strings properly
 
+v0.9.13
 commit 8d7f35233498880fcacf47e90cc42d2de7411f6a
 * pipe code should now handle unexpected aborts slightly better
 * fix: server no longer crashes when fcgi closes the connection before expected
@@ -200,6 +208,7 @@ commit 8fcbc9927f2eb72c0fae28ac2bbb9db4f1dd15dc
 * documentation changes
 * fixed previous commit not exiting properly when you use fcgi
 
+v0.9.12
 commit 0b14a77d6d56789b38697954dfcd426015d4c365
 * fixed downloader exiting before it even began downloading
 * changed default log format to be closer to apache format
@@ -249,6 +258,7 @@ commit f04d7703f6cdbd2e33f8a7289d80a01dba5e970f
 * removed some of the gcc -Wextra -pedantic warnings
 * fixed debug level argument parsing
 
+v0.9.11
 commit d5942e9253436a8f3c60f414b04f274779ec0ff0
 * httpd toggle to force requiring hostname like the http spec requires
 * httpd post-ing created a tmp file that wasn't being used
@@ -273,6 +283,7 @@ commit 133f98d11c56a92a76161f339608c15047b4f858
 * bugfix order of returns for set\_path function
 * bugfix http url matches a few more (] is still missing due to match_pattern bugs)
 
+v0.9.10
 commit 47f242e485906c795ab77f00b57bdbd8509e1a4d
 * checks rlimits MEMLOCK at runtime so you don't have to warn at install time
 * also increased RLIMIT_NOFILE to something more reasonable and customizable
@@ -280,6 +291,7 @@ commit 47f242e485906c795ab77f00b57bdbd8509e1a4d
 commit ca8a1e3ec9c636a350ff16a4ce441610b93e52a4
 * bugfix header function didn't write the last character for a buffer of a very specific size, aka vsnprintf needs a buffer of size n+1
 
+v0.9.9
 commit d24aec6c4a7a5239af563d03ba6f0a1e3200b38c
 * added gzip compression
 * refactored fcgi lifecycle to make it easier in the future to add reusing sockets
@@ -303,6 +315,7 @@ commit 0c1fbdc264750aff0d9ec9dae899e93dcd5aaad9
 * pid file should now only be writable at server start/restart (via pid_helper)
 * should now properly abort if logfiles can't be opened
 
+v0.9.8
 commit 98446fe03d7da3364e5bf613b24b03a8d05d2a45
 * added php compression by default
 * bugfix fcgi crash due to improper buffer length handling
@@ -318,6 +331,7 @@ commit e8a2edd159e2e58fe826fa025f1cd9a46ceef19e
 * fixed epoll with files (epoll doesn't support files so just use sync)
 * fixed musl system calls for other architectures besides x86
 
+v0.9.7
 commit 915945d97133c84af4f2ac63b7bbe96fabeceb6b
 * fcgi uploads
 * moved some headers around
@@ -356,6 +370,7 @@ commit 46ad0263fd23433434e16c76a9c0e637f0385210
 commit fcf50de3ee618191d64e1450578c831ee88e9a83
 * removed old ebuild and just added an initd script
 
+v0.9.6
 commit b82656f1d4e8b306a2d6c905ae41e6955cd75bab
 * fcgi fpm connections initial
 * fcgi doesn't output headers or output properly
@@ -369,6 +384,7 @@ commit 90ef43094295760d20128956853394d596813455
 * removed debug message when redirecting to console
 * removed a few compiler warnings
 
+v0.9.5
 commit f5671c1c7a2190967314b355be95eb7a04a860b4
 * cache_test.php to test if caching still works
 * made connect slightly more general purpose
@@ -395,6 +411,7 @@ commit a6194916bb20f7bff5d7a42af9982b8dd00e013d
 * better lua include/require error messages
 * timing code simplification, removed perfect frame timing
 
+v0.9.4
 commit 8c55b6c18dffdb77148ea75cd6427a20103bb804
 * changed logging a bit
 
@@ -446,13 +463,16 @@ commit e239ca9e285e3065bcc04ee736a20cae1363977f
 commit e370b38d734e881104e27da50b6cf3ae29c8f55e
 * musl compatibility, weird way to force posix compliance musl
 
+v0.9.3
 commit efb5dd88e60588c712dfc90f042d3c3e75fbd45d
 * fixed redirect log (again)
 * compile option to disable greeting
 
+v0.9.2
 commit 4bb511fa407c3481af90286b23c357aaf1b1d231
 * documentation changes
 
+v0.9.1
 commit f23205a0310b25e3c2d9dcd7a21c56ca7cfa8743
 * abort program if you can't redirect log to file
 * logdir, cwd and tmpdir forced to have trailing /
@@ -464,6 +484,7 @@ commit 54787f932072c955da27d2146832fc0898d9d1e9
 commit 05bcf5207cd60e069b3dc5a3377cdc4d23b6239a
 * fixed lua not being properly #include
 
+v0.9.0
 commit 0e1e88ddb00d2786730d400dd06b5e735f9ddd62
 * fixed proxying of chunked encoded connections
 * I thought I fixed this

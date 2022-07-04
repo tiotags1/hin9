@@ -27,12 +27,11 @@ check_output () {
 
 check_hammer () {
   export RET
+  export module
   sh $TOOL_DIR/hammer.sh
 }
 
-#export SUBTEST="normal ssl head deflate gzip no_keepalive POST hammer"
-
-module="normal"
+export module="normal"
 if echo "$SUBTEST" | grep "$module" > /dev/null; then
   echo "Start test $name $module"
   out_file=$DOWNLOAD_DIR/${name}_${module}.bin
@@ -40,7 +39,7 @@ if echo "$SUBTEST" | grep "$module" > /dev/null; then
   check_output
 fi
 
-module="ssl"
+export module="ssl"
 if echo "$SUBTEST" | grep "$module" > /dev/null; then
   echo "Start test $name $module"
   out_file=$DOWNLOAD_DIR/${name}_${module}.bin
@@ -48,7 +47,7 @@ if echo "$SUBTEST" | grep "$module" > /dev/null; then
   check_output
 fi
 
-module="deflate"
+export module="deflate"
 if echo "$SUBTEST" | grep "$module" > /dev/null; then
   echo "Start test $name $module"
   out_gz=$DOWNLOAD_DIR/${name}_${module}.gz
@@ -65,7 +64,7 @@ if echo "$SUBTEST" | grep "$module" > /dev/null; then
   fi
 fi
 
-module="post"
+export module="post"
 if echo "$SUBTEST" | grep "$module" > /dev/null; then
   echo "Start test $name $module"
   POSTVALUE="helloworldhowareyou"
@@ -80,7 +79,7 @@ if echo "$SUBTEST" | grep "$module" > /dev/null; then
   echo "Completed test $name $module"
 fi
 
-module="hammer"
+export module="hammer"
 if echo "$SUBTEST" | grep "$module" > /dev/null; then
   echo "Start test $name $module"
   RET="$(ab -k -c $BENCH_CON -n $BENCH_NUM "http://$HOST:$PORT/$URL_PATH")"
@@ -88,7 +87,7 @@ if echo "$SUBTEST" | grep "$module" > /dev/null; then
   echo "Completed test $name $module"
 fi
 
-module="no_keepalive"
+export module="no_keepalive"
 if echo "$SUBTEST" | grep "$module" > /dev/null; then
   echo "Start test $name $module"
   RET="$(ab -c $BENCH_CON -n $BENCH_NUM "http://$HOST:$PORT/$URL_PATH")"
@@ -96,7 +95,7 @@ if echo "$SUBTEST" | grep "$module" > /dev/null; then
   echo "Completed test $name $module"
 fi
 
-module="head"
+export module="head"
 if echo "$SUBTEST" | grep "$module" > /dev/null; then
   echo "Start test $name $module"
   RET="$(ab -k -i -c $BENCH_CON -n $BENCH_NUM "http://$HOST:$PORT/$URL_PATH")"
